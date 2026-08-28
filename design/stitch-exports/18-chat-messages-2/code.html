@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Messages - Interface de Messagerie</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#f4256a",
+            "background-light": "#f8f5f6",
+            "background-dark": "#221016",
+          },
+          fontFamily: {
+            "display": ["Plus Jakarta Sans", "Noto Sans", "sans-serif"]
+          },
+          borderRadius: {
+            "DEFAULT": "1rem",
+            "lg": "2rem",
+            "xl": "3rem",
+            "full": "9999px"
+          },
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden">
+<header class="sticky top-0 z-10 flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between border-b border-gray-200 dark:border-white/10">
+<div class="flex items-center gap-2">
+<button class="flex size-10 shrink-0 items-center justify-center rounded-full">
+<span class="material-symbols-outlined text-gray-800 dark:text-white text-2xl">arrow_back</span>
+</button>
+<div class="flex items-center gap-3">
+<div class="relative shrink-0">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-10 w-10" data-alt="Photo de profil de Sophie" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCjf7re65X1OXXHPP5zXgDFgmDXyW-aStE5LT9UE9zeiisRBoOUU_Hes_BGOSYsRmPztkv3i2BcNYksjcZto3HwB5o5P0KQMc8iJzxFgXtTNOhZS6UihUIqReO8Uq5sm2DmKYaaP_e7CanKL1zJ2Z9dhs7H8RPJfrehQjJvGct8oUQDVXY1mwMh9Kk4pNBIApSyHUqhkuV2I17f5zTmO1gKCOpitL48qlJ0yrdnw0sA9_4YtEf7hfPGVTAVGRJxh9yqTwAzu7-jhx0");'></div>
+<div class="absolute bottom-0 right-0 size-3 rounded-full bg-green-500 border-2 border-background-light dark:border-background-dark"></div>
+</div>
+<div class="flex flex-col">
+<p class="text-gray-900 dark:text-white text-base font-bold leading-normal line-clamp-1">Sophie, 25</p>
+<p class="text-green-500 text-xs font-normal leading-normal">En ligne</p>
+</div>
+</div>
+</div>
+<div @click.away="open = false" class="relative" x-data="{ open: false }">
+<button @click="open = !open" class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-transparent text-gray-800 dark:text-white">
+<span class="material-symbols-outlined text-2xl">more_vert</span>
+</button>
+<div class="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white dark:bg-gray-800 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none" style="display: none;" x-show="open" x-transition:enter="transition ease-out duration-100" x-transition:enter-end="transform opacity-100 scale-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:leave="transition ease-in duration-75" x-transition:leave-end="transform opacity-0 scale-95" x-transition:leave-start="transform opacity-100 scale-100">
+<div class="py-1">
+<a class="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700" href="#">
+<span class="material-symbols-outlined text-base">flag</span>
+<span>Signaler un abus</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 text-sm text-red-600 dark:text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700" href="#">
+<span class="material-symbols-outlined text-base">block</span>
+<span>Bloquer ce membre</span>
+</a>
+</div>
+</div>
+</div>
+</header>
+<main class="flex-grow flex flex-col p-4 space-y-4">
+<div class="flex justify-center">
+<span class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-medium px-3 py-1 rounded-full">Aujourd'hui</span>
+</div>
+<div class="flex items-end gap-2 max-w-[80%] self-start">
+<div class="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-t-lg rounded-br-lg">
+<p class="text-sm">Salut ! Ça va ? Prête pour notre rendez-vous ce soir ?</p>
+</div>
+</div>
+<div class="flex items-end gap-2 max-w-[80%] self-end">
+<div class="bg-primary text-white p-3 rounded-t-lg rounded-bl-lg">
+<p class="text-sm">Hey ! Super et toi ? Oui, j'ai vraiment hâte !</p>
+<div class="flex justify-end items-center gap-1 mt-1">
+<span class="text-xs text-white/70">10:28</span>
+<span class="material-symbols-outlined !text-base !font-semibold text-white">done_all</span>
+</div>
+</div>
+</div>
+<div class="flex items-end gap-2 max-w-[80%] self-start">
+<div class="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white p-3 rounded-t-lg rounded-br-lg">
+<p class="text-sm">On se voit ce week-end ? J'ai hâte !</p>
+</div>
+</div>
+</main>
+<footer class="sticky bottom-0 bg-background-light dark:bg-background-dark p-4 pt-2 border-t border-gray-200 dark:border-white/10">
+<div class="flex items-center gap-2">
+<button class="flex size-10 items-center justify-center shrink-0 rounded-full text-gray-500 dark:text-gray-400">
+<span class="material-symbols-outlined text-2xl">add_circle</span>
+</button>
+<div class="relative flex-grow">
+<input class="w-full h-12 rounded-full border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 pl-4 pr-12 focus:ring-primary focus:border-primary" placeholder="Écrire un message..." type="text"/>
+<button class="absolute right-1 top-1/2 -translate-y-1/2 flex size-10 items-center justify-center shrink-0 rounded-full bg-primary text-white">
+<span class="material-symbols-outlined text-2xl">send</span>
+</button>
+</div>
+</div>
+</footer>
+</div>
+<script defer="" src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+</body></html>

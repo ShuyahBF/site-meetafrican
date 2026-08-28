@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Découvrir - App de rencontre</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#f4256a",
+              "background-light": "#f8f5f6",
+              "background-dark": "#221016",
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans", "Noto Sans", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col">
+<!-- Top App Bar -->
+<div class="sticky top-0 z-10 flex flex-col bg-background-light/80 pt-4 dark:bg-background-dark/80 backdrop-blur-sm">
+<div class="flex items-center px-4 pb-2 justify-between">
+<div class="flex size-12 shrink-0 items-center justify-start">
+<!-- Placeholder for potential logo or back button -->
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Découvrir</h2>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 bg-transparent text-slate-600 dark:text-white/80 gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Main Content -->
+<main class="flex-grow">
+<!-- Action Panel for Subscription -->
+<div class="p-4 @container">
+<div class="flex flex-1 flex-col items-start justify-between gap-4 rounded-lg border border-slate-200 dark:border-[#543b43] bg-white dark:bg-black/20 p-5 @[480px]:flex-row @[480px]:items-center">
+<div class="flex flex-col gap-1">
+<p class="text-slate-900 dark:text-white text-base font-bold leading-tight">Débloquez tout le potentiel</p>
+<p class="text-slate-500 dark:text-[#ba9ca6] text-base font-normal leading-normal">Voyez qui vous plaît et engagez la conversation.</p>
+</div>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-5 bg-primary text-white text-sm font-medium leading-normal">
+<span class="truncate">Passer Premium</span>
+</button>
+</div>
+</div>
+<!-- Image Grid of Profiles -->
+<div class="grid grid-cols-[repeat(auto-fit,minmax(158px,1fr))] gap-3 p-4">
+<!-- Profile Card 1 (Blurred) -->
+<div class="relative bg-cover bg-center flex flex-col gap-3 rounded-xl justify-end p-4 aspect-[3/4] overflow-hidden group" data-alt="Profile photo of a user, blurred for non-subscribers">
+<img alt="Profile photo of a user, blurred" class="absolute inset-0 w-full h-full object-cover blur-lg scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5rdSWyFm5-Z09nqJILfGsoKlSTb1EeKneaRRuYsoVzPzn_lcGPyQchBla1Bsod7da3Ig9FowuHc2Yuw1v5fXOgcc7ZVLdCcxlg69RScuGvSH86SB15MoAhSyp_OErZhduR3AhfmdCExSFmzmm8lSQP4bNoo972RUIT_nORL1O9D2awUaZPVwVXCL2FSDC8nkkU8HhcEhesdhKjB0cx4yS4QKs5TBNEWzHzhJJ4a7WgNBkxWl8Hv7bvDylMoTxPYwT3rAuEFHtZjM"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+<div class="relative z-10 flex items-center justify-between">
+<p class="text-white text-base font-bold leading-tight w-4/5 line-clamp-3">Sophie, 28</p>
+</div>
+</div>
+<!-- Profile Card 2 (Clear) -->
+<div class="relative bg-cover bg-center flex flex-col gap-3 rounded-xl justify-end p-4 aspect-[3/4] overflow-hidden group" data-alt="Clear profile photo of a male user named Marc" style='background-image: linear-gradient(0deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 100%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuBxoFtZ3vLcBJlV2FyqmzRSWmnw7tiAdllUMEoh9rEpAJTl3OYZ1m5sfGqUT_oUiv4gXPSWGvmGO7pg5Ky_XeR81nwZLUbnj-pkpouG08Qc8dejMGnbv6FxMKDDIod4PbovmP67jVZVFHBGLQRX3h4XnNYqbHJGJMn94VQAskoAfRJi2LuqqivLWGpg0qXy-dmkmlZjhosaxOJtkrlXo-2b6dE5qvREt7AsUmgVKbN61xU7N-SHGceCRm0p46NXJU8T8gfWUveaYSI");'>
+<div class="relative z-10 flex items-center justify-between">
+<p class="text-white text-base font-bold leading-tight w-4/5 line-clamp-3">Marc, 32</p>
+<div class="w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white/50"></div>
+</div>
+</div>
+<!-- Profile Card 3 (Clear) -->
+<div class="relative bg-cover bg-center flex flex-col gap-3 rounded-xl justify-end p-4 aspect-[3/4] overflow-hidden group" data-alt="Clear profile photo of a female user named Clara" style='background-image: linear-gradient(0deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 100%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuAXCMrS3nhqX9Cgz1qTfK5OEd5vpKQa6ATuv4qfkL_yzkgSNZv3cWMn7u1d1fb92r9Q5cTwNdNUm2PxrgqF9DnafChJh5r2QFK2vPZ-s5UITZdp16oFI5WmRfi2pCylCyskA1SOyWtF0LHItPsScO3kEHL9sXqcZdgc2j2L8Cl5NzmytgDSA-n8Y0el-l6A_vAwQVct4Ewmax2t0VX_sgVsuZj5Ab4F_n_9CkNPOEgvNGF1WQxPqDY0x98xQ1f5yHAyLpnmIm4lO9M");'>
+<div class="relative z-10 flex items-center justify-between">
+<p class="text-white text-base font-bold leading-tight w-4/5 line-clamp-3">Clara, 25</p>
+</div>
+</div>
+<!-- Profile Card 4 (Blurred) -->
+<div class="relative bg-cover bg-center flex flex-col gap-3 rounded-xl justify-end p-4 aspect-[3/4] overflow-hidden group" data-alt="Profile photo of a user, blurred for non-subscribers">
+<img alt="Profile photo of a user, blurred" class="absolute inset-0 w-full h-full object-cover blur-lg scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuADr55RQb_r3GOK5suKe9awAXeS2ni3cUufErivTz_NRyT4gRpZiK-76JcCmn09nFb4NQJp9oX8M7-oYQ-MCFPX2jO5X16fJt0y0f_SdvM5twTOuWy-4wL5Q_GLbRPNjasLqq0Tz1WmxLEi4Qc5BQLY6SwUxLjI23_SMkNhfmLydAjZpD_u4dTkN-qHgnM_uKHg6k62Gfmc5WHpCTpoX9gzU1v0D5aSoin2WFJppU7SEbeEoPcEJJu59AJSXL9NBxbXtkSEsGUuNJk"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+<div class="relative z-10 flex items-center justify-between">
+<p class="text-white text-base font-bold leading-tight w-4/5 line-clamp-3">Lucas, 30</p>
+<div class="w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white/50"></div>
+</div>
+</div>
+<!-- Profile Card 5 (Blurred) -->
+<div class="relative bg-cover bg-center flex flex-col gap-3 rounded-xl justify-end p-4 aspect-[3/4] overflow-hidden group" data-alt="Profile photo of a user, blurred for non-subscribers">
+<img alt="Profile photo of a user, blurred" class="absolute inset-0 w-full h-full object-cover blur-lg scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6h_20mAxSxVS2vMtR_BOSpk2X_7B2le_X9tz7cBG3dyHKyll1-ipneX6pDDMO9ZJ3QFB5iz4A0nunQdbJNN6i8eAmEgbd7-1wc7I-1grTsycQIWuk7H0dmr3g_hd5kGQscpDL4cR-LT-LYE6eaCW_BggwB8yLom1tUGLkUZJMXITuFhk2sb10VLs729qDF5EhisfYghgay0jLwdXSQHApxCTqrroPQC4JWvNIWJGyQlqVsFRFc_vI58zdJtSPk7c9tvNyuO3aMY8"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+<div class="relative z-10 flex items-center justify-between">
+<p class="text-white text-base font-bold leading-tight w-4/5 line-clamp-3">Manon, 27</p>
+</div>
+</div>
+<!-- Profile Card 6 (Clear) -->
+<div class="relative bg-cover bg-center flex flex-col gap-3 rounded-xl justify-end p-4 aspect-[3/4] overflow-hidden group" data-alt="Clear profile photo of a male user named Alex" style='background-image: linear-gradient(0deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 100%), url("https://lh3.googleusercontent.com/aida-public/AB6AXuDxbSIU5mx6hiVPN-8IsooakYpJOhGhO1jMJ-fzGzkxkXThb-uMozm4A23hzacjDtQJMWevVr35OjznQMAUHIdldD94BxtLNApGT-M6qoQGsEuIWn-ay5_fq-jnzLnZKHEv1UQfyPobs4RzEKNs4LvL1xgaCPxcuYd0-z5CRHDiKv36oxAdaLJPuzLftYj_PdpwZJ7QgUq0DnNMUQHXWic5yebC1YYd2heZSTq9yjm4JBlyxVDGDbK7pPJnuNoG-L4BVmsCPfag8yw");'>
+<div class="relative z-10 flex items-center justify-between">
+<p class="text-white text-base font-bold leading-tight w-4/5 line-clamp-3">Alex, 29</p>
+<div class="w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white/50"></div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Nav Bar -->
+<div class="sticky bottom-0 z-10">
+<div class="flex gap-2 border-t border-slate-200 dark:border-[#39282e] bg-background-light/90 dark:bg-[#271b1f]/90 backdrop-blur-sm px-4 pb-3 pt-2">
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-primary" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">spark</span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Découvrir</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-500 dark:text-[#ba9ca6]" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined">favorite</span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Matchs</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-500 dark:text-[#ba9ca6]" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined">chat_bubble</span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Messages</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-500 dark:text-[#ba9ca6]" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined">person</span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Profil</p>
+</a>
+</div>
+</div>
+</div>
+</body></html>

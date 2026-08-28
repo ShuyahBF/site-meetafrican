@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Paramètres de notifications</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#E57373", // Rouge doux / Rose poudré
+              "background-light": "#F8F8F8", // Blanc cassé
+              "background-dark": "#181113", // Dark background from original components
+              "text-light": "#333333", // Gris foncé
+              "text-dark": "#FFFFFF",
+              "text-secondary-light": "#888888", // Gris plus clair
+              "text-secondary-dark": "#ba9ca6",
+              "switch-off-light": "#CCCCCC", // Gris clair
+              "switch-off-dark": "#39282e",
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans", "Noto Sans", "sans-serif"]
+            },
+            borderRadius: {
+              "DEFAULT": "1rem",
+              "lg": "1.5rem",
+              "xl": "2rem",
+              "full": "9999px"
+            },
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex min-h-screen w-full flex-col">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-10 flex items-center justify-between bg-background-light/80 dark:bg-background-dark/80 p-4 backdrop-blur-sm">
+<button class="flex size-10 shrink-0 items-center justify-center text-text-light dark:text-text-dark">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h1 class="flex-1 text-center text-lg font-bold leading-tight tracking-[-0.015em] text-text-light dark:text-text-dark">Gérer mes notifications</h1>
+<div class="size-10 shrink-0"></div> <!-- Spacer -->
+</header>
+<main class="flex-grow pb-28">
+<!-- Labels for Toggles -->
+<div class="grid grid-cols-5 gap-4 px-4 pt-4 pb-2">
+<div class="col-span-3"></div>
+<div class="text-center text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark">Push</div>
+<div class="text-center text-sm font-semibold text-text-secondary-light dark:text-text-secondary-dark">E-mail</div>
+</div>
+<!-- Section 1: Messages -->
+<section>
+<h2 class="px-4 pb-2 pt-4 text-lg font-bold leading-tight tracking-[-0.015em] text-text-light dark:text-text-dark">Messages</h2>
+<div class="flex flex-col">
+<!-- List Item: Nouveau message -->
+<div class="grid grid-cols-5 items-center gap-4 bg-background-light dark:bg-background-dark px-4 py-3">
+<div class="col-span-3 flex flex-col justify-center">
+<p class="text-base font-medium leading-normal text-text-light dark:text-text-dark">Nouveau message</p>
+<p class="text-sm font-normal leading-normal text-text-secondary-light dark:text-text-secondary-dark">Quand vous recevez un nouveau message.</p>
+</div>
+<div class="flex shrink-0 justify-center">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full bg-switch-off-light p-0.5 dark:bg-switch-off-dark has-[:checked]:bg-primary">
+<input checked="" class="peer invisible absolute" type="checkbox"/>
+<div class="h-[27px] w-[27px] rounded-full bg-white transition-transform duration-300 peer-checked:translate-x-[20px]" style="box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;"></div>
+</label>
+</div>
+<div class="flex shrink-0 justify-center">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full bg-switch-off-light p-0.5 dark:bg-switch-off-dark has-[:checked]:bg-primary">
+<input class="peer invisible absolute" type="checkbox"/>
+<div class="h-[27px] w-[27px] rounded-full bg-white transition-transform duration-300 peer-checked:translate-x-[20px]" style="box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;"></div>
+</label>
+</div>
+</div>
+<!-- List Item: Réaction à un message -->
+<div class="grid grid-cols-5 items-center gap-4 bg-background-light dark:bg-background-dark px-4 py-3">
+<div class="col-span-3 flex flex-col justify-center">
+<p class="text-base font-medium leading-normal text-text-light dark:text-text-dark">Réaction à un message</p>
+<p class="text-sm font-normal leading-normal text-text-secondary-light dark:text-text-secondary-dark">Quand quelqu'un réagit à votre message.</p>
+</div>
+<div class="flex shrink-0 justify-center">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full bg-switch-off-light p-0.5 dark:bg-switch-off-dark has-[:checked]:bg-primary">
+<input checked="" class="peer invisible absolute" type="checkbox"/>
+<div class="h-[27px] w-[27px] rounded-full bg-white transition-transform duration-300 peer-checked:translate-x-[20px]" style="box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;"></div>
+</label>
+</div>
+<div class="flex shrink-0 justify-center">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full bg-switch-off-light p-0.5 dark:bg-switch-off-dark has-[:checked]:bg-primary">
+<input class="peer invisible absolute" type="checkbox"/>
+<div class="h-[27px] w-[27px] rounded-full bg-white transition-transform duration-300 peer-checked:translate-x-[20px]" style="box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;"></div>
+</label>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 2: Activité du Profil -->
+<section>
+<h2 class="px-4 pb-2 pt-6 text-lg font-bold leading-tight tracking-[-0.015em] text-text-light dark:text-text-dark">Activité du Profil</h2>
+<div class="flex flex-col">
+<!-- List Item: Nouveau Match -->
+<div class="grid grid-cols-5 items-center gap-4 bg-background-light dark:bg-background-dark px-4 py-3">
+<div class="col-span-3 flex flex-col justify-center">
+<p class="text-base font-medium leading-normal text-text-light dark:text-text-dark">Nouveau Match</p>
+<p class="text-sm font-normal leading-normal text-text-secondary-light dark:text-text-secondary-dark">Quand quelqu'un vous like en retour.</p>
+</div>
+<div class="flex shrink-0 justify-center">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full bg-switch-off-light p-0.5 dark:bg-switch-off-dark has-[:checked]:bg-primary">
+<input checked="" class="peer invisible absolute" type="checkbox"/>
+<div class="h-[27px] w-[27px] rounded-full bg-white transition-transform duration-300 peer-checked:translate-x-[20px]" style="box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;"></div>
+</label>
+</div>
+<div class="flex shrink-0 justify-center">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full bg-switch-off-light p-0.5 dark:bg-switch-off-dark has-[:checked]:bg-primary">
+<input checked="" class="peer invisible absolute" type="checkbox"/>
+<div class="h-[27px] w-[27px] rounded-full bg-white transition-transform duration-300 peer-checked:translate-x-[20px]" style="box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;"></div>
+</label>
+</div>
+</div>
+<!-- List Item: Visite de profil -->
+<div class="grid grid-cols-5 items-center gap-4 bg-background-light dark:bg-background-dark px-4 py-3">
+<div class="col-span-3 flex flex-col justify-center">
+<p class="text-base font-medium leading-normal text-text-light dark:text-text-dark">Quelqu'un a visité votre profil</p>
+<p class="text-sm font-normal leading-normal text-text-secondary-light dark:text-text-secondary-dark">Quand un profil consulte le vôtre.</p>
+</div>
+<div class="flex shrink-0 justify-center">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full bg-switch-off-light p-0.5 dark:bg-switch-off-dark has-[:checked]:bg-primary">
+<input class="peer invisible absolute" type="checkbox"/>
+<div class="h-[27px] w-[27px] rounded-full bg-white transition-transform duration-300 peer-checked:translate-x-[20px]" style="box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;"></div>
+</label>
+</div>
+<div class="flex shrink-0 justify-center">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full bg-switch-off-light p-0.5 dark:bg-switch-off-dark has-[:checked]:bg-primary">
+<input class="peer invisible absolute" type="checkbox"/>
+<div class="h-[27px] w-[27px] rounded-full bg-white transition-transform duration-300 peer-checked:translate-x-[20px]" style="box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;"></div>
+</label>
+</div>
+</div>
+<!-- List Item: Like de profil -->
+<div class="grid grid-cols-5 items-center gap-4 bg-background-light dark:bg-background-dark px-4 py-3">
+<div class="col-span-3 flex flex-col justify-center">
+<p class="text-base font-medium leading-normal text-text-light dark:text-text-dark">Quelqu'un a "liké" votre profil</p>
+<p class="text-sm font-normal leading-normal text-text-secondary-light dark:text-text-secondary-dark">Recevoir une alerte pour chaque like.</p>
+</div>
+<div class="flex shrink-0 justify-center">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full bg-switch-off-light p-0.5 dark:bg-switch-off-dark has-[:checked]:bg-primary">
+<input checked="" class="peer invisible absolute" type="checkbox"/>
+<div class="h-[27px] w-[27px] rounded-full bg-white transition-transform duration-300 peer-checked:translate-x-[20px]" style="box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;"></div>
+</label>
+</div>
+<div class="flex shrink-0 justify-center">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full bg-switch-off-light p-0.5 dark:bg-switch-off-dark has-[:checked]:bg-primary">
+<input class="peer invisible absolute" type="checkbox"/>
+<div class="h-[27px] w-[27px] rounded-full bg-white transition-transform duration-300 peer-checked:translate-x-[20px]" style="box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;"></div>
+</label>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 3: Actualités de l'App -->
+<section>
+<h2 class="px-4 pb-2 pt-6 text-lg font-bold leading-tight tracking-[-0.015em] text-text-light dark:text-text-dark">Actualités de l'App</h2>
+<div class="flex flex-col">
+<!-- List Item: Promotions -->
+<div class="grid grid-cols-5 items-center gap-4 bg-background-light dark:bg-background-dark px-4 py-3">
+<div class="col-span-3 flex flex-col justify-center">
+<p class="text-base font-medium leading-normal text-text-light dark:text-text-dark">Promotions et offres spéciales</p>
+<p class="text-sm font-normal leading-normal text-text-secondary-light dark:text-text-secondary-dark">Ne manquez aucune de nos offres.</p>
+</div>
+<div class="flex shrink-0 justify-center">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full bg-switch-off-light p-0.5 dark:bg-switch-off-dark has-[:checked]:bg-primary">
+<input class="peer invisible absolute" type="checkbox"/>
+<div class="h-[27px] w-[27px] rounded-full bg-white transition-transform duration-300 peer-checked:translate-x-[20px]" style="box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;"></div>
+</label>
+</div>
+<div class="flex shrink-0 justify-center">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full bg-switch-off-light p-0.5 dark:bg-switch-off-dark has-[:checked]:bg-primary">
+<input checked="" class="peer invisible absolute" type="checkbox"/>
+<div class="h-[27px] w-[27px] rounded-full bg-white transition-transform duration-300 peer-checked:translate-x-[20px]" style="box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;"></div>
+</label>
+</div>
+</div>
+<!-- List Item: Nouveautés -->
+<div class="grid grid-cols-5 items-center gap-4 bg-background-light dark:bg-background-dark px-4 py-3">
+<div class="col-span-3 flex flex-col justify-center">
+<p class="text-base font-medium leading-normal text-text-light dark:text-text-dark">Nouveautés et mises à jour</p>
+<p class="text-sm font-normal leading-normal text-text-secondary-light dark:text-text-secondary-dark">Restez informé des nouvelles fonctionnalités.</p>
+</div>
+<div class="flex shrink-0 justify-center">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full bg-switch-off-light p-0.5 dark:bg-switch-off-dark has-[:checked]:bg-primary">
+<input checked="" class="peer invisible absolute" type="checkbox"/>
+<div class="h-[27px] w-[27px] rounded-full bg-white transition-transform duration-300 peer-checked:translate-x-[20px]" style="box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;"></div>
+</label>
+</div>
+<div class="flex shrink-0 justify-center">
+<label class="relative flex h-[31px] w-[51px] cursor-pointer items-center rounded-full bg-switch-off-light p-0.5 dark:bg-switch-off-dark has-[:checked]:bg-primary">
+<input class="peer invisible absolute" type="checkbox"/>
+<div class="h-[27px] w-[27px] rounded-full bg-white transition-transform duration-300 peer-checked:translate-x-[20px]" style="box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;"></div>
+</label>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Fixed Action Button -->
+<footer class="fixed bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-background-light/100 to-background-light/0 dark:from-background-dark/100 dark:to-background-dark/0 p-4 pt-6">
+<button class="h-12 w-full rounded-full bg-primary text-base font-bold text-white shadow-lg shadow-primary/30">
+                Enregistrer
+            </button>
+</footer>
+</div>
+</body></html>

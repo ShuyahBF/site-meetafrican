@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Bienvenue - App de Rencontre</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#f4256a",
+              "background-light": "#f8f5f6",
+              "background-dark": "#221016",
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex min-h-screen w-full flex-col dark overflow-x-hidden">
+<!-- Header Image & Logo -->
+<div class="relative w-full">
+<div class="@container">
+<div class="@[480px]:px-4 @[480px]:py-3 p-0">
+<div class="w-full bg-center bg-no-repeat bg-cover flex flex-col justify-between overflow-hidden bg-[#181113] @[480px]:rounded-xl min-h-[40vh] md:min-h-[50vh]" data-alt="Couple souriant partageant un moment chaleureux en extérieur" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD3DvDA0dgatQBBnogmeszlPazM1NKKv7XtFyXRUSJWtvTYeVGjg3eTVU4MJahU57ndqXjvHdEooNP3JuyxfC61rsT5cG7fO4iVqiyHL_YDTKWQwYESfZzX5GYTSYcFc8E4cMc89gZRLEs4JR9ah9R1hfpYN9Vl31qJ2MZeEdg4ChiG-EGxlxY6IkKl4c33Dmd-sWgVDlyV9j5qWyChxw17HTbEvQDyPlItwajk1-2YL1aEt2X8nviiQxrh_l5MLpl0nl3HjIiHYyw");'>
+<div class="flex items-center justify-center p-6">
+<span class="material-symbols-outlined text-white text-5xl">favorite</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Headline Text -->
+<h1 class="text-slate-900 dark:text-white tracking-tight text-3xl md:text-4xl font-bold leading-tight px-4 text-center pb-3 pt-8 font-display">La rencontre commence ici</h1>
+<!-- Carousel -->
+<div class="flex-grow">
+<div class="flex overflow-x-auto [-ms-scrollbar-style:none] [scrollbar-width:none] [&amp;::-webkit-scrollbar]:hidden py-4">
+<div class="flex items-stretch px-4 gap-4">
+<div class="flex h-full w-64 flex-shrink-0 flex-col gap-4 rounded-lg">
+<div class="w-full bg-primary/10 aspect-square rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-6xl">swipe</span>
+</div>
+<div>
+<p class="text-slate-800 dark:text-white text-base font-bold leading-normal">Découvrez des profils</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal">Trouvez facilement des personnes compatibles à proximité.</p>
+</div>
+</div>
+<div class="flex h-full w-64 flex-shrink-0 flex-col gap-4 rounded-lg">
+<div class="w-full bg-primary/10 aspect-square rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-6xl">chat</span>
+</div>
+<div>
+<p class="text-slate-800 dark:text-white text-base font-bold leading-normal">Connectez en sécurité</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal">Discutez en toute confiance grâce à notre chat sécurisé.</p>
+</div>
+</div>
+<div class="flex h-full w-64 flex-shrink-0 flex-col gap-4 rounded-lg">
+<div class="w-full bg-primary/10 aspect-square rounded-xl flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-6xl">celebration</span>
+</div>
+<div>
+<p class="text-slate-800 dark:text-white text-base font-bold leading-normal">Vivez de vrais moments</p>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal">L'application est conçue pour mener à de vraies rencontres.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Page Indicators -->
+<div class="flex w-full flex-row items-center justify-center gap-2 py-5">
+<div class="h-2 w-6 rounded-full bg-primary"></div>
+<div class="h-2 w-2 rounded-full bg-primary/20"></div>
+<div class="h-2 w-2 rounded-full bg-primary/20"></div>
+</div>
+<!-- Button Group -->
+<div class="flex justify-center pb-6 pt-2 sticky bottom-0 bg-background-light dark:bg-background-dark">
+<div class="flex flex-1 gap-3 max-w-[480px] flex-col items-stretch px-4">
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-14 px-5 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] w-full">
+<span class="truncate">Créer un compte</span>
+</button>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-14 px-5 bg-transparent text-slate-800 dark:text-white text-base font-bold leading-normal tracking-[0.015em] w-full hover:bg-primary/10">
+<span class="truncate">Se connecter</span>
+</button>
+</div>
+</div>
+</div>
+</body></html>
