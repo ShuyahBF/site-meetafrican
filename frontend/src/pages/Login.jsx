@@ -15,8 +15,9 @@ export default function Login() {
     setError("");
     setSubmitting(true);
     try {
-      await login(identifier, password);
-      navigate("/decouverte");
+      const loggedInUser = await login(identifier, password);
+      const isStaff = loggedInUser.role === "admin" || loggedInUser.role === "moderator";
+      navigate(isStaff ? "/admin" : "/decouverte");
     } catch (err) {
       setError(err?.response?.data?.detail || "Identifiants invalides");
     } finally {

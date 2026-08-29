@@ -9,8 +9,20 @@ from fastapi.staticfiles import StaticFiles
 
 from config import get_settings
 from db import ensure_indexes
-from routes import admin, auth, chat, matching, payments_pawapay, photos, subscriptions, uploads, verification
-from seed import seed_default_plans
+from routes import (
+    admin,
+    auth,
+    chat,
+    matching,
+    payments_pawapay,
+    photos,
+    ratings,
+    referrals,
+    subscriptions,
+    uploads,
+    verification,
+)
+from seed import ensure_admin_user, seed_default_plans
 
 settings = get_settings()
 
@@ -34,6 +46,8 @@ api.include_router(verification.router)
 api.include_router(photos.router)
 api.include_router(matching.router)
 api.include_router(chat.router)
+api.include_router(ratings.router)
+api.include_router(referrals.router)
 
 
 @api.get("/health")
@@ -52,3 +66,4 @@ app.mount("/api/files", StaticFiles(directory=str(uploads_path)), name="files")
 async def on_startup():
     await ensure_indexes()
     await seed_default_plans()
+    await ensure_admin_user()

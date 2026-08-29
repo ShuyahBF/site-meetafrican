@@ -10,6 +10,10 @@ body {
   .input {
     @apply h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-primary dark:border-white/10 dark:bg-white/5 dark:text-white;
   }
+
+  .admin-input {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-primary;
+  }
 }
 
 .material-symbols-outlined {

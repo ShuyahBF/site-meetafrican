@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     anthropic_api_key: Optional[str] = None
     ai_moderation_model: str = "claude-sonnet-5"
 
+    # Bootstrap du premier compte admin (back-office) — optionnel : si défini,
+    # le compte est créé/promu admin au démarrage. À retirer du .env une fois
+    # le compte créé, ou à changer pour promouvoir quelqu'un d'autre.
+    admin_bootstrap_email: Optional[str] = None
+    admin_bootstrap_password: Optional[str] = None
+
 
 @lru_cache
 def get_settings() -> Settings:

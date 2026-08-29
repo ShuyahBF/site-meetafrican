@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import UserActionsMenu from "@/components/UserActionsMenu";
 
 export default function Conversation() {
   const { conversationId } = useParams();
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
+  const [otherUser, setOtherUser] = useState(null);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef(null);
@@ -19,6 +21,13 @@ export default function Conversation() {
     loadMessages();
     const interval = setInterval(loadMessages, 4000);
     return () => clearInterval(interval);
+  }, [conversationId]);
+
+  useEffect(() => {
+    apiClient.get("/conversations").then((r) => {
+      const conv = r.data.find((c) => c.conversation_id === conversationId);
+      if (conv) setOtherUser(conv.other_user);
+    });
   }, [conversationId]);
 
   useEffect(() => {
@@ -44,7 +53,10 @@ export default function Conversation() {
         <Link to="/messages" className="text-slate-500 dark:text-slate-400">
           <span className="material-symbols-outlined">arrow_back</span>
         </Link>
-        <h1 className="text-lg font-bold text-slate-900 dark:text-white">Conversation</h1>
+        <h1 className="flex-1 truncate text-lg font-bold text-slate-900 dark:text-white">
+          {otherUser?.full_name || "Conversation"}
+        </h1>
+        {otherUser && <UserActionsMenu targetUserId={otherUser.id} targetName={otherUser.full_name} />}
       </header>
 
       <main className="flex-1 space-y-2 overflow-y-auto px-4 py-4">

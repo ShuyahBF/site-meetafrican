@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiClient } from "@/lib/api";
 import { uploadFile } from "@/lib/upload";
 import { useAuth } from "@/context/AuthContext";
@@ -87,6 +88,17 @@ export default function Profile() {
         <p className="text-lg font-bold text-slate-900 dark:text-white">{user?.full_name}</p>
         <p className={`text-sm font-semibold ${statusInfo.color}`}>{statusInfo.text}</p>
         {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+
+        <Link
+          to="/parrainage"
+          className="mt-4 flex items-center justify-between rounded-xl bg-primary/10 px-4 py-3"
+        >
+          <span className="text-sm font-semibold text-slate-800 dark:text-white">Points de parrainage</span>
+          <span className="flex items-center gap-1 font-bold text-primary">
+            {user?.points ?? 0}
+            <span className="material-symbols-outlined text-base">chevron_right</span>
+          </span>
+        </Link>
 
         <section className="mt-6">
           <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">

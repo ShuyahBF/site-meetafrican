@@ -106,6 +106,7 @@ class UserPublic(BaseModel):
     city: Optional[str] = None
     country: Optional[str] = None
     photos: List[Photo] = Field(default_factory=list)
+    role: Role = Role.user
     verification_status: VerificationStatus
     points: int
     referral_code: str
@@ -220,6 +221,8 @@ class Report(BaseModel):
     reason: str  # "fake_profile" | "abus" | "autre"
     details: Optional[str] = Field(None, max_length=500)
     status: str = "open"  # open | reviewed | dismissed
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[str] = None
     created_at: str = Field(default_factory=_now)
 
 
