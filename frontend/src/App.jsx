@@ -14,6 +14,7 @@ import Conversation from "@/pages/Conversation";
 import Referrals from "@/pages/Referrals";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminPhotos from "@/pages/admin/AdminPhotos";
 import AdminVerifications from "@/pages/admin/AdminVerifications";
 import AdminPayments from "@/pages/admin/AdminPayments";
@@ -43,6 +44,7 @@ export default function App() {
 
           <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
             <Route index element={<AdminDashboard />} />
+            <Route path="comptes" element={<AdminUsers />} />
             <Route path="photos" element={<AdminPhotos />} />
             <Route path="verifications" element={<AdminVerifications />} />
             <Route path="paiements" element={<AdminPayments />} />

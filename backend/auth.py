@@ -60,3 +60,11 @@ async def get_current_admin(user: dict = Depends(get_current_user)) -> dict:
     if user.get("role") not in ("admin", "moderator"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Réservé aux administrateurs")
     return user
+
+
+async def get_current_super_admin(user: dict = Depends(get_current_user)) -> dict:
+    """Réservé aux comptes role="admin" (pas les modérateurs) — pour les
+    actions sensibles comme changer le rôle d'un autre compte."""
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Réservé aux administrateurs (pas modérateur)")
+    return user

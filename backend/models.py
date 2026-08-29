@@ -124,6 +124,30 @@ class UserPublic(BaseModel):
     created_at: str
 
 
+class UserAdminView(BaseModel):
+    """Vue étendue réservée au back-office — jamais renvoyée aux utilisateurs
+    eux-mêmes ni aux autres profils (email/téléphone/statut de compte sont
+    des informations sensibles)."""
+    id: str
+    full_name: str
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = None
+    age: Optional[int] = None
+    gender: Gender
+    role: Role
+    is_active: bool
+    verification_status: VerificationStatus
+    points: int
+    avg_response_seconds: Optional[float] = None
+    created_at: str
+
+
+def to_user_admin_view(doc: dict) -> "UserAdminView":
+    data = {k: v for k, v in doc.items() if k in UserAdminView.model_fields}
+    data["age"] = _age_from_birthdate(doc.get("birthdate"))
+    return UserAdminView(**data)
+
+
 def _age_from_birthdate(birthdate: Optional[str]) -> Optional[int]:
     if not birthdate:
         return None

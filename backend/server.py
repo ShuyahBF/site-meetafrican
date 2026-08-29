@@ -11,6 +11,7 @@ from config import get_settings
 from db import ensure_indexes
 from routes import (
     admin,
+    admin_users,
     auth,
     chat,
     matching,
@@ -41,6 +42,7 @@ api.include_router(auth.router)
 api.include_router(payments_pawapay.router)
 api.include_router(subscriptions.router)
 api.include_router(admin.router)
+api.include_router(admin_users.router)
 api.include_router(uploads.router)
 api.include_router(verification.router)
 api.include_router(photos.router)
