@@ -10,9 +10,11 @@ MeetAfrican — site de rencontre pour hommes et femmes africains.
 - **Implémentation** : auth, abonnements Premium, paiement PawaPay (Mobile Money),
   découverte/matching (swipe), chat temps réel (WebSocket), vérification
   d'identité et modération des photos de profil par IA (Claude vision), notation
-  entre comptes, signalement de faux profils, points de parrainage social et
-  back-office admin (`/admin`) fonctionnels de bout en bout — testés en local
-  (voir section Tests ci-dessous).
+  entre comptes, signalement de faux profils, points de parrainage social,
+  stockage objet Cloudflare R2 et back-office admin (`/admin` — modération,
+  formules d'abonnement, réglages, gestion des comptes) fonctionnels de bout en
+  bout — testés en local et contre un vrai bucket R2 (voir section Tests
+  ci-dessous).
 
 ## Stack
 
@@ -94,7 +96,5 @@ jamais utiliser en production**.
 
 ## Prochaines étapes
 
-- Gestion des comptes utilisateurs côté admin (liste, désactivation directe,
-  changement de rôle) au-delà des files de modération
 - Auto-hébergement de la police d'icônes (Material Symbols) : actuellement
   chargée depuis Google Fonts, donc dépendante de sa disponibilité réseau
