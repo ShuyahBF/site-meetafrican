@@ -42,3 +42,6 @@ async def ensure_indexes() -> None:
     await db.reports.create_index("reported_user_id")
     await db.ratings.create_index([("rated_user_id", 1), ("rater_user_id", 1)], unique=True)
     await db.referral_shares.create_index("user_id")
+    await db.swipes.create_index([("user_id", 1), ("target_user_id", 1)], unique=True)
+    await db.conversations.create_index("match_id", unique=True)
+    await db.identity_verifications.create_index("user_id")

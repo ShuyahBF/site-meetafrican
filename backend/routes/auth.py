@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from auth import create_access_token, get_current_user, hash_password, verify_password
 from db import db
-from models import Token, User, UserLogin, UserPublic, UserRegister
+from models import Token, User, UserLogin, UserPublic, UserRegister, to_user_public
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -19,10 +19,6 @@ def _age_years(birthdate: str) -> int:
     d = date.fromisoformat(birthdate)
     today = date.today()
     return today.year - d.year - ((today.month, today.day) < (d.month, d.day))
-
-
-def _to_public(user: dict) -> UserPublic:
-    return UserPublic(**{k: v for k, v in user.items() if k in UserPublic.model_fields})
 
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
@@ -61,7 +57,7 @@ async def register(payload: UserRegister):
     doc = user.model_dump(mode="json")
     await db.users.insert_one(doc.copy())
     token = create_access_token(user.id)
-    return Token(access_token=token, user=_to_public(doc))
+    return Token(access_token=token, user=to_user_public(doc))
 
 
 @router.post("/login", response_model=Token)
@@ -75,9 +71,9 @@ async def login(payload: UserLogin):
         raise HTTPException(status_code=403, detail="Compte désactivé")
     user.pop("_id", None)
     token = create_access_token(user["id"])
-    return Token(access_token=token, user=_to_public(user))
+    return Token(access_token=token, user=to_user_public(user))
 
 
 @router.get("/me", response_model=UserPublic)
 async def me(user: dict = Depends(get_current_user)):
-    return _to_public(user)
+    return to_user_public(user)

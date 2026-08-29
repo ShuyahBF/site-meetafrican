@@ -1,6 +1,9 @@
 """Routes /api/admin — réglages paramétrables par l'administrateur système :
-barème de points de parrainage, activation/désactivation de la vérification
-automatique, gestion des formules d'abonnement."""
+barème de points de parrainage, gestion des formules d'abonnement.
+
+La bascule vérification/modération auto par IA vit dans
+routes/verification.py (/admin/settings/moderation), à côté des prompts
+système qu'elle contrôle."""
 from __future__ import annotations
 
 from typing import List
@@ -28,17 +31,6 @@ async def update_referral_points_settings(
     doc["id"] = "global_referral_points"
     await db.settings.update_one({"id": "global_referral_points"}, {"$set": doc}, upsert=True)
     return payload
-
-
-@router.put("/settings/verification-auto")
-async def toggle_verification_auto(enabled: bool, _: dict = Depends(get_current_admin)):
-    """Active/désactive la vérification d'identité automatique par IA au
-    niveau global. Quand désactivée, toute soumission passe directement en
-    revue humaine."""
-    await db.settings.update_one(
-        {"id": "global"}, {"$set": {"verification_auto_enabled": enabled}}, upsert=True
-    )
-    return {"ok": True, "verification_auto_enabled": enabled}
 
 
 @router.get("/subscription-plans", response_model=List[SubscriptionPlan])

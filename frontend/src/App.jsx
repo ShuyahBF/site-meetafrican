@@ -6,6 +6,14 @@ import Register from "@/pages/Register";
 import Login from "@/pages/Login";
 import Discover from "@/pages/Discover";
 import Subscriptions from "@/pages/Subscriptions";
+import Profile from "@/pages/Profile";
+import Matches from "@/pages/Matches";
+import Messages from "@/pages/Messages";
+import Conversation from "@/pages/Conversation";
+
+function Protected({ children }) {
+  return <ProtectedRoute>{children}</ProtectedRoute>;
+}
 
 export default function App() {
   return (
@@ -15,22 +23,12 @@ export default function App() {
           <Route path="/" element={<Welcome />} />
           <Route path="/inscription" element={<Register />} />
           <Route path="/connexion" element={<Login />} />
-          <Route
-            path="/decouverte"
-            element={
-              <ProtectedRoute>
-                <Discover />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/abonnement"
-            element={
-              <ProtectedRoute>
-                <Subscriptions />
-              </ProtectedRoute>
-            }
-          />
+          <Route path="/decouverte" element={<Protected><Discover /></Protected>} />
+          <Route path="/matchs" element={<Protected><Matches /></Protected>} />
+          <Route path="/messages" element={<Protected><Messages /></Protected>} />
+          <Route path="/messages/:conversationId" element={<Protected><Conversation /></Protected>} />
+          <Route path="/profil" element={<Protected><Profile /></Protected>} />
+          <Route path="/abonnement" element={<Protected><Subscriptions /></Protected>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

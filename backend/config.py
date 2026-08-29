@@ -34,8 +34,15 @@ class Settings(BaseSettings):
     pawapay_callback_secret: Optional[str] = None
     pawapay_default_country: str = "BFA"
 
-    # Object storage (photos, pièces d'identité) — placeholder, à brancher plus tard
+    # Object storage (photos, pièces d'identité) — stockage local pour démarrer,
+    # à remplacer par un object storage (S3-compatible) avant la production.
     uploads_dir: str = "./uploads"
+    max_upload_bytes: int = 8 * 1024 * 1024  # 8 Mo
+    public_base_url: str = "http://localhost:8000"
+
+    # IA de modération / vérification (Claude, via l'API Anthropic)
+    anthropic_api_key: Optional[str] = None
+    ai_moderation_model: str = "claude-sonnet-5"
 
 
 @lru_cache

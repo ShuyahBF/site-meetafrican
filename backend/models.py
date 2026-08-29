@@ -85,8 +85,9 @@ class User(BaseModel):
     photos: List[Photo] = Field(default_factory=list)
     role: Role = Role.user
     verification_status: VerificationStatus = VerificationStatus.unverified
-    verification_auto_enabled: bool = True  # activable/désactivable par l'admin
     points: int = 0
+    avg_response_seconds: Optional[float] = None
+    response_count: int = 0
     referral_code: str = Field(default_factory=lambda: uuid.uuid4().hex[:8])
     referred_by: Optional[str] = None
     is_active: bool = True
@@ -95,9 +96,11 @@ class User(BaseModel):
 
 
 class UserPublic(BaseModel):
-    """Vue exposée à l'API — jamais de password_hash."""
+    """Vue exposée à l'API — jamais de password_hash, ni de date de
+    naissance exacte (seulement l'âge calculé)."""
     id: str
     full_name: str
+    age: Optional[int] = None
     gender: Gender
     bio: Optional[str] = None
     city: Optional[str] = None
@@ -106,7 +109,26 @@ class UserPublic(BaseModel):
     verification_status: VerificationStatus
     points: int
     referral_code: str
+    avg_response_seconds: Optional[float] = None
     created_at: str
+
+
+def _age_from_birthdate(birthdate: Optional[str]) -> Optional[int]:
+    if not birthdate:
+        return None
+    try:
+        from datetime import date
+        d = date.fromisoformat(birthdate)
+        today = date.today()
+        return today.year - d.year - ((today.month, today.day) < (d.month, d.day))
+    except ValueError:
+        return None
+
+
+def to_user_public(doc: dict) -> "UserPublic":
+    data = {k: v for k, v in doc.items() if k in UserPublic.model_fields}
+    data["age"] = _age_from_birthdate(doc.get("birthdate"))
+    return UserPublic(**data)
 
 
 class Token(BaseModel):
@@ -198,4 +220,117 @@ class Report(BaseModel):
     reason: str  # "fake_profile" | "abus" | "autre"
     details: Optional[str] = Field(None, max_length=500)
     status: str = "open"  # open | reviewed | dismissed
+    created_at: str = Field(default_factory=_now)
+
+
+# ---------------------------------------------------------------------------
+# Vérification d'identité & modération photo par IA
+# ---------------------------------------------------------------------------
+
+class AiDecision(str, Enum):
+    approved = "approved"
+    rejected = "rejected"
+    needs_review = "needs_review"  # IA incertaine -> escalade humaine
+
+
+DEFAULT_ID_VERIFICATION_PROMPT = (
+    "Tu es un agent de vérification d'identité pour MeetAfrican, un site de "
+    "rencontre. On te montre la photo d'une pièce d'identité (carte "
+    "nationale, passeport, permis) soumise par un utilisateur lors de son "
+    "inscription ou d'une mise à jour de profil.\n\n"
+    "Évalue uniquement :\n"
+    "1. S'agit-il bien d'une pièce d'identité officielle lisible (pas une "
+    "photo floue, tronquée, un écran filmé, un document manifestement "
+    "trafiqué, ou une image sans rapport) ?\n"
+    "2. Le document semble-t-il authentique et cohérent (pas de signe "
+    "évident de montage/falsification) ?\n\n"
+    "Ne tente PAS de vérifier l'identité réelle de la personne (pas de "
+    "comparaison biométrique) — évalue seulement la validité apparente du "
+    "document. En cas de doute, réponds needs_review plutôt que de deviner.\n\n"
+    "Réponds STRICTEMENT en JSON, rien d'autre : "
+    '{"decision": "approved"|"rejected"|"needs_review", "reason": "<courte explication en français>"}'
+)
+
+DEFAULT_PHOTO_MODERATION_PROMPT = (
+    "Tu es un modérateur de contenu pour MeetAfrican, un site de rencontre "
+    "africain. On te montre une photo qu'un utilisateur veut ajouter à son "
+    "album de profil.\n\n"
+    "Rejette (rejected) les photos qui contiennent : nudité ou contenu "
+    "sexuel explicite, violence, symboles haineux, mineurs, informations de "
+    "contact (numéro de téléphone/réseaux sociaux affichés sur l'image), "
+    "publicité manifeste, ou qui sont clairement une image volée/stock/"
+    "célébrité plutôt qu'une photo personnelle.\n"
+    "Approuve (approved) les photos de personnes correctes, habillées, "
+    "conformes à un usage de profil de rencontre.\n"
+    "Si tu n'es pas sûr (photo ambiguë, de groupe, de dos, artistique...), "
+    "réponds needs_review pour une revue humaine plutôt que de deviner.\n\n"
+    "Réponds STRICTEMENT en JSON, rien d'autre : "
+    '{"decision": "approved"|"rejected"|"needs_review", "reason": "<courte explication en français>"}'
+)
+
+
+class ModerationSettings(BaseModel):
+    """Prompts système modifiables par l'admin, et interrupteur global de la
+    vérification automatique par IA (désactivable -> tout passe en revue
+    humaine)."""
+    id: str = "global"
+    ai_auto_enabled: bool = True
+    id_verification_prompt: str = DEFAULT_ID_VERIFICATION_PROMPT
+    photo_moderation_prompt: str = DEFAULT_PHOTO_MODERATION_PROMPT
+
+
+class IdentityVerification(BaseModel):
+    id: str = Field(default_factory=_uuid)
+    user_id: str
+    document_url: str
+    status: VerificationStatus = VerificationStatus.pending
+    ai_decision: Optional[AiDecision] = None
+    ai_reason: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[str] = None
+    created_at: str = Field(default_factory=_now)
+
+
+# ---------------------------------------------------------------------------
+# Matching
+# ---------------------------------------------------------------------------
+
+class SwipeAction(str, Enum):
+    like = "like"
+    pass_ = "pass"
+
+
+class Swipe(BaseModel):
+    id: str = Field(default_factory=_uuid)
+    user_id: str
+    target_user_id: str
+    action: SwipeAction
+    created_at: str = Field(default_factory=_now)
+
+
+class Match(BaseModel):
+    id: str = Field(default_factory=_uuid)
+    user_a: str
+    user_b: str
+    created_at: str = Field(default_factory=_now)
+
+
+# ---------------------------------------------------------------------------
+# Chat
+# ---------------------------------------------------------------------------
+
+class Conversation(BaseModel):
+    id: str = Field(default_factory=_uuid)
+    match_id: str
+    user_a: str
+    user_b: str
+    last_message_at: Optional[str] = None
+    created_at: str = Field(default_factory=_now)
+
+
+class Message(BaseModel):
+    id: str = Field(default_factory=_uuid)
+    conversation_id: str
+    sender_id: str
+    text: str = Field(..., min_length=1, max_length=2000)
     created_at: str = Field(default_factory=_now)
