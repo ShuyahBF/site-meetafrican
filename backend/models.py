@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 def _uuid() -> str:
@@ -54,6 +54,16 @@ class UserRegister(BaseModel):
     gender: Gender
     birthdate: str  # ISO date — validé côté route (âge minimum)
     referral_code: Optional[str] = Field(None, max_length=20)
+
+    @field_validator("email", "phone", "referral_code", mode="before")
+    @classmethod
+    def _blank_optional_to_none(cls, v):
+        """Les champs optionnels du formulaire d'inscription arrivent en ''
+        (pas omis) quand l'utilisateur les laisse vides — à traiter comme
+        "non fourni", pas comme une valeur invalide."""
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
 
 
 class UserLogin(BaseModel):

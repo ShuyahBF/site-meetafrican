@@ -49,16 +49,16 @@ async def add_photo(payload: PhotoCreate, user: dict = Depends(get_current_user)
     else:
         photo.status = PhotoStatus.needs_review
 
+    current = await db.users.find_one({"id": user["id"]}, {"_id": 0, "photos": 1})
+    existing_photos = (current or {}).get("photos", [])
     if payload.is_primary:
-        await db.users.update_one(
-            {"id": user["id"]},
-            {"$set": {"photos.$[p].is_primary": False}},
-            array_filters=[{"p.is_primary": True}],
-        )
+        for p in existing_photos:
+            p["is_primary"] = False
+    new_photos = existing_photos + [photo.model_dump(mode="json")]
 
     await db.users.update_one(
         {"id": user["id"]},
-        {"$push": {"photos": photo.model_dump(mode="json")}, "$set": {"updated_at": _now()}},
+        {"$set": {"photos": new_photos, "updated_at": _now()}},
     )
     return photo
 

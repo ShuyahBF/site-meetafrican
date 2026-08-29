@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { extractErrorMessage } from "@/lib/api";
 
 export default function Login() {
   const { login } = useAuth();
@@ -19,14 +20,14 @@ export default function Login() {
       const isStaff = loggedInUser.role === "admin" || loggedInUser.role === "moderator";
       navigate(isStaff ? "/admin" : "/decouverte");
     } catch (err) {
-      setError(err?.response?.data?.detail || "Identifiants invalides");
+      setError(extractErrorMessage(err, "Identifiants invalides"));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="dark flex min-h-screen w-full flex-col justify-center bg-background-light px-6 py-10 font-display dark:bg-background-dark">
+    <div className="flex min-h-screen w-full flex-col justify-center bg-background-light px-6 py-10 font-display dark:bg-background-dark">
       <h1 className="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Se connecter</h1>
 
       <form onSubmit={submit} className="flex flex-col gap-4">

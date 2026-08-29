@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { apiClient } from "@/lib/api";
+import { apiClient, extractErrorMessage } from "@/lib/api";
 import { uploadFile } from "@/lib/upload";
 import { useAuth } from "@/context/AuthContext";
 import BottomNav from "@/components/BottomNav";
@@ -42,7 +42,7 @@ export default function Profile() {
       const res = await apiClient.post("/me/photos", { url });
       setPhotos((prev) => [...prev, res.data]);
     } catch (err) {
-      setError(err?.response?.data?.detail || "Échec de l'envoi de la photo");
+      setError(extractErrorMessage(err, "Échec de l'envoi de la photo"));
     } finally {
       setUploadingPhoto(false);
       e.target.value = "";
@@ -68,7 +68,7 @@ export default function Profile() {
       await apiClient.post("/me/verification/submit", { document_url: url });
       await refresh();
     } catch (err) {
-      setError(err?.response?.data?.detail || "Échec de l'envoi de la pièce d'identité");
+      setError(extractErrorMessage(err, "Échec de l'envoi de la pièce d'identité"));
     } finally {
       setUploadingDoc(false);
       e.target.value = "";
@@ -78,7 +78,7 @@ export default function Profile() {
   const statusInfo = STATUS_LABEL[user?.verification_status] || STATUS_LABEL.unverified;
 
   return (
-    <div className="dark flex min-h-screen flex-col bg-background-light font-display dark:bg-background-dark">
+    <div className="flex min-h-screen flex-col bg-background-light font-display dark:bg-background-dark">
       <header className="flex items-center justify-between px-4 py-4">
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">Mon profil</h1>
         <button onClick={logout} className="text-sm text-slate-500 dark:text-slate-400">Déconnexion</button>

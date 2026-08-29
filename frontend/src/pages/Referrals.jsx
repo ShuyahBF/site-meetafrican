@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { apiClient } from "@/lib/api";
+import { apiClient, extractErrorMessage } from "@/lib/api";
 
 const PLATFORMS = [
   { key: "whatsapp", label: "WhatsApp", icon: "chat" },
@@ -44,7 +44,7 @@ export default function Referrals() {
       await apiClient.post("/me/referrals/share", { platform });
       load();
     } catch (err) {
-      setNotice(err?.response?.data?.detail || "Partage non comptabilisé");
+      setNotice(extractErrorMessage(err, "Partage non comptabilisé"));
     } finally {
       setBusyPlatform(null);
     }
@@ -53,7 +53,7 @@ export default function Referrals() {
   if (!data) return null;
 
   return (
-    <div className="dark min-h-screen bg-background-light px-4 py-6 font-display dark:bg-background-dark">
+    <div className="min-h-screen bg-background-light px-4 py-6 font-display dark:bg-background-dark">
       <Link to="/profil" className="text-slate-500 dark:text-slate-400">
         <span className="material-symbols-outlined align-middle">arrow_back</span>
       </Link>

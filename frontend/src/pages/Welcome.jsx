@@ -8,7 +8,7 @@ const SLIDES = [
 
 export default function Welcome() {
   return (
-    <div className="dark relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light font-display dark:bg-background-dark">
+    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light font-display dark:bg-background-dark">
       <div className="relative w-full">
         <div className="flex min-h-[40vh] w-full flex-col items-center justify-center bg-[#181113] md:min-h-[50vh]">
           <span className="material-symbols-outlined text-5xl text-white">favorite</span>

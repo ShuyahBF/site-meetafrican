@@ -11,3 +11,19 @@ apiClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+/**
+ * FastAPI renvoie `detail` soit comme une chaîne (HTTPException), soit comme
+ * un tableau d'objets d'erreur de validation Pydantic ({loc, msg, type, ...}).
+ * On ne rend jamais l'un de ces objets directement dans du JSX — toujours
+ * passer par cette fonction pour obtenir une chaîne affichable.
+ */
+export function extractErrorMessage(err, fallback = "Une erreur est survenue") {
+  const detail = err?.response?.data?.detail;
+  if (!detail) return fallback;
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((d) => (typeof d === "string" ? d : d.msg || JSON.stringify(d))).join(" · ");
+  }
+  return fallback;
+}

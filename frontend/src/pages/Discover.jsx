@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { apiClient } from "@/lib/api";
+import { apiClient, extractErrorMessage } from "@/lib/api";
 import BottomNav from "@/components/BottomNav";
 
 function primaryPhotoUrl(candidate) {
@@ -40,14 +40,14 @@ export default function Discover() {
         setMatchInfo({ other_user: current });
       }
     } catch (err) {
-      setError(err?.response?.data?.detail || "Action impossible");
+      setError(extractErrorMessage(err, "Action impossible"));
     } finally {
       setSwiping(false);
     }
   };
 
   return (
-    <div className="dark flex min-h-screen flex-col bg-background-light font-display dark:bg-background-dark">
+    <div className="flex min-h-screen flex-col bg-background-light font-display dark:bg-background-dark">
       <header className="flex items-center justify-between px-4 py-4">
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">Découvrir</h1>
       </header>

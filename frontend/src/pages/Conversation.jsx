@@ -48,7 +48,7 @@ export default function Conversation() {
   };
 
   return (
-    <div className="dark flex min-h-screen flex-col bg-background-light font-display dark:bg-background-dark">
+    <div className="flex min-h-screen flex-col bg-background-light font-display dark:bg-background-dark">
       <header className="flex items-center gap-3 border-b border-slate-800/10 px-4 py-4 dark:border-white/10">
         <Link to="/messages" className="text-slate-500 dark:text-slate-400">
           <span className="material-symbols-outlined">arrow_back</span>

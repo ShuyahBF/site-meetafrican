@@ -7,7 +7,7 @@ préfixé (`maf_<nom>`) — impossible d'oublier le préfixe par erreur.
 """
 from __future__ import annotations
 
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection, AsyncIOMotorDatabase
+from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
 
 from config import get_settings
 
@@ -24,8 +24,21 @@ class PrefixedDatabase:
         return self._database[f"{self._prefix}{name}"]
 
 
+def _make_client(mongo_url: str):
+    # MONGO_URL=mongomock:// -> base en mémoire (mongomock-motor), pratique
+    # pour développer/tester sans connexion réseau à Atlas. Ne jamais utiliser
+    # en production : les données ne persistent pas entre redémarrages.
+    if mongo_url.startswith("mongomock://"):
+        from mongomock_motor import AsyncMongoMockClient
+
+        return AsyncMongoMockClient()
+    from motor.motor_asyncio import AsyncIOMotorClient
+
+    return AsyncIOMotorClient(mongo_url)
+
+
 _settings = get_settings()
-_client = AsyncIOMotorClient(_settings.mongo_url)
+_client = _make_client(_settings.mongo_url)
 _raw_db = _client[_settings.mongo_db_name]
 
 db = PrefixedDatabase(_raw_db, _settings.mongo_collection_prefix)

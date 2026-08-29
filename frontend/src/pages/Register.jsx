@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import { extractErrorMessage } from "@/lib/api";
 
 export default function Register() {
   const { register } = useAuth();
@@ -21,14 +22,14 @@ export default function Register() {
       await register(form);
       navigate("/decouverte");
     } catch (err) {
-      setError(err?.response?.data?.detail || "Erreur lors de l'inscription");
+      setError(extractErrorMessage(err, "Erreur lors de l'inscription"));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="dark flex min-h-screen w-full flex-col bg-background-light px-6 py-10 font-display dark:bg-background-dark">
+    <div className="flex min-h-screen w-full flex-col bg-background-light px-6 py-10 font-display dark:bg-background-dark">
       <h1 className="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Créer un compte</h1>
 
       <form onSubmit={submit} className="flex flex-1 flex-col gap-4">

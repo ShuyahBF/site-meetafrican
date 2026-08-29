@@ -15,7 +15,7 @@ export default function Messages() {
   }, []);
 
   return (
-    <div className="dark flex min-h-screen flex-col bg-background-light font-display dark:bg-background-dark">
+    <div className="flex min-h-screen flex-col bg-background-light font-display dark:bg-background-dark">
       <header className="px-4 py-4">
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">Messages</h1>
       </header>
