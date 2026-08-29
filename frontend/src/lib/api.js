@@ -4,6 +4,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000
 
 export const apiClient = axios.create({ baseURL: API_BASE_URL });
 
+// ws(s):// équivalent de l'URL de l'API, pour le chat temps réel.
+export const WS_BASE_URL = API_BASE_URL.replace(/^http/, "ws");
+
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem("maf_token");
   if (token) {
