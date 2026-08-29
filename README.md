@@ -9,9 +9,9 @@ MeetAfrican — site de rencontre pour hommes et femmes africains.
   [`design/DESIGN_SYSTEM.md`](design/DESIGN_SYSTEM.md).
 - **Implémentation** : auth, abonnements Premium, paiement PawaPay (Mobile Money),
   découverte/matching (swipe), chat, vérification d'identité et modération des
-  photos de profil par IA (Claude vision) fonctionnels de bout en bout. Notation
-  entre comptes, signalement de faux profils, points de parrainage social et
-  back-office admin restent à construire.
+  photos de profil par IA (Claude vision), notation entre comptes, signalement
+  de faux profils, points de parrainage social et back-office admin (`/admin`)
+  fonctionnels de bout en bout.
 
 ## Stack
 
@@ -53,11 +53,17 @@ npm run dev
 L'app tourne sur http://localhost:5173, l'API sur http://localhost:8000/api
 (docs interactives sur `/docs`).
 
+### Accéder au back-office admin
+
+Définir `ADMIN_BOOTSTRAP_EMAIL` / `ADMIN_BOOTSTRAP_PASSWORD` dans `backend/.env`
+avant le premier démarrage : le compte est créé (ou promu admin s'il existe déjà)
+automatiquement. Se connecter ensuite sur `/connexion` avec cet email — la
+redirection vers `/admin` est automatique pour les comptes admin/modérateur.
+
 ## Prochaines étapes
 
-- Notation entre comptes et signalement de faux profils
-- Points de parrainage social (WhatsApp/Facebook/Instagram/TikTok)
-- Back-office admin (interface, pas seulement l'API)
 - Chat en temps réel (WebSocket — actuellement en polling côté frontend)
-- Objet storage S3-compatible pour les photos/pièces d'identité (actuellement
+- Object storage S3-compatible pour les photos/pièces d'identité (actuellement
   stockage local côté serveur, à ne pas garder en production)
+- Gestion des comptes utilisateurs côté admin (liste, désactivation directe,
+  changement de rôle) au-delà des files de modération
