@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Messages - Interface de Messagerie</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#f4256a",
+                        "background-light": "#f8f5f6",
+                        "background-dark": "#221016",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "Noto Sans", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings:
+            'FILL' 0,
+            'wght' 400,
+            'GRAD' 0,
+            'opsz' 24
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark group/design-root overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="sticky top-0 z-10 flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between border-b border-white/10 dark:border-white/10">
+<div class="flex size-12 shrink-0 items-center">
+<span class="material-symbols-outlined text-gray-800 dark:text-white text-2xl">arrow_back</span>
+</div>
+<h1 class="text-gray-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Messages</h1>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 bg-transparent text-gray-800 dark:text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined text-2xl">search</span>
+</button>
+</div>
+</header>
+<!-- Messages List -->
+<main class="flex-grow flex flex-col pt-4">
+<!-- Active Conversation -->
+<a class="flex items-center gap-4 bg-background-light dark:bg-background-dark px-4 min-h-[72px] py-2 justify-between" href="#">
+<div class="flex items-center gap-4 w-full">
+<div class="relative shrink-0">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14" data-alt="Photo de profil de Sophie" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCjf7re65X1OXXHPP5zXgDFgmDXyW-aStE5LT9UE9zeiisRBoOUU_Hes_BGOSYsRmPztkv3i2BcNYksjcZto3HwB5o5P0KQMc8iJzxFgXtTNOhZS6UihUIqReO8Uq5sm2DmKYaaP_e7CanKL1zJ2Z9dhs7H8RPJfrehQjJvGct8oUQDVXY1mwMh9Kk4pNBIApSyHUqhkuV2I17f5zTmO1gKCOpitL48qlJ0yrdnw0sA9_4YtEf7hfPGVTAVGRJxh9yqTwAzu7-jhx0");'></div>
+<div class="absolute bottom-0 right-0 size-4 rounded-full bg-green-500 border-2 border-background-light dark:border-background-dark"></div>
+</div>
+<div class="flex flex-col justify-center flex-grow overflow-hidden">
+<p class="text-gray-900 dark:text-white text-base font-bold leading-normal line-clamp-1">Sophie, 25</p>
+<p class="text-gray-600 dark:text-gray-400 text-sm font-normal leading-normal line-clamp-1">On se voit ce week-end ? J'ai hâte !</p>
+</div>
+<div class="shrink-0 flex flex-col items-end gap-1.5">
+<p class="text-primary text-xs font-bold leading-normal">10:30</p>
+<div class="flex size-6 items-center justify-center rounded-full bg-primary text-white text-xs font-bold"><span>2</span></div>
+</div>
+</div>
+</a>
+<div class="px-4"><div class="h-px w-full bg-gray-200 dark:bg-white/10 my-2"></div></div>
+<!-- Read Conversation -->
+<a class="flex items-center gap-4 bg-background-light dark:bg-background-dark px-4 min-h-[72px] py-2 justify-between" href="#">
+<div class="flex items-center gap-4 w-full">
+<div class="relative shrink-0">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14" data-alt="Photo de profil de Laura" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBsL376V3XILQUrYZ2qmgVj92E_cAXfNfJjeEgoAzCCp_Rj-xLIxJg2QzP5Pf-S0fu8DMLu3trlIQG0a5GIu0faWbqcniejrUIUDJL7JN2wPTf5pYckygfjpIl7vpXmmR_ERx2q0mpysHrbwOOYnaSHKF8GQjqtEPGQbBI2YIcVEb3UVDek3E4Pld2ShTzEBuYvQfEYF6qb9UoU6C-fcnE6DEeOSCSpiiVQgPj4omLfo5Bx1tUZ-xytKAJH7y0EEfmQ9_31T_qSpk8");'></div>
+</div>
+<div class="flex flex-col justify-center flex-grow overflow-hidden">
+<p class="text-gray-900 dark:text-white text-base font-medium leading-normal line-clamp-1">Laura, 28</p>
+<p class="text-gray-500 dark:text-gray-500 text-sm font-normal leading-normal line-clamp-1">Salut ! Ça va bien et toi ?</p>
+</div>
+<div class="shrink-0"><p class="text-gray-500 dark:text-gray-500 text-sm font-normal leading-normal">Hier</p></div>
+</div>
+</a>
+<div class="px-4"><div class="h-px w-full bg-gray-200 dark:bg-white/10 my-2"></div></div>
+<!-- Older Conversation -->
+<a class="flex items-center gap-4 bg-background-light dark:bg-background-dark px-4 min-h-[72px] py-2 justify-between" href="#">
+<div class="flex items-center gap-4 w-full">
+<div class="relative shrink-0">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-14 w-14" data-alt="Photo de profil de Marie" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBAQ86QStGASFcfd2FCAgVqviMQ9q0UfVkV6CPvP-RBW7Z4nobxQH1z5YxqV0dkaJZX6B48Rt9DbhTZwAVbpSwOgPGdWB5iEwSMvAkMHcYa6a94zIB9UOKjpOxev4KHJzdf2WpVGr5_x4oboakUjYelz36CLqA2c0rjzRuv6l1rMWBTVmMjRS0dgplbrAxJAe8WblRX77Tr18pTcYIzFzxMN6zia86Ae8-9RvuvM97fc1ns5zK3h48PmWg9VDPk677BhDgNXyVEIvM");'></div>
+</div>
+<div class="flex flex-col justify-center flex-grow overflow-hidden">
+<p class="text-gray-900 dark:text-white text-base font-medium leading-normal line-clamp-1">Marie, 31</p>
+<p class="text-gray-500 dark:text-gray-500 text-sm font-normal leading-normal line-clamp-1">Haha, c'était super drôle !</p>
+</div>
+<div class="shrink-0"><p class="text-gray-500 dark:text-gray-500 text-sm font-normal leading-normal">2j</p></div>
+</div>
+</a>
+<div class="px-4"><div class="h-px w-full bg-gray-200 dark:bg-white/10 my-2"></div></div>
+<!-- Empty State (Uncomment to view) -->
+<!--
+            <div class="flex flex-col px-4 py-24 flex-grow justify-center">
+                <div class="flex flex-col items-center gap-6 text-center">
+                    <span class="material-symbols-outlined text-7xl text-primary/50">chat_bubble</span>
+                    <div class="flex max-w-sm flex-col items-center gap-2">
+                        <p class="text-gray-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">Aucune conversation pour le moment</p>
+                        <p class="text-gray-600 dark:text-gray-400 text-sm font-normal leading-normal">Vos conversations apparaîtront ici. Continuez à swiper !</p>
+                    </div>
+                    <button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-6 bg-primary text-white text-sm font-bold leading-normal tracking-[0.015em]">
+                        <span class="truncate">Trouver des matchs</span>
+                    </button>
+                </div>
+            </div>
+            -->
+</main>
+</div>
+</body></html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Passez à Premium</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#f4256a",
+              "background-light": "#f8f5f6",
+              "background-dark": "#181113",
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans", "Noto Sans", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "1.5rem", "xl": "2rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings:
+        'FILL' 1,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+      }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="flex items-center p-4 pb-2 sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm">
+<button class="text-slate-800 dark:text-white flex size-12 shrink-0 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/5">
+<span class="material-symbols-outlined text-2xl">arrow_back</span>
+</button>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center pr-12">Passez à Premium</h2>
+</header>
+<main class="flex-1 pb-40">
+<!-- Headline Text -->
+<h1 class="text-slate-900 dark:text-white tracking-tight text-[32px] font-bold leading-tight px-4 text-center pb-3 pt-6">Faites des rencontres sans limites</h1>
+<p class="text-slate-600 dark:text-slate-400 text-center px-6 pb-6">Débloquez toutes les fonctionnalités et multipliez vos chances de trouver la bonne personne.</p>
+<!-- Pricing Cards -->
+<div class="grid grid-cols-1 gap-4 px-4 py-3 sm:grid-cols-3">
+<!-- 1 Week Plan -->
+<div class="flex flex-1 flex-col gap-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#271b1f]/50 p-6">
+<div class="flex flex-col gap-1">
+<h3 class="text-slate-900 dark:text-white text-base font-bold leading-tight">1 Semaine</h3>
+<p class="flex items-baseline gap-1.5 text-slate-900 dark:text-white">
+<span class="text-4xl font-black leading-tight tracking-[-0.033em]">7,99€</span>
+<span class="text-slate-600 dark:text-slate-400 text-sm font-medium leading-tight">par semaine</span>
+</p>
+</div>
+<div class="flex flex-col gap-2 pt-2">
+<div class="text-[13px] font-normal leading-normal flex items-center gap-3 text-slate-700 dark:text-slate-300">
+<span class="material-symbols-outlined text-primary text-xl">check</span>
+                        Accès illimité au chat
+                    </div>
+<div class="text-[13px] font-normal leading-normal flex items-center gap-3 text-slate-700 dark:text-slate-300">
+<span class="material-symbols-outlined text-primary text-xl">check</span>
+                        Voir toutes les photos
+                    </div>
+<div class="text-[13px] font-normal leading-normal flex items-center gap-3 text-slate-700 dark:text-slate-300">
+<span class="material-symbols-outlined text-primary text-xl">check</span>
+                        Filtres de recherche avancée
+                    </div>
+</div>
+</div>
+<!-- 12 Months Plan (Featured) -->
+<div class="relative flex flex-1 flex-col gap-4 rounded-lg border-2 border-primary bg-white dark:bg-[#271b1f]/50 p-6 ring-4 ring-primary/20 dark:ring-primary/10">
+<p class="absolute -top-3.5 left-1/2 -translate-x-1/2 text-white text-xs font-bold leading-normal tracking-[0.015em] rounded-full bg-primary px-3 py-1.5 text-center shadow-lg shadow-primary/30">Meilleure offre</p>
+<div class="flex flex-col gap-1">
+<h3 class="text-slate-900 dark:text-white text-base font-bold leading-tight">12 Mois</h3>
+<p class="flex items-baseline gap-1.5 text-slate-900 dark:text-white">
+<span class="text-4xl font-black leading-tight tracking-[-0.033em]">89,99€</span>
+<span class="text-slate-600 dark:text-slate-400 text-sm font-medium leading-tight">par an</span>
+</p>
+<p class="text-green-600 dark:text-green-400 text-xs font-bold">Économisez 78%</p>
+</div>
+<div class="flex flex-col gap-2 pt-2">
+<div class="text-[13px] font-normal leading-normal flex items-center gap-3 text-slate-700 dark:text-slate-300">
+<span class="material-symbols-outlined text-primary text-xl">check</span>
+                        Accès illimité au chat
+                    </div>
+<div class="text-[13px] font-normal leading-normal flex items-center gap-3 text-slate-700 dark:text-slate-300">
+<span class="material-symbols-outlined text-primary text-xl">check</span>
+                        Voir toutes les photos
+                    </div>
+<div class="text-[13px] font-normal leading-normal flex items-center gap-3 text-slate-700 dark:text-slate-300">
+<span class="material-symbols-outlined text-primary text-xl">check</span>
+                        Filtres de recherche avancée
+                    </div>
+<div class="text-[13px] font-normal leading-normal flex items-center gap-3 text-slate-700 dark:text-slate-300">
+<span class="material-symbols-outlined text-primary text-xl">check</span>
+                        Voir qui a visité votre profil
+                    </div>
+<div class="text-[13px] font-normal leading-normal flex items-center gap-3 text-slate-700 dark:text-slate-300">
+<span class="material-symbols-outlined text-primary text-xl">check</span>
+                        Navigation sans publicité
+                    </div>
+</div>
+</div>
+<!-- 1 Month Plan -->
+<div class="relative flex flex-1 flex-col gap-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#271b1f]/50 p-6">
+<p class="absolute -top-3.5 left-1/2 -translate-x-1/2 text-slate-700 dark:text-slate-300 text-xs font-bold leading-normal tracking-[0.015em] rounded-full bg-slate-200 dark:bg-slate-700 px-3 py-1.5 text-center">Populaire</p>
+<div class="flex flex-col gap-1">
+<h3 class="text-slate-900 dark:text-white text-base font-bold leading-tight">1 Mois</h3>
+<p class="flex items-baseline gap-1.5 text-slate-900 dark:text-white">
+<span class="text-4xl font-black leading-tight tracking-[-0.033em]">19,99€</span>
+<span class="text-slate-600 dark:text-slate-400 text-sm font-medium leading-tight">par mois</span>
+</p>
+</div>
+<div class="flex flex-col gap-2 pt-2">
+<div class="text-[13px] font-normal leading-normal flex items-center gap-3 text-slate-700 dark:text-slate-300">
+<span class="material-symbols-outlined text-primary text-xl">check</span>
+                        Accès illimité au chat
+                    </div>
+<div class="text-[13px] font-normal leading-normal flex items-center gap-3 text-slate-700 dark:text-slate-300">
+<span class="material-symbols-outlined text-primary text-xl">check</span>
+                        Voir toutes les photos
+                    </div>
+<div class="text-[13px] font-normal leading-normal flex items-center gap-3 text-slate-700 dark:text-slate-300">
+<span class="material-symbols-outlined text-primary text-xl">check</span>
+                        Filtres de recherche avancée
+                    </div>
+<div class="text-[13px] font-normal leading-normal flex items-center gap-3 text-slate-700 dark:text-slate-300">
+<span class="material-symbols-outlined text-primary text-xl">check</span>
+                        Voir qui a visité votre profil
+                    </div>
+</div>
+</div>
+</div>
+</main>
+<!-- Sticky Footer CTA -->
+<footer class="fixed bottom-0 left-0 right-0 p-4 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm border-t border-slate-200 dark:border-slate-800">
+<div class="flex flex-col items-center gap-3">
+<button class="flex w-full max-w-md cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-5 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] shadow-lg shadow-primary/30 hover:bg-opacity-90 transition-opacity">
+<span class="truncate">Choisir mon abonnement</span>
+</button>
+<p class="text-slate-500 dark:text-slate-400 text-sm font-normal leading-normal text-center underline cursor-pointer">L'abonnement se renouvelle automatiquement. Annulez à tout moment.</p>
+</div>
+</footer>
+</div>
+</body></html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Matching Screen</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#ee2b8c",
+              "background-light": "#f8f6f7",
+              "background-dark": "#221019",
+            },
+            fontFamily: {
+              "display": ["Plus Jakarta Sans", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-screen w-full max-w-md mx-auto flex-col overflow-hidden">
+<!-- Top App Bar -->
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 z-20">
+<div class="flex size-12 shrink-0 items-center">
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="User's profile picture, a smiling woman." style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCvbzDYxReMDmC4JcbGnDCLHHYLv6VgsPjm4Hc6oMIi3Ew7sEcffn0W4YlQYBoqNyjZtm8TcovI1y8YrLyzj9lF9B-uMomv-Zh0hIMPO1H28-hIlHPKH4aueFvCbieFkesF_JAIqlixbIVmFwPEOv3yDcYXeG8QWv4q7PyV9uYUm4R9Ea9hKrqS9Yvv-UBF3eHfaac4gxliYzBWug3F4rqtdX5oytWkB7YnKcVaWhIxrPfpawnBnSohNGV462MQonKGzdYTdsRrwqs");'></div>
+</div>
+<h2 class="text-slate-800 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Découvrir</h2>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 bg-transparent text-slate-800 dark:text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined text-slate-500 dark:text-slate-400">
+                        chat
+                    </span>
+</button>
+</div>
+</div>
+<!-- Main Content: Profile Card -->
+<main class="flex flex-col flex-grow items-center justify-center p-4 pt-0">
+<div class="relative w-full aspect-[9/14] flex-grow max-h-full">
+<!-- Profile Card -->
+<div class="absolute inset-0 flex flex-col items-stretch justify-end rounded-xl overflow-hidden shadow-2xl">
+<div class="absolute inset-0 bg-cover bg-center" data-alt="Photo of Camila smiling outdoors." style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBM8JYolaQsmKw2oqTF5cGyQDQWmYfJHAyATdK6AJGAzCZ9VIIvcAqSEYoPEoPrQPLzr_eOj4eCT2aJaAnkK9geDMU39TOD28Qmrm8dmTu4VFVhDScGMUapmFJ-B0xzSz0xOVsNuwL-Lu_fWSiOnZMBI4kWVbJCH-sVtFqT0N3Njde8HFNloa4CxjEwtYMQZ82cPl65Dy28tt7ugkH1gM-dL3sWC7eiKbnWaFiL9hEBuilazgMH3BpDsojjsrZiOPXrGSCH9XYZnV8");'></div>
+<div class="absolute inset-x-0 top-0 p-2">
+<!-- Page Indicators -->
+<div class="flex w-full flex-row items-center justify-center gap-1.5">
+<div class="h-1 flex-1 rounded-full bg-white/90"></div>
+<div class="h-1 flex-1 rounded-full bg-white/40"></div>
+<div class="h-1 flex-1 rounded-full bg-white/40"></div>
+</div>
+</div>
+<div class="relative z-10 w-full bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-24">
+<div class="flex items-end justify-between gap-4 p-4">
+<div class="flex flex-1 flex-col gap-1">
+<p class="text-white tracking-light text-2xl font-bold leading-tight">Camila, 26</p>
+<p class="text-white/90 text-base font-medium leading-normal">à 5 km</p>
+</div>
+<button class="flex items-center justify-center size-12 rounded-full bg-white/20 backdrop-blur-sm">
+<span class="material-symbols-outlined text-white text-3xl">info</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Actions Bar -->
+<div class="px-4 pb-4">
+<div class="grid grid-cols-5 items-center gap-2">
+<div class="flex flex-col items-center gap-2 text-center">
+<button class="flex items-center justify-center size-14 rounded-full bg-slate-200 dark:bg-white/10 text-amber-500 hover:bg-slate-300 dark:hover:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-3xl">replay</span>
+</button>
+</div>
+<div class="flex flex-col items-center gap-2 text-center">
+<button class="flex items-center justify-center size-20 rounded-full bg-slate-200 dark:bg-white/10 text-red-500 hover:bg-slate-300 dark:hover:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-5xl">close</span>
+</button>
+</div>
+<div class="flex flex-col items-center gap-2 text-center">
+<button class="flex items-center justify-center size-14 rounded-full bg-slate-200 dark:bg-white/10 text-sky-400 hover:bg-slate-300 dark:hover:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-3xl">star</span>
+</button>
+</div>
+<div class="flex flex-col items-center gap-2 text-center">
+<button class="flex items-center justify-center size-20 rounded-full bg-primary text-white hover:bg-primary/90 transition-colors">
+<span class="material-symbols-outlined text-5xl">favorite</span>
+</button>
+</div>
+<div class="flex flex-col items-center gap-2 text-center">
+<button class="flex items-center justify-center size-14 rounded-full bg-slate-200 dark:bg-white/10 text-purple-500 hover:bg-slate-300 dark:hover:bg-white/20 transition-colors">
+<span class="material-symbols-outlined text-3xl">bolt</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<div class="flex gap-2 border-t border-slate-200 dark:border-white/10 bg-background-light dark:bg-background-dark px-4 pb-3 pt-2 z-20">
+<a class="flex flex-1 flex-col items-center justify-end gap-1 rounded-full text-primary" href="#">
+<span class="material-symbols-outlined !text-3xl" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<p class="text-primary text-xs font-bold leading-normal tracking-[0.015em]">Découvrir</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined !text-3xl">diamond</span>
+<p class="text-slate-400 dark:text-slate-500 text-xs font-medium leading-normal tracking-[0.015em]">Top Picks</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined !text-3xl">favorite</span>
+<p class="text-slate-400 dark:text-slate-500 text-xs font-medium leading-normal tracking-[0.015em]">Likes</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-slate-400 dark:text-slate-500" href="#">
+<span class="material-symbols-outlined !text-3xl">chat</span>
+<p class="text-slate-400 dark:text-slate-500 text-xs font-medium leading-normal tracking-[0.015em]">Messages</p>
+</a>
+</div>
+<!-- Match Modal (Initially hidden, shown on match) -->
+<div class="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
+<div class="bg-background-light dark:bg-background-dark w-full max-w-sm rounded-xl p-6 text-center flex flex-col items-center shadow-2xl">
+<div class="relative w-full flex justify-center items-center h-28">
+<div class="absolute left-1/2 -translate-x-[75%] size-28 rounded-full border-4 border-background-light dark:border-background-dark bg-cover bg-center shadow-lg" data-alt="User's profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCh9LsyZImqGQf8fV9JoIjWYaCJUCv4C7gZu9J9tFi_w8zzvkECbmeeFPZtPt5puCmS9VrzOfhyOlIetZ0fCR6uPqXwnCTLYwjXiiM-aGcP5LrvO5R5bYdkqNFLBeut7RSR79IcD77vl1VL17rcXeYKWvdztbzFohDINQWFHrGn3lnD9r28-Fc9O1EjEeWoCLDdh9zrUkT_OY1gi2EdqGWhcGBg359L29Cgsr5GZEavCkWYsuxBaBVzri1FSJDf3urm5WK_Ev7CWWo");'></div>
+<div class="absolute left-1/2 -translate-x-[25%] size-28 rounded-full border-4 border-background-light dark:border-background-dark bg-cover bg-center shadow-lg" data-alt="Matched user's profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBFxfASvE1z-fHrz16xa7x1CFwHNwZAoHI02x2eTB0ZuOsdWduhR-ouhEuc078BIgiWOuqDqMpuEODF3mip0ulDSBUVTqLFvS5UmFL2s7h8XNdMnzqlCKHgX2XJXnV6m2B_ER0eTvh0bZEKgGsL2QtDHohh_dAmS2Wb5cFRXBVUbd7Gx1e2mmGa6rk57tuxqZ3vXmJwvabuMdUU1K47gMzvEXjqVnoLr5X-EMC5s_oX7MIHWsuyfiAnUICoCzXMgdSwC19_n42Mmcw");'></div>
+</div>
+<h2 class="text-primary text-3xl font-extrabold mt-6">C'est un Match !</h2>
+<p class="text-slate-600 dark:text-slate-300 mt-2">Vous vous plaisez mutuellement avec Camila !</p>
+<p class="text-slate-500 dark:text-slate-400 mt-4 text-sm">Passez à l'abonnement Premium pour commencer à discuter.</p>
+<button class="w-full mt-6 flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-4 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors">
+<span class="truncate">Découvrir nos offres</span>
+</button>
+<button class="w-full mt-3 flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-4 bg-transparent text-slate-500 dark:text-slate-400 text-base font-bold leading-normal tracking-[0.015em] hover:bg-slate-200 dark:hover:bg-white/10 transition-colors">
+<span class="truncate">Continuer à swiper</span>
+</button>
+</div>
+</div>
+</div>
+</body></html>

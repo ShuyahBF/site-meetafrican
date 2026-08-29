@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html class="dark" lang="fr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Administration Panel</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#135bec",
+              "background-light": "#f6f6f8",
+              "background-dark": "#101622",
+            },
+            fontFamily: {
+              "display": ["Manrope", "sans-serif"]
+            },
+            borderRadius: {
+                "DEFAULT": "0.25rem", 
+                "lg": "0.5rem", 
+                "xl": "0.75rem", 
+                "full": "9999px"
+            },
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Manrope', sans-serif;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark">
+<div class="relative flex h-auto min-h-screen w-full flex-col font-display text-[#1f2937] dark:text-white">
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between sticky top-0 z-10 border-b border-white/10">
+<div class="flex size-12 shrink-0 items-center">
+<span class="material-symbols-outlined text-primary text-3xl">shield_person</span>
+</div>
+<h1 class="text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Administration</h1>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-transparent gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined">logout</span>
+</button>
+</div>
+</div>
+<main class="flex-1 p-4">
+<h2 class="text-2xl font-bold leading-tight tracking-[-0.015em] pb-3 pt-2">Tableau de Bord</h2>
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+<div class="flex min-w-[120px] flex-1 flex-col gap-2 rounded-xl p-4 border border-[#e5e7eb] dark:border-white/20 bg-white dark:bg-white/5">
+<p class="text-sm font-medium leading-normal text-gray-600 dark:text-gray-300">Nouveaux signalements</p>
+<p class="text-primary tracking-light text-2xl font-bold leading-tight">12</p>
+</div>
+<div class="flex min-w-[120px] flex-1 flex-col gap-2 rounded-xl p-4 border border-[#e5e7eb] dark:border-white/20 bg-white dark:bg-white/5">
+<p class="text-sm font-medium leading-normal text-gray-600 dark:text-gray-300">Inscriptions</p>
+<p class="tracking-light text-2xl font-bold leading-tight">84</p>
+</div>
+<div class="flex min-w-[120px] flex-1 flex-col gap-2 rounded-xl p-4 border border-[#e5e7eb] dark:border-white/20 bg-white dark:bg-white/5 col-span-2 sm:col-span-1">
+<p class="text-sm font-medium leading-normal text-gray-600 dark:text-gray-300">Abonnés actifs</p>
+<p class="tracking-light text-2xl font-bold leading-tight">1,234</p>
+</div>
+</div>
+<h2 class="text-2xl font-bold leading-tight tracking-[-0.015em] pb-3 pt-8">Modération Automatique</h2>
+<div class="flex flex-col gap-4">
+<div class="rounded-xl border border-[#e5e7eb] dark:border-white/20 bg-white dark:bg-white/5 p-4">
+<div class="flex items-start justify-between">
+<div>
+<p class="text-lg font-bold">Antoine L.</p>
+<p class="text-sm text-gray-600 dark:text-gray-300">#ID-789012</p>
+<div class="mt-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-amber-500 text-lg">history</span>
+<p class="text-sm font-medium text-amber-500">2 alertes précédentes</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="h-10 px-4 rounded-lg bg-red-600 text-white font-semibold text-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-base">block</span>
+<span>Bloquer</span>
+</button>
+</div>
+</div>
+<div class="mt-4 grid grid-cols-2 gap-3">
+<div class="relative">
+<img alt="Photo à modérer 1" class="aspect-square w-full rounded-lg object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBCYBkrovpcQ3IkSFqDCtEMehFOy54VQHBllPC9BGAy1iLvs76d_ncmecikJUdUOeQ6u_p7Nd9-loVvsSPmTdNIq0oqh_XjpMgHH3NTwTuj6wdpfWfi8OabkW8pTzlspgLBrNAiYHk5OCoLav-ouHOqoZm4UAC1TqEmFX4g9gob-YM5cQDOCjnt5cXORD2X7ynQrHxtuzN07FZbPtelkA1gkk1kh4IBFieLa9mvkGAZLrRerHgjD2MQjFE-Hm5BNJpOo3gSXZ_ZgtQ"/>
+<div class="absolute inset-0 bg-black/40 rounded-lg"></div>
+<div class="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-red-600/80 px-2 py-1 text-xs font-semibold text-white">
+<span class="material-symbols-outlined text-sm">error</span>
+<span>Nudité</span>
+</div>
+</div>
+<div class="relative">
+<img alt="Photo à modérer 2" class="aspect-square w-full rounded-lg object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbm0vcIvMH1_UvAfmb1lUkpAb9f-8NP2SvsVhFNdeHvRft0mYI4-qZOpTlqkzhswTmqs2QTAGrXhFnKlAjlGdxAg5hBsWB8tf8To_UiomsoCT7gwO7ONgEs_wRpb05wcoaZe3k2ohtBzJ944OvutY0oZwj3xTlvvh0v_TzZBCBdYdykotncGqjT2qSW_Sl-PGOOi6TCxmFEph8qVCvnEtGBt8jhaHJW6PqQUZKyWzW2EY4jP7zb6iV-hDvKm1LF2wNWEynbsxKcvA"/>
+<div class="absolute inset-0 bg-black/40 rounded-lg"></div>
+<div class="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-orange-500/80 px-2 py-1 text-xs font-semibold text-white">
+<span class="material-symbols-outlined text-sm">error</span>
+<span>Suggestif</span>
+</div>
+</div>
+</div>
+</div>
+<div class="rounded-xl border border-[#e5e7eb] dark:border-white/20 bg-white dark:bg-white/5 p-4">
+<div class="flex items-start justify-between">
+<div>
+<p class="text-lg font-bold">Juliette M.</p>
+<p class="text-sm text-gray-600 dark:text-gray-300">#ID-345678</p>
+<div class="mt-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-green-500 text-lg">check_circle</span>
+<p class="text-sm font-medium text-green-500">Aucune alerte</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="h-10 px-4 rounded-lg bg-red-600/50 text-white font-semibold text-sm flex items-center gap-2" disabled="">
+<span class="material-symbols-outlined text-base">block</span>
+<span>Bloquer</span>
+</button>
+</div>
+</div>
+<div class="mt-4 grid grid-cols-2 gap-3">
+<div class="relative">
+<img alt="Photo à modérer 3" class="aspect-square w-full rounded-lg object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeOKPYsiZjHbdRKZdy0vE1FwCxah7LpeUn7YU3QHDmRC7vFque_b-QfbWg0B67Kg0VMYnnEr2xcRmlujXGc2iZdeOMtaUNuJt6gah4E4P003GEWbWhgMBnJAblhtwraGMaUcdoeveGOaXA2hv5Msp0lhzhmNpQj1fYul2CG1dnv9JRAIx7SvLOEPCKVANGVl6ejTB97No8uXeJyVL68oPj5C0N_PJginR5C0oxRrDOILRuqjKvppTsR_3RtG6_91KGPxlE-7Vkv5w"/>
+<div class="absolute inset-0 bg-black/40 rounded-lg"></div>
+<div class="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-red-600/80 px-2 py-1 text-xs font-semibold text-white">
+<span class="material-symbols-outlined text-sm">error</span>
+<span>Obscène</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<h2 class="text-2xl font-bold leading-tight tracking-[-0.015em] pb-3 pt-8">Actions Rapides</h2>
+<div class="py-3">
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-xl h-full shadow-sm">
+<div class="text-[#9e9e9e] dark:text-[#9da6b9] flex border border-r-0 border-[#e5e7eb] dark:border-white/20 bg-white dark:bg-[#282e39] items-center justify-center pl-4 rounded-l-xl">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-r-xl text-black dark:text-white focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset border-y border-r border-[#e5e7eb] dark:border-white/20 bg-white dark:bg-[#282e39] h-full placeholder:text-[#9e9e9e] dark:placeholder:text-[#9da6b9] px-4 pl-2 text-base font-normal leading-normal" placeholder="Rechercher un utilisateur..." value=""/>
+</div>
+</label>
+</div>
+<div class="flex flex-col gap-3 pt-2">
+<a class="flex items-center gap-4 rounded-xl p-3 min-h-14 justify-between bg-white dark:bg-white/5 border border-[#e5e7eb] dark:border-white/20 transition-transform active:scale-[0.98]" href="#">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center rounded-lg bg-primary/20 shrink-0 size-10 text-primary">
+<span class="material-symbols-outlined">group</span>
+</div>
+<p class="text-base font-medium leading-normal flex-1 truncate">Gérer les Utilisateurs</p>
+</div>
+<div class="shrink-0">
+<div class="text-gray-400 dark:text-gray-500 flex size-7 items-center justify-center">
+<span class="material-symbols-outlined">arrow_forward_ios</span>
+</div>
+</div>
+</a>
+<a class="flex items-center gap-4 rounded-xl p-3 min-h-14 justify-between bg-white dark:bg-white/5 border border-[#e5e7eb] dark:border-white/20 transition-transform active:scale-[0.98]" href="#">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center rounded-lg bg-primary/20 shrink-0 size-10 text-primary">
+<span class="material-symbols-outlined">bar_chart</span>
+</div>
+<p class="text-base font-medium leading-normal flex-1 truncate">Voir les Statistiques</p>
+</div>
+<div class="shrink-0">
+<div class="text-gray-400 dark:text-gray-500 flex size-7 items-center justify-center">
+<span class="material-symbols-outlined">arrow_forward_ios</span>
+</div>
+</div>
+</a>
+<a class="flex items-center gap-4 rounded-xl p-3 min-h-14 justify-between bg-white dark:bg-white/5 border border-[#e5e7eb] dark:border-white/20 transition-transform active:scale-[0.98]" href="#">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center rounded-lg bg-primary/20 shrink-0 size-10 text-primary">
+<span class="material-symbols-outlined">credit_card</span>
+</div>
+<p class="text-base font-medium leading-normal flex-1 truncate">Gérer les Abonnements</p>
+</div>
+<div class="shrink-0">
+<div class="text-gray-400 dark:text-gray-500 flex size-7 items-center justify-center">
+<span class="material-symbols-outlined">arrow_forward_ios</span>
+</div>
+</div>
+</a>
+<a class="flex items-center gap-4 rounded-xl p-3 min-h-14 justify-between bg-white dark:bg-white/5 border border-[#e5e7eb] dark:border-white/20 transition-transform active:scale-[0.98]" href="#">
+<div class="flex items-center gap-4">
+<div class="flex items-center justify-center rounded-lg bg-primary/20 shrink-0 size-10 text-primary">
+<span class="material-symbols-outlined">settings</span>
+</div>
+<p class="text-base font-medium leading-normal flex-1 truncate">Paramètres</p>
+</div>
+<div class="shrink-0">
+<div class="text-gray-400 dark:text-gray-500 flex size-7 items-center justify-center">
+<span class="material-symbols-outlined">arrow_forward_ios</span>
+</div>
+</div>
+</a>
+</div>
+</main>
+</div>
+</body></html>
