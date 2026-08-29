@@ -8,10 +8,11 @@ MeetAfrican — site de rencontre pour hommes et femmes africains.
   [`design/stitch-exports/`](design/stitch-exports). Charte graphique extraite dans
   [`design/DESIGN_SYSTEM.md`](design/DESIGN_SYSTEM.md).
 - **Implémentation** : auth, abonnements Premium, paiement PawaPay (Mobile Money),
-  découverte/matching (swipe), chat, vérification d'identité et modération des
-  photos de profil par IA (Claude vision), notation entre comptes, signalement
-  de faux profils, points de parrainage social et back-office admin (`/admin`)
-  fonctionnels de bout en bout.
+  découverte/matching (swipe), chat temps réel (WebSocket), vérification
+  d'identité et modération des photos de profil par IA (Claude vision), notation
+  entre comptes, signalement de faux profils, points de parrainage social et
+  back-office admin (`/admin`) fonctionnels de bout en bout — testés en local
+  (voir section Tests ci-dessous).
 
 ## Stack
 
@@ -60,10 +61,18 @@ avant le premier démarrage : le compte est créé (ou promu admin s'il existe d
 automatiquement. Se connecter ensuite sur `/connexion` avec cet email — la
 redirection vers `/admin` est automatique pour les comptes admin/modérateur.
 
+### Tests sans accès à MongoDB Atlas
+
+`MONGO_URL=mongomock://` dans `.env` bascule vers une base MongoDB **en
+mémoire** (`backend/requirements-dev.txt`), pratique pour développer/tester sans
+connexion réseau — les données ne persistent pas entre redémarrages, **à ne
+jamais utiliser en production**.
+
 ## Prochaines étapes
 
-- Chat en temps réel (WebSocket — actuellement en polling côté frontend)
 - Object storage S3-compatible pour les photos/pièces d'identité (actuellement
   stockage local côté serveur, à ne pas garder en production)
 - Gestion des comptes utilisateurs côté admin (liste, désactivation directe,
   changement de rôle) au-delà des files de modération
+- Auto-hébergement de la police d'icônes (Material Symbols) : actuellement
+  chargée depuis Google Fonts, donc dépendante de sa disponibilité réseau
