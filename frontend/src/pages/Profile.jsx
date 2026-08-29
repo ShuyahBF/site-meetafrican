@@ -38,7 +38,7 @@ export default function Profile() {
     setError("");
     setUploadingPhoto(true);
     try {
-      const { url } = await uploadFile(file);
+      const { url } = await uploadFile(file, "photo");
       const res = await apiClient.post("/me/photos", { url });
       setPhotos((prev) => [...prev, res.data]);
     } catch (err) {
@@ -64,8 +64,8 @@ export default function Profile() {
     setError("");
     setUploadingDoc(true);
     try {
-      const { url } = await uploadFile(file);
-      await apiClient.post("/me/verification/submit", { document_url: url });
+      const { key } = await uploadFile(file, "document");
+      await apiClient.post("/me/verification/submit", { document_key: key });
       await refresh();
     } catch (err) {
       setError(extractErrorMessage(err, "Échec de l'envoi de la pièce d'identité"));

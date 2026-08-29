@@ -4,7 +4,12 @@ du compte ou à toute resoumission ultérieure.
 Le compte reste `pending` (non confirmé) tant qu'une pièce valide n'a pas été
 approuvée. L'IA peut trancher automatiquement (activable/désactivable par
 l'admin) ; en cas de doute ou si l'IA est désactivée, la demande passe en
-revue humaine (modérateur/admin)."""
+revue humaine (modérateur/admin).
+
+La pièce d'identité elle-même n'est JAMAIS exposée via une URL publique
+permanente : on ne stocke que sa clé d'objet privée, et une URL d'accès
+temporaire est générée à la demande (analyse IA au moment de la soumission,
+affichage en revue admin)."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -22,6 +27,7 @@ from models import (
     ModerationSettings,
     VerificationStatus,
 )
+from storage import presigned_document_url
 
 router = APIRouter(tags=["Vérification d'identité"])
 
@@ -36,16 +42,17 @@ async def _moderation_settings() -> ModerationSettings:
 
 
 class VerificationSubmit(BaseModel):
-    document_url: str
+    document_key: str
 
 
 @router.post("/me/verification/submit", response_model=IdentityVerification, status_code=201)
 async def submit_verification(payload: VerificationSubmit, user: dict = Depends(get_current_user)):
     settings = await _moderation_settings()
-    verification = IdentityVerification(user_id=user["id"], document_url=payload.document_url)
+    verification = IdentityVerification(user_id=user["id"], document_key=payload.document_key)
 
     if settings.ai_auto_enabled:
-        result = await analyze_image(payload.document_url, settings.id_verification_prompt or DEFAULT_ID_VERIFICATION_PROMPT)
+        view_url = await presigned_document_url(payload.document_key)
+        result = await analyze_image(view_url, settings.id_verification_prompt or DEFAULT_ID_VERIFICATION_PROMPT)
         verification.ai_decision = result.decision
         verification.ai_reason = result.reason
         if result.decision == "approved":
@@ -74,11 +81,13 @@ async def my_verifications(user: dict = Depends(get_current_user)):
     return items
 
 
-@router.get("/admin/verification/pending", response_model=List[IdentityVerification])
+@router.get("/admin/verification/pending")
 async def pending_verifications(_: dict = Depends(get_current_admin)):
     items = await db.identity_verifications.find(
         {"status": VerificationStatus.pending.value}, {"_id": 0}
     ).sort("created_at", 1).to_list(200)
+    for item in items:
+        item["document_view_url"] = await presigned_document_url(item["document_key"])
     return items
 
 

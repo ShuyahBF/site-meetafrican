@@ -29,6 +29,16 @@ MeetAfrican — site de rencontre pour hommes et femmes africains.
   par l'admin (`/api/admin/settings/moderation`) ; décision `approved` /
   `rejected` / `needs_review` — ce dernier cas et la désactivation globale de l'IA
   déclenchent une revue humaine (voir `backend/ai_moderation.py`).
+- **Stockage des fichiers** : Cloudflare R2 (compatible S3), deux buckets aux
+  usages différents (voir `backend/storage.py`) :
+  - `meetafrican-photos` — **public**, album profil (visible dans le fil de
+    découverte) ;
+  - `meetafrican-documents` — **privé**, pièces d'identité. Jamais d'URL
+    publique permanente : une URL présignée à courte durée de vie est générée
+    à la demande (analyse IA, revue admin), jamais stockée.
+  Un mode `STORAGE_BACKEND=local` (disque du serveur) reste disponible pour
+  développer sans configurer R2 — à ne jamais utiliser en production (fichiers
+  perdus à chaque redéploiement, `/api/private-files` non protégée).
 
 ## Démarrer en local
 
@@ -68,10 +78,22 @@ mémoire** (`backend/requirements-dev.txt`), pratique pour développer/tester sa
 connexion réseau — les données ne persistent pas entre redémarrages, **à ne
 jamais utiliser en production**.
 
+### Configurer Cloudflare R2 (production)
+
+1. Dashboard Cloudflare → **R2** → créer deux buckets : `meetafrican-photos` et
+   `meetafrican-documents`.
+2. Sur `meetafrican-photos` : Settings → Public access → activer un accès public
+   (domaine personnalisé recommandé, ex. `photos.meetafrican.com` ; l'URL
+   `r2.dev` fournie par défaut convient pour tester). Renseigner cette URL dans
+   `R2_PUBLIC_PHOTOS_BASE_URL`.
+3. `meetafrican-documents` reste **privé** — ne rien activer dessus.
+4. R2 → **Manage API Tokens** → créer un token avec droits Read & Write sur ces
+   deux buckets → récupérer Account ID, Access Key ID, Secret Access Key.
+5. Dans `backend/.env` : `STORAGE_BACKEND=r2` + les 5 variables `R2_*`
+   correspondantes.
+
 ## Prochaines étapes
 
-- Object storage S3-compatible pour les photos/pièces d'identité (actuellement
-  stockage local côté serveur, à ne pas garder en production)
 - Gestion des comptes utilisateurs côté admin (liste, désactivation directe,
   changement de rôle) au-delà des files de modération
 - Auto-hébergement de la police d'icônes (Material Symbols) : actuellement

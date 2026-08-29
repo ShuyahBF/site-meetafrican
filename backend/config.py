@@ -34,11 +34,27 @@ class Settings(BaseSettings):
     pawapay_callback_secret: Optional[str] = None
     pawapay_default_country: str = "BFA"
 
-    # Object storage (photos, pièces d'identité) — stockage local pour démarrer,
-    # à remplacer par un object storage (S3-compatible) avant la production.
-    uploads_dir: str = "./uploads"
+    # Object storage (photos, pièces d'identité)
+    # storage_backend="local" : disque local, pratique en dev/test, jamais en
+    # production (perdu à chaque redéploiement). storage_backend="r2" :
+    # Cloudflare R2 (compatible S3) — voir backend/storage.py.
+    storage_backend: str = "local"  # local | r2
     max_upload_bytes: int = 8 * 1024 * 1024  # 8 Mo
+
+    # Mode local uniquement
+    uploads_dir: str = "./uploads"
     public_base_url: str = "http://localhost:8000"
+
+    # Mode R2 uniquement — Cloudflare dashboard > R2 > Manage API Tokens
+    r2_account_id: Optional[str] = None
+    r2_access_key_id: Optional[str] = None
+    r2_secret_access_key: Optional[str] = None
+    r2_bucket_photos: str = "meetafrican-photos"       # bucket PUBLIC (album profil)
+    r2_bucket_documents: str = "meetafrican-documents"  # bucket PRIVÉ (pièces d'identité)
+    # URL publique du bucket photos (domaine personnalisé Cloudflare, ou
+    # l'URL r2.dev fournie par Cloudflare pour les tests).
+    r2_public_photos_base_url: Optional[str] = None
+    r2_presigned_url_ttl_seconds: int = 600
 
     # IA de modération / vérification (Claude, via l'API Anthropic)
     anthropic_api_key: Optional[str] = None

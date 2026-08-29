@@ -295,7 +295,7 @@ class ModerationSettings(BaseModel):
 class IdentityVerification(BaseModel):
     id: str = Field(default_factory=_uuid)
     user_id: str
-    document_url: str
+    document_key: str  # clé d'objet privée — jamais une URL publique
     status: VerificationStatus = VerificationStatus.pending
     ai_decision: Optional[AiDecision] = None
     ai_reason: Optional[str] = None

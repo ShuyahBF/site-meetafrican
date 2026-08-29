@@ -1,18 +1,20 @@
 """Upload de fichiers (photos de profil, pièces d'identité).
 
-Stockage local pour démarrer (backend/uploads/, servi via /api/files/<nom>).
-À remplacer par un object storage S3-compatible avant la mise en production
-— l'API exposée (POST /me/uploads -> {url}) ne change pas pour les
-consommateurs (photos, vérification d'identité)."""
+Deux natures bien distinctes, jamais interchangeables :
+  - kind="photo"    -> album profil, PUBLIC par nature (fil de découverte) ;
+                       renvoie une URL stable et publique.
+  - kind="document" -> pièce d'identité, PRIVÉE ; renvoie uniquement une clé
+                       d'objet — jamais d'URL publique. La consommer via
+                       POST /me/verification/submit."""
 from __future__ import annotations
 
-import uuid
-from pathlib import Path
+from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile
 
 from auth import get_current_user
 from config import get_settings
+from storage import save_document, save_photo
 
 router = APIRouter(prefix="/uploads", tags=["Uploads"])
 
@@ -20,7 +22,11 @@ ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", 
 
 
 @router.post("")
-async def upload_file(file: UploadFile, user: dict = Depends(get_current_user)):
+async def upload_file(
+    file: UploadFile,
+    kind: Literal["photo", "document"] = Form("photo"),
+    user: dict = Depends(get_current_user),
+):
     settings = get_settings()
     if file.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(status_code=400, detail="Type de fichier non autorisé (image uniquement)")
@@ -29,11 +35,9 @@ async def upload_file(file: UploadFile, user: dict = Depends(get_current_user)):
     if len(content) > settings.max_upload_bytes:
         raise HTTPException(status_code=400, detail=f"Fichier trop volumineux (max {settings.max_upload_bytes // (1024*1024)} Mo)")
 
-    ext = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/heic": ".heic", "image/heif": ".heif"}[file.content_type]
-    filename = f"{uuid.uuid4().hex}{ext}"
+    if kind == "photo":
+        url = await save_photo(content, file.content_type)
+        return {"kind": "photo", "url": url}
 
-    uploads_dir = Path(settings.uploads_dir)
-    uploads_dir.mkdir(parents=True, exist_ok=True)
-    (uploads_dir / filename).write_bytes(content)
-
-    return {"url": f"{settings.public_base_url}/api/files/{filename}", "filename": filename}
+    key = await save_document(content, file.content_type)
+    return {"kind": "document", "key": key}

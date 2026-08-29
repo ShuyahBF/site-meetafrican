@@ -38,7 +38,7 @@ export default function AdminVerifications() {
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
             <div key={item.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              <img src={item.document_url} alt="" className="aspect-[4/3] w-full object-cover" />
+              <img src={item.document_view_url} alt="" className="aspect-[4/3] w-full object-cover" />
               <div className="p-3">
                 <p className="text-xs text-slate-400">Utilisateur : {item.user_id}</p>
                 {item.ai_reason && <p className="mt-1 text-xs text-slate-500">Note IA : {item.ai_reason}</p>}
