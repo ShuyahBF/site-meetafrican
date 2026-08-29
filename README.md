@@ -7,9 +7,11 @@ MeetAfrican — site de rencontre pour hommes et femmes africains.
 - **Design** : 22 écrans de maquette générés avec Stitch AI (Google), rangés dans
   [`design/stitch-exports/`](design/stitch-exports). Charte graphique extraite dans
   [`design/DESIGN_SYSTEM.md`](design/DESIGN_SYSTEM.md).
-- **Implémentation** : socle en place — auth, abonnements Premium, paiement PawaPay
-  (Mobile Money) fonctionnels de bout en bout. Matching, chat, notation,
-  vérification d'identité et modération photo par IA restent à construire.
+- **Implémentation** : auth, abonnements Premium, paiement PawaPay (Mobile Money),
+  découverte/matching (swipe), chat, vérification d'identité et modération des
+  photos de profil par IA (Claude vision) fonctionnels de bout en bout. Notation
+  entre comptes, signalement de faux profils, points de parrainage social et
+  back-office admin restent à construire.
 
 ## Stack
 
@@ -21,6 +23,11 @@ MeetAfrican — site de rencontre pour hommes et femmes africains.
 - **Base de données** : MongoDB Atlas, cluster `Cluster0` partagé, base dédiée
   `site_meetafrican` isolée des autres projets, toutes les collections préfixées
   `maf_` (voir `backend/db.py`).
+- **IA de vérification/modération** : Claude (API Anthropic) analyse chaque pièce
+  d'identité et chaque photo de profil soumise selon un prompt système modifiable
+  par l'admin (`/api/admin/settings/moderation`) ; décision `approved` /
+  `rejected` / `needs_review` — ce dernier cas et la désactivation globale de l'IA
+  déclenchent une revue humaine (voir `backend/ai_moderation.py`).
 
 ## Démarrer en local
 
@@ -48,11 +55,9 @@ L'app tourne sur http://localhost:5173, l'API sur http://localhost:8000/api
 
 ## Prochaines étapes
 
-- Fil de découverte / algorithme de matching
-- Chat temps réel
-- Vérification d'identité (pièce d'identité) avec bascule auto/manuelle et
-  escalade humaine
-- Modération des photos par IA (prompt système dédié)
-- Notation entre comptes, signalement de faux profils, temps de réponse moyen
+- Notation entre comptes et signalement de faux profils
 - Points de parrainage social (WhatsApp/Facebook/Instagram/TikTok)
-- Back-office admin
+- Back-office admin (interface, pas seulement l'API)
+- Chat en temps réel (WebSocket — actuellement en polling côté frontend)
+- Objet storage S3-compatible pour les photos/pièces d'identité (actuellement
+  stockage local côté serveur, à ne pas garder en production)
