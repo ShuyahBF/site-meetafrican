@@ -1,0 +1,6 @@
+# Dépendances de développement/test uniquement (pas nécessaires en production).
+-r requirements.txt
+
+# Base MongoDB en mémoire (MONGO_URL=mongomock://) — teste toute la logique
+# applicative sans connexion réseau à Atlas. Voir backend/db.py.
+mongomock-motor==0.0.36

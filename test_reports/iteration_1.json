@@ -1,0 +1,37 @@
+{
+  "summary": "Backend-only testing of MeetAfrican Phase 1 against the public preview URL. Created /app/backend/tests/backend_test.py (80 pytest cases) covering health, auth (register/login by email+phone/me/JWT), age gate, subscriptions & plans seeding, manual payment-proof flow, photo upload + moderation queue + admin approval, discover/swipe/mutual-match, chat REST messaging + RBAC, admin RBAC matrix (6 endpoints x admin/user/anonymous), settings persistence, ratings, reports + account deactivation, referrals & points, identity verification flow, PawaPay unconfigured behaviour, uploads validation. Result: 79/80 passed (98.8%). No 500s observed; all error paths return clean 400/401/403/404/409/422/503.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "DELETE /api/me/photos/{photo_id}", "issue": "Always returns 200 even for a non-existent photo id. The update combines $pull with $set updated_at, so modified_count is always 1 and the 404 branch is dead code. Use the photos array length / find_one check instead."},
+      {"endpoint": "POST /api/uploads (kind=photo)", "issue": "Returned URL is built from PUBLIC_BASE_URL=http://localhost:8001 -> 'http://localhost:8001/api/files/<key>.png'. Unusable/blocked (mixed content) from the browser, so every locally uploaded profile photo will be broken in the UI. The same file IS served correctly at https://meetafrican-phase.preview.emergentagent.com/api/files/<key>. Set PUBLIC_BASE_URL to the preview/public origin."},
+      {"endpoint": "GET /api/auth/me, POST /api/auth/login|register (UserPublic)", "issue": "UserPublic exposes neither email nor phone, so the frontend can never display the logged-in account's own email/phone (e.g. profile/account screen). Consider a separate 'me' schema including contact fields."},
+      {"endpoint": "POST /api/auth/register", "issue": "gender only accepts 'homme'|'femme' (models.Gender). The spec/request mentioned 'autre' -> returns 422. Frontend select is consistent with the backend, so this is a spec gap, not a runtime break."},
+      {"endpoint": "startup / uvicorn reload", "issue": "Backend --reload watches the whole /app/backend tree, so writing test files under /app/backend/tests restarts the app and wipes the mongomock in-memory DB mid-run. Consider --reload-exclude tests/* (test-infra impact only)."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Fix DELETE /api/me/photos/{id} to return 404 for unknown photo ids (modified_count is always 1 because of $set updated_at).",
+    "Set PUBLIC_BASE_URL to the public preview origin (https://meetafrican-phase.preview.emergentagent.com) so /api/uploads returns loadable photo URLs; currently every uploaded photo URL points to http://localhost:8001.",
+    "Decide whether to expose email/phone in the /api/auth/me payload (frontend currently cannot show the account email).",
+    "Optional: add 'autre' to models.Gender if the product spec requires it (backend + Register.jsx select)."
+  ],
+  "critical_code_review_comments": [
+    "matching/chat/ratings routers are mounted without a prefix, so real paths are /api/discover, /api/swipe, /api/matches, /api/conversations, /api/me/ratings (NOT /api/matching/*). Frontend src already uses the correct paths — the review request description was inaccurate.",
+    "matching.discover uses _opposite(gender) which maps anything != 'homme' to 'homme'; with only two genders it works, but it silently breaks if a third gender is ever added, and it offers no user-controlled preference.",
+    "discover requires photos.status == 'approved'; with ANTHROPIC_API_KEY empty every photo lands in needs_review, so no user is discoverable until an admin manually approves — expected in Phase 1 but worth documenting.",
+    "subscriptions.list_pending_proofs / review_payment_proof re-implement the admin RBAC check inline instead of reusing the get_current_admin dependency (duplicated logic, drift risk).",
+    "Duplicate-account protection relies solely on an application-level find_one before insert; the unique index (db.py) is the real guard but mongomock does not enforce it, so concurrent duplicate registrations are only caught in production Mongo.",
+    "MONGO_URL=mongomock:// means all data (users, matches, messages) is lost on every backend reload/restart — acceptable for Phase 1 only; seed recreates admin + 3 plans correctly on each boot (verified)."
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py"],
+  "success_rate": {"backend": "98.8% (79/80 pytest cases)", "frontend": "not tested (backend-only request)"},
+  "seed_data_creation": "Ephemeral mongomock data only: ~12 TEST_ users (emails test_*@example.com, password TestPass#2026), photos, one match+conversation with 2 messages, 1 rating, 1 report (reported user deactivated), 1 referral share, 1 identity verification, 2 subscriptions + payment proofs, 1 inactive TEST_ plan. All disappear on the next backend restart.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "Admin@sawalismartsystems.com / Admin@Sawali2026 (verified working, role=admin, verification_status=verified). Standard users are created on the fly by the test suite.",
+  "context_for_next_testing_agent": "Run: cd /app/backend && python -m pytest tests/backend_test.py -p no:randomly -q. IMPORTANT: do not edit files under /app/backend while a run is in progress — uvicorn --reload restarts and mongomock loses all data (fixtures are session-scoped and interdependent: TestMatching creates the match that TestChat consumes; keep -p no:randomly and avoid xdist). Login field is 'identifier'. Admin photo/verification/proof reviews take 'approve' as a QUERY param. Only known failing test: TestPhotosModeration::test_delete_unknown_photo_404 (real backend bug, left failing on purpose). Frontend was not tested at all.",
+  "rca_of_the_issue": "delete_photo: db.users.update_one({id}, {'$pull': {...}, '$set': {'updated_at': now}}) — the $set always mutates the document, so result.modified_count == 1 regardless of whether the $pull matched, making the 'if modified_count == 0 -> 404' check unreachable. Uploads: storage.save_photo returns f'{settings.public_base_url}/api/files/{key}' and PUBLIC_BASE_URL in /app/backend/.env is still the dev default http://localhost:8001."
+}
