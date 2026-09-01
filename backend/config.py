@@ -8,6 +8,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Optional
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,7 +17,12 @@ class Settings(BaseSettings):
 
     # MongoDB
     mongo_url: str = "mongodb://localhost:27017"
-    mongo_db_name: str = "site_meetafrican"
+    # Nom de la base MongoDB. Aliasé sur la variable d'env "DB_NAME"
+    # (variable protégée gérée par l'environnement Emergent en preview /
+    # production). Aucune valeur par défaut : si DB_NAME est absent, le
+    # backend refuse de démarrer plutôt que de tomber silencieusement sur
+    # une base d'application non voulue si le secret est réinitialisé.
+    mongo_db_name: str = Field(validation_alias="DB_NAME")
     mongo_collection_prefix: str = "maf_"
 
     # Auth

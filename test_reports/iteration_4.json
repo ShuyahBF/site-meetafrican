@@ -1,0 +1,31 @@
+{
+  "summary": "Backend-only regression after moving mongo_db_name to Field(validation_alias='DB_NAME') with no default. Full existing pytest suite: 101/101 passed (tests/backend_test.py, tests/test_google_auth.py incl. mocked Google happy-path with cookie+DB storage, tests/test_startup_resilience.py). Added an out-of-tree config verification script (/tmp) confirming: get_settings().mongo_db_name == 'site_meetafrican' (read via DB_NAME alias), Settings() raises ValidationError when DB_NAME is absent (backend refuses to start, no silent fallback), MONGO_DB_NAME alone is no longer accepted, and backend/.env contains only DB_NAME. Live public-URL regression (10 checks, 10 effective passes): /api/health -> {ok:true}, admin login (identifier/password) -> 200 with role=admin JWT, /api/auth/me with bearer -> admin, wrong password -> 401, /api/subscriptions/plans -> 200 with plans, register -> 200 + /me works for new user, POST /api/auth/session -> 400 without X-Session-ID and 401 with invalid header. No regressions found.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_google_auth.py",
+    "/app/backend/tests/test_startup_resilience.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "config.py: mongo_db_name has no default and is aliased to DB_NAME — verified fail-fast behaviour (ValidationError) when the protected var is missing. Consider catching this at startup to log an explicit 'DB_NAME missing' message instead of a raw pydantic ValidationError traceback (cosmetic only).",
+    "Note for expectations: UserPublic intentionally omits email, and UserRegister does not accept city/country (extra='ignore'), so a freshly registered user shows city/country=null — not a regression, but confirm the signup UI does not collect city/country expecting persistence."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (101/101 pytest + 10/10 live checks + 4/4 config checks)", "frontend": "not tested (backend-only request)"},
+  "seed_data_creation": "One throwaway registered user TEST_<uuid>@example.com created against the live preview backend (mongomock, wiped on restart).",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": false,
+  "test_credentials": "Admin@sawalismartsystems.com / Admin@Sawali2026 (login field: identifier) — valid and working",
+  "context_for_next_testing_agent": "DB_NAME env-var change verified; no code changes made by the testing agent. Full command: cd /app/backend && python -m pytest tests/ -q -p no:randomly. pytest-asyncio is NOT installed (tests use asyncio.run). Keep -p no:randomly. Do not edit files under /app/backend while a run is in progress (uvicorn --reload wipes the shared mongomock DB). Config-level checks live at /tmp/check_dbname.py and live API checks at /tmp/live_regression.py (temporary, recreate if needed).",
+  "rca_of_the_issue": "N/A — no defects found. The two initial 'failures' in my live script were faults in my own payload/assertions (missing full_name in register payload; asserting email on UserPublic which by design excludes it), not application bugs."
+}
