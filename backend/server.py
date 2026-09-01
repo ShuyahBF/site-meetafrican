@@ -76,6 +76,14 @@ if settings.storage_backend == "local":
 
 @app.on_event("startup")
 async def on_startup():
-    await ensure_indexes()
-    await seed_default_plans()
-    await ensure_admin_user()
+    import logging
+    logger = logging.getLogger(__name__)
+    for step_name, step in (
+        ("ensure_indexes", ensure_indexes),
+        ("seed_default_plans", seed_default_plans),
+        ("ensure_admin_user", ensure_admin_user),
+    ):
+        try:
+            await step()
+        except Exception as exc:  # noqa: BLE001 — startup must never crash
+            logger.warning("Startup step %s failed (continuing): %s", step_name, exc)

@@ -1,0 +1,36 @@
+{
+  "summary": "Backend-only regression + targeted verification of the deployment-resilience fix (ensure_indexes swallowing OperationFailure, on_startup wrapping each step in try/except). Ran full existing suite against the public preview URL: 80/80 passed (previously 79/80 — the DELETE /api/me/photos/{id} 404 bug is now fixed and its test passes). Added 4 new unit tests (/app/backend/tests/test_startup_resilience.py) that inject OperationFailure(code 13) and ServerSelectionTimeoutError into every create_index call and force all three startup steps to raise: ensure_indexes() and on_startup() both complete without raising, and all 3 steps are still attempted (no early abort). Total 84/84 passed. Live spot-checks: GET /api/health -> {ok:true}; GET /api/subscriptions/plans -> 3 seeded plans (1_semaine/1_mois/12_mois); admin login with identifier=Admin@sawalismartsystems.com returns JWT with role=admin; GET /api/auth/me with that token returns the bootstrapped admin (verification_status=verified); duplicate register still returns 409 (app-level uniqueness). Backend logs show 'Application startup complete' with no index/seed warnings (mongomock has no perms restrictions). No 500s anywhere. No regressions detected.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "startup (pydantic)", "issue": "Recurring log warning 'Pydantic serializer warnings: Expected `enum` but got `str`' on auth/me and admin responses — models store gender/role as plain strings (seed uses model_dump(mode='json')) while the response schema declares Enum types. Cosmetic but noisy; align the model field types or coerce on read."},
+      {"endpoint": "db._safe_create_index", "issue": "Catches every OperationFailure, not only code 13 (Unauthorized). In production this would also silently swallow IndexOptionsConflict (85) or a duplicate-key failure while building a unique index on already-duplicated data — the app boots but silently loses uniqueness. Consider logging at ERROR level (or re-checking exc.code) so such cases are visible in production logs."},
+      {"endpoint": "GET /api/auth/me (UserPublic)", "issue": "Still exposes neither email nor phone (carried over from iteration_1) — frontend cannot display the account's own contact info."},
+      {"endpoint": "uvicorn --reload", "issue": "Reload watches /app/backend/**, so adding tests/*.py restarts the app and wipes the mongomock in-memory DB. Consider --reload-exclude 'tests/*' (test-infra impact only)."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_startup_resilience.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Optional: log skipped indexes at ERROR (or distinguish exc.code == 13) so non-permission index failures in production Atlas are not silently swallowed.",
+    "Optional: fix the Pydantic 'Expected enum but got str' serializer warnings (seed/User stores role/gender as str).",
+    "Carried over from iteration_1 (still open): expose email/phone on /api/auth/me if the profile screen needs it; add 'autre' to models.Gender if the spec requires it."
+  ],
+  "critical_code_review_comments": [
+    "server.on_startup catches bare Exception per step — intentional and correct for boot resilience, but since ensure_admin_user can now silently fail in production, the back-office could become inaccessible with only a WARNING in the logs. Consider surfacing startup step status via /api/health (e.g. {ok:true, startup:{indexes:'skipped', admin:'ok'}}) so deployment can be validated.",
+    "Uniqueness now depends entirely on the application-level find_one-before-insert in routes/auth.py when indexes are skipped; two concurrent registrations with the same email can both succeed in production. Acceptable for Phase 1, but document it.",
+    "Minor: 'import logging' inside on_startup should move to module level."
+  ],
+  "updated_files": ["/app/backend/tests/test_startup_resilience.py"],
+  "success_rate": {"backend": "100% (84/84 pytest cases)", "frontend": "not tested (backend-only request)"},
+  "seed_data_creation": "Ephemeral mongomock data only (TEST_ users test_*@example.com / TestPass#2026, photos, one match+conversation, ratings, report, referral, verification, subscriptions). Wiped on next backend restart; admin + 3 plans are recreated automatically at boot (verified).",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "Admin@sawalismartsystems.com / Admin@Sawali2026 — verified working (role=admin).",
+  "context_for_next_testing_agent": "Run: cd /app/backend && python -m pytest tests/ -q -p no:randomly. Do NOT create/edit files under /app/backend while a run is in progress (uvicorn --reload wipes mongomock; session-scoped fixtures are interdependent — TestMatching creates the match TestChat consumes, keep -p no:randomly, no xdist). Login field is 'identifier'. Admin review endpoints take 'approve' as a QUERY param. pytest-asyncio is NOT installed — async unit tests must use asyncio.run(). Frontend has never been tested in iterations 1-2.",
+  "rca_of_the_issue": "Production crash was pymongo OperationFailure code 13 (Atlas user has readWrite but not createIndex) raised from ensure_indexes inside the FastAPI startup hook, which aborts app boot. Fix verified: db._safe_create_index catches OperationFailure/PyMongoError and logs a warning; server.on_startup wraps each of the 3 steps in try/except. Unit tests injecting OperationFailure(13) and ServerSelectionTimeoutError confirm neither ensure_indexes() nor on_startup() propagates, and all 3 steps are still attempted."
+}

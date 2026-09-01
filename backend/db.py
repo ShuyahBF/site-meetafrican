@@ -7,9 +7,14 @@ préfixé (`maf_<nom>`) — impossible d'oublier le préfixe par erreur.
 """
 from __future__ import annotations
 
+import logging
+
 from motor.motor_asyncio import AsyncIOMotorCollection, AsyncIOMotorDatabase
+from pymongo.errors import OperationFailure, PyMongoError
 
 from config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 class PrefixedDatabase:
@@ -44,17 +49,38 @@ _raw_db = _client[_settings.mongo_db_name]
 db = PrefixedDatabase(_raw_db, _settings.mongo_collection_prefix)
 
 
+async def _safe_create_index(collection, keys, **kwargs) -> None:
+    """Crée un index en avalant les erreurs de permission (cluster Atlas
+    partagé où l'utilisateur DB n'a pas le privilège createIndex). Les
+    contraintes d'unicité restent appliquées côté applicatif (find_one avant
+    insert) : perdre les index n'empêche pas l'app de fonctionner."""
+    try:
+        await collection.create_index(keys, **kwargs)
+    except OperationFailure as exc:
+        # code 13 = Unauthorized ; on log et on continue (l'app doit démarrer
+        # même si l'utilisateur DB n'a que readWrite sans createIndex).
+        logger.warning(
+            "Skipping index on %s (%s): %s",
+            getattr(collection, "name", "?"), keys, exc,
+        )
+    except PyMongoError as exc:
+        logger.warning(
+            "Failed to create index on %s (%s): %s",
+            getattr(collection, "name", "?"), keys, exc,
+        )
+
+
 async def ensure_indexes() -> None:
-    await db.users.create_index("email", unique=True, sparse=True)
-    await db.users.create_index("phone", unique=True, sparse=True)
-    await db.payments.create_index("deposit_id", unique=True)
-    await db.payment_links.create_index("slug", unique=True)
-    await db.subscriptions.create_index("user_id")
-    await db.matches.create_index([("user_a", 1), ("user_b", 1)], unique=True)
-    await db.messages.create_index("conversation_id")
-    await db.reports.create_index("reported_user_id")
-    await db.ratings.create_index([("rated_user_id", 1), ("rater_user_id", 1)], unique=True)
-    await db.referral_shares.create_index("user_id")
-    await db.swipes.create_index([("user_id", 1), ("target_user_id", 1)], unique=True)
-    await db.conversations.create_index("match_id", unique=True)
-    await db.identity_verifications.create_index("user_id")
+    await _safe_create_index(db.users, "email", unique=True, sparse=True)
+    await _safe_create_index(db.users, "phone", unique=True, sparse=True)
+    await _safe_create_index(db.payments, "deposit_id", unique=True)
+    await _safe_create_index(db.payment_links, "slug", unique=True)
+    await _safe_create_index(db.subscriptions, "user_id")
+    await _safe_create_index(db.matches, [("user_a", 1), ("user_b", 1)], unique=True)
+    await _safe_create_index(db.messages, "conversation_id")
+    await _safe_create_index(db.reports, "reported_user_id")
+    await _safe_create_index(db.ratings, [("rated_user_id", 1), ("rater_user_id", 1)], unique=True)
+    await _safe_create_index(db.referral_shares, "user_id")
+    await _safe_create_index(db.swipes, [("user_id", 1), ("target_user_id", 1)], unique=True)
+    await _safe_create_index(db.conversations, "match_id", unique=True)
+    await _safe_create_index(db.identity_verifications, "user_id")
