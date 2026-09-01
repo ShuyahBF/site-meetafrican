@@ -2,7 +2,12 @@ import axios from "axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
-export const apiClient = axios.create({ baseURL: API_BASE_URL });
+// withCredentials: envoie automatiquement le cookie httpOnly `session_token`
+// (flux Emergent Auth Google) sur toutes les requêtes /api/*.
+export const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  withCredentials: true,
+});
 
 // ws(s):// équivalent de l'URL de l'API, pour le chat temps réel.
 export const WS_BASE_URL = API_BASE_URL.replace(/^http/, "ws");

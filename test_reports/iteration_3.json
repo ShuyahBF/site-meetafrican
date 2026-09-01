@@ -1,0 +1,65 @@
+{
+  "summary": "Iteration 3 — focused testing of the new Emergent-managed Google Sign-In plus full regression of the existing suite. Backend: created /app/backend/tests/test_google_auth.py (17 tests) covering local JWT regressions (admin login role=admin, register+/me, plans seeded, admin RBAC 403/200) and all Google-auth paths. Error paths tested live against the preview URL (POST /api/auth/session without header -> 400 'Header X-Session-ID manquant'; with random X-Session-ID -> 401; POST /api/auth/logout with nothing -> 200 {ok:true}; GET /api/auth/me with no auth / invalid cookie / invalid bearer -> 401). Happy path tested in-process via httpx ASGITransport with routes.auth_google._fetch_session_data monkeypatched (real Emergent /session-data endpoint NEVER hit): exchange returns 200, Set-Cookie 'session_token=stk_test; HttpOnly; Secure; SameSite=none; Path=/', exactly 1 doc in maf_sessions with user_id matching, exactly 1 user in maf_users with google_sub='g_1', password_hash=null, needs_profile_completion=true; /auth/me works via cookie AND via Bearer session_token; logout deletes the session row and subsequent /auth/me with that cookie returns 401; a 2nd exchange with the same google_sub does NOT duplicate the user (same id). Full suite: 101/101 passed (84 pre-existing + 17 new). Frontend (Playwright, 1440x900): /connexion shows data-testid='google-auth-button' labeled 'Se connecter avec Google', click navigates to https://auth.emergentagent.com/?redirect=<encoded> whose redirect decodes exactly to <origin>/decouverte (no hardcoding/fallback); /inscription shows the button labeled \"S'inscrire avec Google\"; local admin login on /connexion still redirects to /admin and the dashboard loads real counters (0/0/1/0) with no failing admin API calls; navigating to /decouverte#session_id=fake-xyz renders auth-callback-screen (ProtectedRoute does NOT hijack it), then shows the backend error 'Session Google invalide ou expirée' and a working 'Retour à la connexion' button — proving frontend interception + backend rejection. No 500s, no console errors other than the expected 401 on the boot-time /auth/me probe.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/auth/session",
+        "issue": "Sessions are append-only: each exchange inserts a new maf_sessions doc for the same session_token/user (no upsert / no purge of expired rows). Repeated logins grow the collection unbounded; consider replace_one(upsert=True) on session_token + a TTL index on expires_at."
+      },
+      {
+        "endpoint": "POST /api/auth/logout",
+        "issue": "Only the presented token's session is deleted and delete_cookie() omits secure/samesite=none, so some browsers may not clear a cookie that was set with SameSite=None; Secure. Pass the same cookie attributes when deleting."
+      },
+      {
+        "endpoint": "_upsert_google_user",
+        "issue": "Email-based linking has no verification: a Google account whose email matches an existing local (password) account is silently merged, which is an account-takeover vector if the local email was never verified. Also sets default gender=homme / birthdate=1990-01-01 with no forced completion gate — needs_profile_completion is exposed but nothing in the app enforces it yet."
+      },
+      {
+        "endpoint": "GET /api/auth/me (UserPublic)",
+        "issue": "Carried over from iterations 1-2: still exposes neither email nor phone, so a Google user cannot see which account they are signed in as."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "App boot / AuthContext",
+        "issue": "On every anonymous page load AuthContext fires GET /api/auth/me which returns 401 twice (StrictMode double-effect), producing two red console errors. Harmless but noisy; guard with a 'has cookie/token' heuristic or swallow the 401 quietly.",
+        "affected_selectors": []
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "/inscription (Register)",
+        "issues": ["'Date de naissance' uses the native browser date input (mm/dd/yyyy) instead of a shadcn calendar/date picker — inconsistent with the rest of the dark themed UI and shows US format on a French app (pre-existing, not introduced by this change)."]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_google_auth.py",
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_startup_resilience.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Optional: dedupe/expire maf_sessions (upsert by session_token + TTL index on expires_at).",
+    "Optional: delete the session cookie with the same attributes it was set with (secure=True, samesite='none').",
+    "Optional: expose email (and phone) on UserPublic so the signed-in Google account is visible.",
+    "Consider enforcing needs_profile_completion with an onboarding screen (gender/birthdate defaults currently leak into Discover matching)."
+  ],
+  "critical_code_review_comments": [
+    "routes/auth_google.py:_upsert_google_user links by unverified email — document/gate this before production to avoid account takeover.",
+    "db.sessions.insert_one in /auth/session should be an upsert on session_token; there is no cleanup of expired sessions anywhere.",
+    "auth.get_current_user tries the Bearer token as a DB session_token on EVERY request before falling back to JWT decode — one extra Mongo query per authenticated JWT call; cheap fix is to try jwt.decode first and only hit the DB on failure."
+  ],
+  "updated_files": ["/app/backend/tests/test_google_auth.py"],
+  "success_rate": {"backend": "100% (101/101)", "frontend": "100% (all 5 Google-auth/regression flows passed)"},
+  "seed_data_creation": "Live preview: 2 throwaway local users via POST /api/auth/register (test_*@example.com) for regression/RBAC checks. In-process mongomock only: user gtest@example.com (google_sub=g_1) + session stk_test — these never touch the running preview DB.",
+  "should_call_test_agent_after_fix": false,
+  "should_main_agent_self_test": true,
+  "test_credentials": "Admin@sawalismartsystems.com / Admin@Sawali2026 (local admin, role=admin) — read from /app/memory/test_credentials.md",
+  "context_for_next_testing_agent": "Env: MONGO_URL=mongomock:// so the live preview DB is in-process and cannot be seeded with a real session_token — browser cookie-based Google session testing is NOT possible without a real Google OAuth run. For the Google happy path use /app/backend/tests/test_google_auth.py::TestGoogleAuthMocked, which imports server.app with httpx.ASGITransport (base_url must be https:// so Secure cookies are stored) and monkeypatches routes.auth_google._fetch_session_data. pytest-asyncio is NOT installed -> use asyncio.run(). Writing files under /app/backend triggers uvicorn --reload which wipes mongomock: create test files, sleep ~6s, then run. Run with '-p no:randomly'. Full suite command: cd /app/backend && python -m pytest tests/ -q -p no:randomly. Admin routes are only /api/admin/settings/referral-points and /api/admin/subscription-plans (no /api/admin/stats).",
+  "rca_of_the_issue": "No defects found in the new Google auth implementation. The only test failure encountered (404 on /api/admin/stats) was my own wrong endpoint in the test; corrected to /api/admin/settings/referral-points. The 401s on /api/auth/me seen in the browser console are the expected anonymous boot probe from AuthContext."
+}

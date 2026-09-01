@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { extractErrorMessage } from "@/lib/api";
+import GoogleAuthButton from "@/components/GoogleAuthButton";
 
 export default function Register() {
   const { register } = useAuth();
@@ -32,7 +33,16 @@ export default function Register() {
     <div className="flex min-h-screen w-full flex-col bg-background-light px-6 py-10 font-display dark:bg-background-dark">
       <h1 className="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Créer un compte</h1>
 
-      <form onSubmit={submit} className="flex flex-1 flex-col gap-4">
+      <div className="mb-6 flex flex-col gap-3">
+        <GoogleAuthButton label="S'inscrire avec Google" />
+        <div className="my-1 flex items-center gap-3 text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          <span className="h-px flex-1 bg-slate-300 dark:bg-white/10" />
+          ou avec un email
+          <span className="h-px flex-1 bg-slate-300 dark:bg-white/10" />
+        </div>
+      </div>
+
+      <form onSubmit={submit} className="flex flex-1 flex-col gap-4" data-testid="register-form">
         <Field label="Nom complet">
           <input required value={form.full_name} onChange={update("full_name")} className="input" />
         </Field>

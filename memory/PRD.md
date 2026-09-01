@@ -39,6 +39,26 @@ Reprise et mise en route d'une app web de rencontre africaine existante (repo Gi
 - ✅ Bug fix : DELETE `/api/me/photos/{id}` retourne bien 404 pour photo inconnue
 - ✅ Bug fix : `PUBLIC_BASE_URL` mis à jour vers l'URL preview (URLs de photos uploadées désormais chargeables depuis le navigateur)
 
+## Deployment resilience fix (2026-09-01)
+- ✅ `db._safe_create_index()` avale `OperationFailure`/`PyMongoError` (log warning) — le manque du privilège `createIndex` sur Atlas ne bloque plus le boot
+- ✅ `on_startup` wrappe chacun des 3 steps (indexes/plans/admin) — plus aucune exception ne peut tuer l'app au démarrage
+- ✅ Testing subagent : 84/84 tests passent (100%) avec 4 nouveaux tests unitaires de résilience
+
+## Emergent-managed Google Sign-In (2026-09-01)
+- ✅ Backend :
+  - `POST /api/auth/session` (header `X-Session-ID`) — échange session_id contre cookie httpOnly `session_token` (7 jours, Secure, SameSite=None)
+  - `POST /api/auth/logout` — supprime la session en base et efface le cookie
+  - `get_current_user` étendu : accepte cookie `session_token` OU Bearer (session_token DB OU JWT local) — les deux flux coexistent
+  - Modèle `User` : `password_hash` devient `Optional[str]`, ajout de `google_sub`, `avatar_url`, `needs_profile_completion`
+  - Nouvelle collection `maf_sessions` (session_token, user_id, expires_at)
+  - Upsert par `google_sub` puis par `email` — pas de doublon utilisateur en cas de re-login
+- ✅ Frontend :
+  - Bouton "Continuer avec Google" (composant `GoogleAuthButton`) sur `/connexion` et `/inscription` — redirige vers `https://auth.emergentagent.com/?redirect=${window.location.origin}/decouverte` (redirect dynamique, jamais hardcodé)
+  - `App.jsx` intercepte SYNCHRONEMENT `useLocation().hash` contenant `session_id=` et rend `<AuthCallback/>` avant que ProtectedRoute ne redirige
+  - `AuthCallback` (avec `useRef` guard contre StrictMode) échange le session_id via le backend, applique la session et navigate vers `/decouverte` ou `/admin`
+  - `AuthContext` skip `/auth/me` si l'URL contient `session_id=` (évite race condition avant set-cookie), gère cookie ET Bearer via `withCredentials: true`
+- ✅ Testing subagent : 101/101 tests passent (100%) — 17 nouveaux tests Google auth (mocking Emergent `/session-data` via httpx ASGITransport) + toute la suite existante en régression, plus 5 flows Playwright
+
 ## Prioritized backlog
 
 ### P0 — Phase 2 (bascule MongoDB Atlas)

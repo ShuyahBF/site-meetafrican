@@ -86,7 +86,7 @@ class User(BaseModel):
     full_name: str
     email: Optional[EmailStr] = None
     phone: Optional[str] = None
-    password_hash: str
+    password_hash: Optional[str] = None  # None pour les comptes Google (pas de mot de passe local)
     gender: Gender
     birthdate: str
     bio: Optional[str] = Field(None, max_length=500)
@@ -101,8 +101,24 @@ class User(BaseModel):
     referral_code: str = Field(default_factory=lambda: uuid.uuid4().hex[:8])
     referred_by: Optional[str] = None
     is_active: bool = True
+    # Auth externe (Emergent-managed Google) — populé si le compte a été créé
+    # via OAuth Google. `needs_profile_completion` invite à compléter genre/
+    # date de naissance/téléphone lors du premier login.
+    google_sub: Optional[str] = None
+    avatar_url: Optional[str] = None
+    needs_profile_completion: bool = False
     created_at: str = Field(default_factory=_now)
     updated_at: str = Field(default_factory=_now)
+
+
+class UserSession(BaseModel):
+    """Session bearer/cookie émise après login Google (Emergent Auth).
+    Distinct du JWT local (auth par mot de passe) : les deux coexistent."""
+    id: str = Field(default_factory=_uuid)
+    user_id: str
+    session_token: str
+    expires_at: str  # ISO datetime UTC
+    created_at: str = Field(default_factory=_now)
 
 
 class UserPublic(BaseModel):
@@ -121,6 +137,8 @@ class UserPublic(BaseModel):
     points: int
     referral_code: str
     avg_response_seconds: Optional[float] = None
+    avatar_url: Optional[str] = None
+    needs_profile_completion: bool = False
     created_at: str
 
 
