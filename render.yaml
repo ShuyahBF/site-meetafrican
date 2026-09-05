@@ -1,0 +1,104 @@
+# Déploiement Render — backend FastAPI + frontend statique (Vite/React).
+#
+# Deux services distincts, connectés à ce dépôt GitHub : chaque push sur la
+# branche configurée redéploie automatiquement les deux.
+#
+# Variables marquées "sync: false" ne sont PAS stockées ici (donc pas dans
+# git) : Render les demande une fois via son dashboard au premier déploiement,
+# puis les garde chiffrées côté plateforme.
+
+services:
+  - type: web
+    name: meetafrican-backend
+    runtime: python
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      # --- MongoDB Atlas ---
+      - key: MONGO_URL
+        sync: false
+      - key: MONGO_DB_NAME
+        value: site_meetafrican
+      - key: MONGO_COLLECTION_PREFIX
+        value: maf_
+
+      # --- Auth ---
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRES_MINUTES
+        value: "10080"
+
+      # --- CORS : URL(s) du frontend, séparées par une virgule si plusieurs
+      # (ex. l'URL onrender.com pendant les tests + bauthentik.com une fois
+      # le domaine branché). À renseigner une fois le frontend déployé et son
+      # URL connue.
+      - key: FRONTEND_ORIGIN
+        sync: false
+
+      # --- PawaPay (Mobile Money) ---
+      - key: PAWAPAY_ENVIRONMENT
+        value: sandbox
+      - key: PAWAPAY_API_TOKEN_SANDBOX
+        sync: false
+      - key: PAWAPAY_API_TOKEN_PRODUCTION
+        sync: false
+      - key: PAWAPAY_CALLBACK_SECRET
+        generateValue: true
+      - key: PAWAPAY_DEFAULT_COUNTRY
+        value: BFA
+
+      # --- Stockage Cloudflare R2 (obligatoire en production : le mode
+      # "local" perd les fichiers à chaque redéploiement sur Render) ---
+      - key: STORAGE_BACKEND
+        value: r2
+      - key: MAX_UPLOAD_BYTES
+        value: "8388608"
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET_PHOTOS
+        value: meetafrican-photos
+      - key: R2_BUCKET_DOCUMENTS
+        value: meetafrican-documents
+      - key: R2_PUBLIC_PHOTOS_BASE_URL
+        sync: false
+      - key: R2_PRESIGNED_URL_TTL_SECONDS
+        value: "600"
+
+      # --- IA de modération (API Anthropic) ---
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: AI_MODERATION_MODEL
+        value: claude-sonnet-5
+
+      # --- Bootstrap du premier compte admin ---
+      - key: ADMIN_BOOTSTRAP_EMAIL
+        sync: false
+      - key: ADMIN_BOOTSTRAP_PASSWORD
+        sync: false
+
+  - type: web
+    name: meetafrican-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      # URL publique du backend + "/api", ex. https://meetafrican-backend.onrender.com/api
+      # À renseigner une fois le backend déployé et son URL connue.
+      - key: VITE_API_BASE_URL
+        sync: false
+    routes:
+      # SPA React Router : toute route inconnue retombe sur index.html,
+      # sinon un rechargement sur /connexion (ou toute route non racine) 404.
+      - type: rewrite
+        source: /*
+        destination: /index.html

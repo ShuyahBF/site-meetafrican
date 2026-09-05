@@ -24,8 +24,14 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expires_minutes: int = 60 * 24 * 7  # 7 jours
 
-    # CORS
+    # CORS — une ou plusieurs origines séparées par des virgules (utile pour
+    # accepter à la fois l'URL Render (*.onrender.com) et un domaine custom
+    # une fois branché, sans devoir choisir entre les deux).
     frontend_origin: str = "http://localhost:5173"
+
+    @property
+    def frontend_origins(self) -> list[str]:
+        return [o.strip() for o in self.frontend_origin.split(",") if o.strip()]
 
     # PawaPay (ported from ShuyahBF/Emergent, Site-SawaliSmartSystems)
     pawapay_environment: str = "sandbox"  # sandbox | production
