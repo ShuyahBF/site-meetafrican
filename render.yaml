@@ -17,6 +17,16 @@ services:
     startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
+      # Render utilise Python 3.14 par défaut, trop récent pour avoir des
+      # wheels précompilées de pydantic-core==2.18.2 (dépendance de
+      # fastapi==0.110.1) — pip tente alors de compiler depuis les sources et
+      # échoue (environnement de build en lecture seule pour le cache Cargo).
+      # On fige donc une version de Python pour laquelle des wheels existent,
+      # plutôt que de toucher aux versions de dépendances déjà calées entre
+      # elles (une pydantic trop récente casse fastapi==0.110.1 autrement).
+      - key: PYTHON_VERSION
+        value: 3.11.10
+
       # --- MongoDB Atlas ---
       - key: MONGO_URL
         sync: false
