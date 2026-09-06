@@ -49,7 +49,7 @@ export default function Register() {
           <input required type="date" value={form.birthdate} onChange={update("birthdate")} className="input" />
         </Field>
         <Field label="Genre">
-          <select value={form.gender} onChange={update("gender")} className="input">
+          <select value={form.gender} onChange={update("gender")} className="input select">
             <option value="homme">Homme</option>
             <option value="femme">Femme</option>
           </select>

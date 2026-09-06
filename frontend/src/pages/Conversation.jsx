@@ -4,6 +4,8 @@ import { apiClient } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useConversationSocket } from "@/hooks/useConversationSocket";
 import UserActionsMenu from "@/components/UserActionsMenu";
+import ProfilePhoto from "@/components/ProfilePhoto";
+import { formatLastSeen } from "@/lib/format";
 
 export default function Conversation() {
   const { conversationId } = useParams();
@@ -67,12 +69,17 @@ export default function Conversation() {
         <Link to="/messages" className="text-slate-500 dark:text-slate-400">
           <span className="material-symbols-outlined">arrow_back</span>
         </Link>
+        {otherUser && <ProfilePhoto profile={otherUser} showOnlineDot className="h-10 w-10 shrink-0 rounded-full" />}
         <div className="flex-1 truncate">
           <h1 className="truncate text-lg font-bold text-slate-900 dark:text-white">
             {otherUser?.full_name || "Conversation"}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            {connected ? "En ligne" : "Connexion…"}
+            {!connected
+              ? "Reconnexion…"
+              : otherUser?.is_online
+              ? "En ligne"
+              : formatLastSeen(otherUser?.last_seen_at)}
           </p>
         </div>
         {otherUser && <UserActionsMenu targetUserId={otherUser.id} targetName={otherUser.full_name} />}

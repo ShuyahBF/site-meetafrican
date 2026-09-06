@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 
 from auth import decode_access_token, get_current_user
 from db import db
-from models import Message, PhotoStatus
+from models import Message, PhotoStatus, _is_online
 from routes.subscriptions import has_active_subscription
 
 router = APIRouter(tags=["Chat"])
@@ -115,6 +115,9 @@ async def list_conversations(user: dict = Depends(get_current_user)):
                 "id": other["id"], "full_name": other["full_name"],
                 "photos": _masked_photos(other.get("photos", []), unlocked),
                 "avg_response_seconds": other.get("avg_response_seconds"),
+                "gender": other.get("gender"),
+                "last_seen_at": other.get("last_seen_at"),
+                "is_online": _is_online(other.get("last_seen_at")),
             },
             "last_message": last_message,
         })

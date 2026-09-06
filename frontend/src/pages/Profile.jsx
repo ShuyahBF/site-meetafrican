@@ -100,6 +100,17 @@ export default function Profile() {
           </span>
         </Link>
 
+        <Link
+          to="/portefeuille"
+          className="mt-3 flex items-center justify-between rounded-xl bg-primary/10 px-4 py-3"
+        >
+          <span className="text-sm font-semibold text-slate-800 dark:text-white">Portefeuille</span>
+          <span className="flex items-center gap-1 font-bold text-primary">
+            <span className="material-symbols-outlined text-base">account_balance_wallet</span>
+            <span className="material-symbols-outlined text-base">chevron_right</span>
+          </span>
+        </Link>
+
         <section className="mt-6">
           <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
             Album photo

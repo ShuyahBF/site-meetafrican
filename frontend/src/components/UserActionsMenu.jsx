@@ -77,7 +77,7 @@ function RateModal({ targetUserId, targetName, onClose }) {
             onChange={(e) => setComment(e.target.value)}
             placeholder="Commentaire (optionnel)"
             rows={3}
-            className="input mt-3"
+            className="textarea mt-3"
           />
           <button onClick={submit} disabled={sending} className="mt-3 h-11 w-full rounded-full bg-primary text-sm font-bold text-white disabled:opacity-50">
             {sending ? "Envoi…" : "Envoyer la note"}
@@ -113,7 +113,7 @@ function ReportModal({ targetUserId, targetName, onClose }) {
       ) : (
         <>
           <p className="font-bold text-slate-900 dark:text-white">Signaler {targetName}</p>
-          <select value={reason} onChange={(e) => setReason(e.target.value)} className="input mt-3">
+          <select value={reason} onChange={(e) => setReason(e.target.value)} className="input select mt-3">
             {REPORT_REASONS.map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
             ))}
@@ -123,7 +123,7 @@ function ReportModal({ targetUserId, targetName, onClose }) {
             onChange={(e) => setDetails(e.target.value)}
             placeholder="Détails (optionnel)"
             rows={3}
-            className="input mt-3"
+            className="textarea mt-3"
           />
           <button onClick={submit} disabled={sending} className="mt-3 h-11 w-full rounded-full bg-red-600 text-sm font-bold text-white disabled:opacity-50">
             {sending ? "Envoi…" : "Envoyer le signalement"}

@@ -7,12 +7,30 @@ body {
 }
 
 @layer components {
+  /* Champs texte/date/nombre — "aéré" : bordure douce, transition au focus,
+     léger anneau de couleur plutôt qu'un simple changement de bordure sec. */
   .input {
-    @apply h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-primary dark:border-white/10 dark:bg-white/5 dark:text-white;
+    @apply h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-white/5 dark:text-white;
+  }
+
+  /* Zones de texte multi-lignes — même habillage que .input mais sans la
+     hauteur fixe de .input, qui écraserait sinon l'attribut `rows`. */
+  .textarea {
+    @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-white/5 dark:text-white;
+  }
+
+  /* Listes déroulantes — flèche personnalisée (au lieu de la flèche système,
+     souvent trop petite/incohérente d'un navigateur à l'autre) + espace pour
+     ne pas la chevaucher. À combiner avec .input : className="input select". */
+  .select {
+    @apply appearance-none bg-no-repeat pr-10;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+    background-position: right 0.75rem center;
+    background-size: 1.1rem;
   }
 
   .admin-input {
-    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-primary;
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20;
   }
 }
 

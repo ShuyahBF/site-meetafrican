@@ -12,6 +12,7 @@ import Matches from "@/pages/Matches";
 import Messages from "@/pages/Messages";
 import Conversation from "@/pages/Conversation";
 import Referrals from "@/pages/Referrals";
+import Wallet from "@/pages/Wallet";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminPhotos from "@/pages/admin/AdminPhotos";
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/messages/:conversationId" element={<Protected><Conversation /></Protected>} />
           <Route path="/profil" element={<Protected><Profile /></Protected>} />
           <Route path="/parrainage" element={<Protected><Referrals /></Protected>} />
+          <Route path="/portefeuille" element={<Protected><Wallet /></Protected>} />
           <Route path="/abonnement" element={<Protected><Subscriptions /></Protected>} />
 
           <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>

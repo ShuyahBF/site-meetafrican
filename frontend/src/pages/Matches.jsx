@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiClient } from "@/lib/api";
 import BottomNav from "@/components/BottomNav";
+import ProfilePhoto from "@/components/ProfilePhoto";
 
 export default function Matches() {
   const [matches, setMatches] = useState([]);
@@ -29,29 +30,22 @@ export default function Matches() {
           </p>
         ) : (
           <div className="grid grid-cols-3 gap-3">
-            {matches.map((m) => {
-              const photo = (m.other_user.photos || []).find((p) => p.status === "approved");
-              return (
-                <Link
-                  key={m.match_id}
-                  to={m.conversation_id ? `/messages/${m.conversation_id}` : "/matchs"}
-                  className="flex flex-col items-center gap-1"
-                >
-                  <div className="aspect-square w-full overflow-hidden rounded-xl bg-slate-800/10">
-                    {photo ? (
-                      <img src={photo.url} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-slate-400">
-                        <span className="material-symbols-outlined">person</span>
-                      </div>
-                    )}
-                  </div>
-                  <p className="truncate text-xs font-semibold text-slate-800 dark:text-white">
-                    {m.other_user.full_name}
-                  </p>
-                </Link>
-              );
-            })}
+            {matches.map((m) => (
+              <Link
+                key={m.match_id}
+                to={m.conversation_id ? `/messages/${m.conversation_id}` : "/matchs"}
+                className="flex flex-col items-center gap-1"
+              >
+                <ProfilePhoto
+                  profile={m.other_user}
+                  showOnlineDot
+                  className="aspect-square w-full rounded-xl"
+                />
+                <p className="truncate text-xs font-semibold text-slate-800 dark:text-white">
+                  {m.other_user.full_name}
+                </p>
+              </Link>
+            ))}
           </div>
         )}
       </main>

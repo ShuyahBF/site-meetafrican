@@ -1,18 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiClient, extractErrorMessage } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 import BottomNav from "@/components/BottomNav";
-
-function primaryPhotoUrl(candidate) {
-  const approved = (candidate.photos || []).filter((p) => p.status === "approved");
-  const primary = approved.find((p) => p.is_primary) || approved[0];
-  return primary?.url || null;
-}
+import ProfileCard from "@/components/ProfileCard";
 
 export default function Discover() {
+  const { user, refresh } = useAuth();
   const [candidates, setCandidates] = useState([]);
+  const [history, setHistory] = useState([]); // profils déjà vus, pour "Annuler"
   const [loading, setLoading] = useState(true);
-  const [swiping, setSwiping] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [matchInfo, setMatchInfo] = useState(null); // { other_user }
   const [error, setError] = useState("");
 
@@ -30,11 +28,12 @@ export default function Discover() {
   const current = candidates[0];
 
   const act = async (action) => {
-    if (!current || swiping) return;
-    setSwiping(true);
+    if (!current || busy) return;
+    setBusy(true);
     setError("");
     try {
       const res = await apiClient.post("/swipe", { target_user_id: current.id, action });
+      setHistory((prev) => [...prev, current]);
       setCandidates((prev) => prev.slice(1));
       if (res.data.matched) {
         setMatchInfo({ other_user: current });
@@ -42,7 +41,40 @@ export default function Discover() {
     } catch (err) {
       setError(extractErrorMessage(err, "Action impossible"));
     } finally {
-      setSwiping(false);
+      setBusy(false);
+    }
+  };
+
+  const undo = async () => {
+    if (busy || history.length === 0) return;
+    setBusy(true);
+    setError("");
+    try {
+      await apiClient.post("/swipe/undo");
+      const restored = history[history.length - 1];
+      setHistory((prev) => prev.slice(0, -1));
+      setCandidates((prev) => [restored, ...prev]);
+    } catch (err) {
+      setError(extractErrorMessage(err, "Impossible d'annuler ce swipe"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const sendHeart = async () => {
+    if (!current || busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      await apiClient.post(`/users/${current.id}/heart`);
+      setCandidates((prev) => [
+        { ...prev[0], hearts_received: (prev[0].hearts_received ?? 0) + 1 },
+        ...prev.slice(1),
+      ]);
+    } catch (err) {
+      setError(extractErrorMessage(err, "Impossible d'envoyer le coup de cœur"));
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -67,46 +99,19 @@ export default function Discover() {
             </button>
           </div>
         ) : (
-          <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-white/5">
-            <div className="aspect-[3/4] w-full bg-slate-800/10">
-              {primaryPhotoUrl(current) ? (
-                <img src={primaryPhotoUrl(current)} alt={current.full_name} className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-slate-400">
-                  <span className="material-symbols-outlined text-6xl">person</span>
-                </div>
-              )}
-            </div>
-            <div className="p-4">
-              <p className="text-lg font-bold text-slate-900 dark:text-white">
-                {current.full_name}{current.age ? `, ${current.age}` : ""}
-              </p>
-              {current.city && <p className="text-sm text-slate-500 dark:text-slate-400">{current.city}</p>}
-              {current.bio && <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{current.bio}</p>}
-            </div>
-          </div>
+          <ProfileCard
+            profile={current}
+            currentUserPoints={user?.points}
+            busy={busy}
+            onPass={() => act("pass")}
+            onLike={() => act("like")}
+            onHeart={sendHeart}
+            onUndo={history.length > 0 ? undo : undefined}
+            onSpend={refresh}
+          />
         )}
 
         {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
-
-        {current && (
-          <div className="mt-6 flex items-center gap-6">
-            <button
-              onClick={() => act("pass")}
-              disabled={swiping}
-              className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-slate-300 text-slate-500 disabled:opacity-50 dark:border-white/20 dark:text-white"
-            >
-              <span className="material-symbols-outlined text-2xl">close</span>
-            </button>
-            <button
-              onClick={() => act("like")}
-              disabled={swiping}
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-white disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined text-2xl">favorite</span>
-            </button>
-          </div>
-        )}
       </main>
 
       <BottomNav />
