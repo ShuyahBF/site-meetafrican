@@ -264,7 +264,7 @@ class AiDecision(str, Enum):
 
 
 DEFAULT_ID_VERIFICATION_PROMPT = (
-    "Tu es un agent de vérification d'identité pour MeetAfrican, un site de "
+    "Tu es un agent de vérification d'identité pour bAuthentik, un site de "
     "rencontre. On te montre la photo d'une pièce d'identité (carte "
     "nationale, passeport, permis) soumise par un utilisateur lors de son "
     "inscription ou d'une mise à jour de profil.\n\n"
@@ -282,7 +282,7 @@ DEFAULT_ID_VERIFICATION_PROMPT = (
 )
 
 DEFAULT_PHOTO_MODERATION_PROMPT = (
-    "Tu es un modérateur de contenu pour MeetAfrican, un site de rencontre "
+    "Tu es un modérateur de contenu pour bAuthentik, un site de rencontre "
     "africain. On te montre une photo qu'un utilisateur veut ajouter à son "
     "album de profil.\n\n"
     "Rejette (rejected) les photos qui contiennent : nudité ou contenu "

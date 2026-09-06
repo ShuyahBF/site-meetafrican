@@ -68,7 +68,7 @@ async def ensure_admin_user() -> None:
         return
 
     admin = User(
-        full_name="Administrateur MeetAfrican",
+        full_name="Administrateur bAuthentik",
         email=settings.admin_bootstrap_email,
         password_hash=hash_password(settings.admin_bootstrap_password),
         gender=Gender.homme,

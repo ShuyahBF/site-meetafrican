@@ -29,7 +29,7 @@ export default function Welcome() {
           déjà mises en avant plus bas. */}
       <header className="flex items-center justify-center px-4 py-5">
         <span className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
-          Meet<span className="text-primary">African</span>
+          b<span className="text-primary">Authentik</span>
         </span>
       </header>
 

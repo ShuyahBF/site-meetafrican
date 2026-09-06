@@ -1,4 +1,4 @@
-"""Point d'entrée FastAPI — MeetAfrican backend."""
+"""Point d'entrée FastAPI — bAuthentik backend."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -26,7 +26,7 @@ from seed import ensure_admin_user, seed_default_plans
 
 settings = get_settings()
 
-app = FastAPI(title="MeetAfrican API", version="0.1.0")
+app = FastAPI(title="bAuthentik API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,

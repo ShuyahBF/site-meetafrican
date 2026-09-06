@@ -9,7 +9,7 @@ const PLATFORMS = [
   { key: "tiktok", label: "TikTok", icon: "music_note" },
 ];
 
-const SHARE_MESSAGE = "Rejoins-moi sur MeetAfrican, le site de rencontre africain ! 💕";
+const SHARE_MESSAGE = "Rejoins-moi sur bAuthentik, le site de rencontre africain ! 💕";
 
 export default function Referrals() {
   const [data, setData] = useState(null);
@@ -60,7 +60,7 @@ export default function Referrals() {
 
       <h1 className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">Parrainage</h1>
       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        Partagez MeetAfrican et gagnez des points à chaque partage.
+        Partagez bAuthentik et gagnez des points à chaque partage.
       </p>
 
       <div className="mt-4 rounded-xl bg-primary/10 p-4 text-center">

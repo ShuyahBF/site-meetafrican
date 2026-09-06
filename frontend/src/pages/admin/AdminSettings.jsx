@@ -44,7 +44,7 @@ function ReferralPointsSection() {
     <section className="rounded-xl border border-slate-200 bg-white p-5">
       <h2 className="font-bold">Points de parrainage social</h2>
       <p className="mt-1 text-sm text-slate-500">
-        Points gagnés quand un membre partage le lien MeetAfrican sur chaque plateforme.
+        Points gagnés quand un membre partage le lien bAuthentik sur chaque plateforme.
       </p>
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Field label="WhatsApp">
