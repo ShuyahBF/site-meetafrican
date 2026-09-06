@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from auth import hash_password
 from config import get_settings
 from db import db
-from models import Gender, Role, SubscriptionPlan, User
+from models import Gender, Role, SubscriptionPlan, User, user_insert_doc
 
 DEFAULT_PLANS = [
     SubscriptionPlan(
@@ -76,4 +76,4 @@ async def ensure_admin_user() -> None:
         role=Role.admin,
         verification_status="verified",
     )
-    await db.users.insert_one(admin.model_dump(mode="json"))
+    await db.users.insert_one(user_insert_doc(admin))

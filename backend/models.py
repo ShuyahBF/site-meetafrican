@@ -105,6 +105,23 @@ class User(BaseModel):
     updated_at: str = Field(default_factory=_now)
 
 
+def user_insert_doc(user: User) -> dict:
+    """Sérialise un User pour insertion Mongo, en retirant email/phone quand
+    ils valent None. email et phone ont un index unique "sparse" (db.py) :
+    un sparse index n'exclut que les documents où la clé est absente, pas
+    ceux où elle vaut explicitement null — model_dump() sérialise pourtant
+    les champs Optional non fournis en null explicite. Sans ce retrait, le
+    deuxième utilisateur créé sans téléphone (ou sans email) entre en
+    collision sur {phone: null} (E11000 DuplicateKeyError) au lieu d'être
+    accepté."""
+    doc = user.model_dump(mode="json")
+    if doc.get("email") is None:
+        doc.pop("email", None)
+    if doc.get("phone") is None:
+        doc.pop("phone", None)
+    return doc
+
+
 class UserPublic(BaseModel):
     """Vue exposée à l'API — jamais de password_hash, ni de date de
     naissance exacte (seulement l'âge calculé)."""

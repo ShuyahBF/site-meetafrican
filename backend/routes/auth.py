@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from auth import create_access_token, get_current_user, hash_password, verify_password
 from db import db
-from models import Token, User, UserLogin, UserPublic, UserRegister, to_user_public
+from models import Token, User, UserLogin, UserPublic, UserRegister, to_user_public, user_insert_doc
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -54,7 +54,7 @@ async def register(payload: UserRegister):
         birthdate=payload.birthdate,
         referred_by=referred_by,
     )
-    doc = user.model_dump(mode="json")
+    doc = user_insert_doc(user)
     await db.users.insert_one(doc.copy())
     token = create_access_token(user.id)
     return Token(access_token=token, user=to_user_public(doc))
