@@ -12,9 +12,23 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from auth import get_current_admin
 from db import db
-from models import ReferralPointsSettings, SubscriptionPlan
+from models import ReferralPointsSettings, SiteAppearance, SubscriptionPlan
 
 router = APIRouter(prefix="/admin", tags=["Administration"])
+
+
+@router.get("/settings/appearance", response_model=SiteAppearance)
+async def get_appearance_settings(_: dict = Depends(get_current_admin)):
+    doc = await db.settings.find_one({"id": "global_appearance"}, {"_id": 0})
+    return SiteAppearance(**doc) if doc else SiteAppearance()
+
+
+@router.put("/settings/appearance", response_model=SiteAppearance)
+async def update_appearance_settings(payload: SiteAppearance, _: dict = Depends(get_current_admin)):
+    doc = payload.model_dump()
+    doc["id"] = "global_appearance"
+    await db.settings.update_one({"id": "global_appearance"}, {"$set": doc}, upsert=True)
+    return payload
 
 
 @router.get("/settings/referral-points", response_model=ReferralPointsSettings)

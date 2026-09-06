@@ -8,7 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from config import get_settings
-from db import ensure_indexes
+from db import db, ensure_indexes
+from models import SiteAppearance
 from routes import (
     admin,
     auth,
@@ -53,6 +54,15 @@ api.include_router(referrals.router)
 @api.get("/health")
 async def health():
     return {"ok": True}
+
+
+@api.get("/appearance", response_model=SiteAppearance)
+async def public_appearance():
+    """Lecture publique, sans authentification — la page d'accueil (et
+    d'autres pages publiques à l'avenir) en ont besoin avant tout login.
+    Modifiable par l'admin via PUT /admin/settings/appearance."""
+    doc = await db.settings.find_one({"id": "global_appearance"}, {"_id": 0})
+    return SiteAppearance(**doc) if doc else SiteAppearance()
 
 
 app.include_router(api)

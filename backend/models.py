@@ -299,6 +299,15 @@ DEFAULT_PHOTO_MODERATION_PROMPT = (
 )
 
 
+class SiteAppearance(BaseModel):
+    """Visuels de l'interface publique, modifiables par l'admin sans
+    redéploiement — pour pouvoir rafraîchir le "look" périodiquement.
+    hero_image_url vide/absent -> le frontend retombe sur son image par
+    défaut embarquée dans le build."""
+    id: str = "global"
+    hero_image_url: Optional[str] = None
+
+
 class ModerationSettings(BaseModel):
     """Prompts système modifiables par l'admin, et interrupteur global de la
     vérification automatique par IA (désactivable -> tout passe en revue

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiClient } from "@/lib/api";
+import { uploadFile } from "@/lib/upload";
 
 export default function AdminSettings() {
   return (
@@ -10,9 +11,96 @@ export default function AdminSettings() {
           Réglages globaux de la plateforme — modérables sans redéploiement.
         </p>
       </div>
+      <AppearanceSection />
       <ReferralPointsSection />
       <ModerationSection />
     </div>
+  );
+}
+
+function AppearanceSection() {
+  const [form, setForm] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+  const fileRef = useRef(null);
+
+  useEffect(() => {
+    apiClient.get("/admin/settings/appearance").then((r) => setForm(r.data));
+  }, []);
+
+  const save = async (next) => {
+    setSaving(true);
+    setSaved(false);
+    try {
+      await apiClient.put("/admin/settings/appearance", next);
+      setForm(next);
+      setSaved(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const uploadHero = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError("");
+    setUploading(true);
+    try {
+      const { url } = await uploadFile(file, "photo");
+      await save({ ...form, hero_image_url: url });
+    } catch {
+      setError("Échec de l'envoi de l'image");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const resetHero = () => save({ ...form, hero_image_url: null });
+
+  if (!form) return null;
+
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-5">
+      <h2 className="font-bold">Apparence de la page d'accueil</h2>
+      <p className="mt-1 text-sm text-slate-500">
+        Change la photo mise en avant sur la page d'accueil publique — pratique pour
+        rafraîchir régulièrement le "look" du site sans repasser par le code.
+        Sans image ici, le site utilise sa photo par défaut.
+      </p>
+
+      <div className="mt-4 flex items-center gap-4">
+        <div className="h-24 w-40 overflow-hidden rounded-lg bg-slate-100">
+          {form.hero_image_url && (
+            <img src={form.hero_image_url} alt="Aperçu" className="h-full w-full object-cover" />
+          )}
+        </div>
+        <div className="flex flex-col gap-2">
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          >
+            {uploading ? "Envoi…" : "Changer l'image"}
+          </button>
+          {form.hero_image_url && (
+            <button
+              onClick={resetHero}
+              disabled={saving}
+              className="text-xs font-semibold text-slate-500 hover:text-primary"
+            >
+              Revenir à l'image par défaut
+            </button>
+          )}
+        </div>
+        <input ref={fileRef} type="file" accept="image/*" hidden onChange={uploadHero} />
+      </div>
+
+      {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+      {saved && <span className="mt-3 inline-block text-sm text-emerald-600">Enregistré ✓</span>}
+    </section>
   );
 }
 

@@ -1,4 +1,8 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { apiClient } from "@/lib/api";
+
+const DEFAULT_HERO_IMAGE = "/images/hero-couple.jpg";
 
 // Trois bénéfices réels de l'app (pas des promesses en l'air : chaque item
 // correspond à une fonctionnalité déjà implémentée côté backend), présentés
@@ -22,6 +26,20 @@ const FEATURES = [
 ];
 
 export default function Welcome() {
+  // Image modifiable par l'admin (Paramètres > Apparence de la page
+  // d'accueil) sans redéploiement ; repli sur l'image embarquée par défaut
+  // tant que rien n'a été réglé.
+  const [heroImage, setHeroImage] = useState(DEFAULT_HERO_IMAGE);
+
+  useEffect(() => {
+    apiClient
+      .get("/appearance")
+      .then((r) => {
+        if (r.data?.hero_image_url) setHeroImage(r.data.hero_image_url);
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light font-display dark:bg-background-dark">
       {/* Barre de marque minimale — juste le wordmark, pas de navigation :
@@ -38,7 +56,7 @@ export default function Welcome() {
       <div className="relative w-full">
         <div className="relative h-[46vh] w-full overflow-hidden md:h-[54vh]">
           <img
-            src="/images/hero-couple.jpg"
+            src={heroImage}
             alt="Un couple souriant"
             className="h-full w-full object-cover"
           />
