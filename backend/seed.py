@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from auth import hash_password
 from config import get_settings
 from db import db
-from models import Gender, Role, SubscriptionPlan, User, user_insert_doc
+from models import Gender, Gift, Role, SubscriptionPlan, User, user_insert_doc
 
 DEFAULT_PLANS = [
     SubscriptionPlan(
@@ -51,6 +51,22 @@ async def seed_default_plans() -> None:
         existing = await db.subscription_plans.find_one({"code": plan.code})
         if not existing:
             await db.subscription_plans.insert_one(plan.model_dump())
+
+
+DEFAULT_GIFTS = [
+    Gift(code="rose", name="Rose", emoji="🌹", price_xof=500),
+    Gift(code="bouquet", name="Bouquet de fleurs", emoji="💐", price_xof=2000),
+    Gift(code="chocolat", name="Boîte de chocolats", emoji="🍫", price_xof=1500),
+    Gift(code="cadeau", name="Cadeau surprise", emoji="🎁", price_xof=3000),
+    Gift(code="diamant", name="Diamant", emoji="💎", price_xof=10000),
+]
+
+
+async def seed_default_gifts() -> None:
+    for gift in DEFAULT_GIFTS:
+        existing = await db.gifts.find_one({"code": gift.code})
+        if not existing:
+            await db.gifts.insert_one(gift.model_dump())
 
 
 async def ensure_admin_user() -> None:

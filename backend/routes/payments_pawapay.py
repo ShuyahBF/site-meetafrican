@@ -123,6 +123,7 @@ async def create_payment_page(
         "deposit_id": deposit_id,
         "user_id": user["id"],
         "subscription_id": subscription["id"],
+        "purpose": "subscription",
         "amount": payload.amount_xof,
         "currency": _currency_for_country(country),
         "country": country,
@@ -178,6 +179,103 @@ async def create_payment_page(
     await db.subscriptions.update_one(
         {"id": subscription["id"]},
         {"$set": {"payment_id": deposit_id}},
+    )
+    return {"deposit_id": deposit_id, "redirect_url": redirect_url}
+
+
+class WalletRechargeCreate(BaseModel):
+    amount_xof: int = Field(..., gt=0)
+    country: Optional[str] = None
+    msisdn: Optional[str] = None
+    return_url: Optional[str] = Field(None, max_length=500)
+
+
+@router.post("/wallet-recharge")
+async def create_wallet_recharge(
+    payload: WalletRechargeCreate, request: Request, user: dict = Depends(get_current_user)
+):
+    """Même mécanique que /payment-page (abonnement), mais crédite le
+    portefeuille de l'utilisateur au lieu d'activer un abonnement — voir la
+    branche purpose=="wallet_recharge" dans _apply_webhook ci-dessous."""
+    s = get_settings()
+    token = _active_token()
+    if not token:
+        raise HTTPException(status_code=503, detail="PawaPay non configuré (clé API manquante)")
+
+    country = (payload.country or s.pawapay_default_country).upper()
+    deposit_id = _uuid()
+    origin = (payload.return_url or str(request.base_url)).rstrip("/")
+    return_url = payload.return_url or f"{origin}/portefeuille/retour?depositId={deposit_id}"
+
+    body: Dict[str, Any] = {
+        "depositId": deposit_id,
+        "returnUrl": return_url,
+        "country": country,
+        "amountDetails": {
+            "amount": str(payload.amount_xof),
+            "currency": _currency_for_country(country),
+        },
+    }
+    msisdn_digits = "".join(ch for ch in (payload.msisdn or "") if ch.isdigit())
+    if msisdn_digits:
+        body["phoneNumber"] = msisdn_digits
+
+    payment_doc = {
+        "id": _uuid(),
+        "deposit_id": deposit_id,
+        "user_id": user["id"],
+        "subscription_id": None,
+        "purpose": "wallet_recharge",
+        "amount": payload.amount_xof,
+        "currency": _currency_for_country(country),
+        "country": country,
+        "environment": s.pawapay_environment,
+        "flow": "payment_page",
+        "status": "initiated",
+        "api_status": None,
+        "api_message": None,
+        "return_url": return_url,
+        "redirect_url": None,
+        "created_at": _now(),
+        "updated_at": _now(),
+    }
+    await db.payments.insert_one(payment_doc.copy())
+
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.post(
+                f"{_base_url()}/v2/paymentpage",
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                json=body,
+            )
+            try:
+                api_resp = r.json()
+            except Exception:
+                api_resp = {"raw": r.text[:500]}
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Délai dépassé lors de l'appel à PawaPay")
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Erreur PawaPay : {str(exc)[:200]}") from exc
+
+    redirect_url = (api_resp or {}).get("redirectUrl")
+    if not redirect_url:
+        await db.payments.update_one(
+            {"deposit_id": deposit_id},
+            {"$set": {
+                "status": "failed",
+                "api_status": "PAYMENT_PAGE_REJECTED",
+                "api_message": _readable(api_resp.get("failureReason") or api_resp.get("message") or api_resp),
+                "updated_at": _now(),
+            }},
+        )
+        raise HTTPException(
+            status_code=502,
+            detail=_readable(api_resp.get("failureReason") or api_resp.get("message")) or "PawaPay n'a pas renvoyé de lien de paiement.",
+        )
+
+    await db.payments.update_one(
+        {"deposit_id": deposit_id},
+        {"$set": {"status": "pending", "redirect_url": redirect_url, "updated_at": _now()}},
     )
     return {"deposit_id": deposit_id, "redirect_url": redirect_url}
 
@@ -260,6 +358,17 @@ async def _apply_webhook(payload: Dict[str, Any]) -> Dict[str, Any]:
                 {"id": subscription["id"]},
                 {"$set": {"status": "active", "started_at": _now(), "expires_at": expires_at}},
             )
+    elif new_status == "completed" and payment.get("purpose") == "wallet_recharge":
+        from models import WalletTransaction
+        await db.users.update_one(
+            {"id": payment["user_id"]}, {"$inc": {"wallet_balance_xof": payment["amount"]}},
+        )
+        tx = WalletTransaction(
+            user_id=payment["user_id"], kind="recharge", amount_xof=payment["amount"],
+            description=f"Recharge {payment['amount']} {payment['currency']}",
+            payment_id=deposit_id,
+        )
+        await db.wallet_transactions.insert_one(tx.model_dump(mode="json"))
     return {"ok": True, "applied": True}
 
 

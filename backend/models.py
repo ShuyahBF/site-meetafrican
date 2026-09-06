@@ -239,17 +239,75 @@ class PaymentProof(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Portefeuille, cadeaux, points, coups de cœur — interactions entre profils
+# ---------------------------------------------------------------------------
+
+class WalletTransaction(BaseModel):
+    """Historique du portefeuille — chaque mouvement de solde, quelle que
+    soit sa nature, pour un relevé complet côté utilisateur."""
+    id: str = Field(default_factory=_uuid)
+    user_id: str
+    kind: str  # "recharge" | "gift_sent" | "gift_received"
+    amount_xof: int  # positif = crédit, négatif = débit
+    related_user_id: Optional[str] = None  # expéditeur/destinataire du cadeau
+    description: str
+    payment_id: Optional[str] = None  # deposit_id PawaPay pour une recharge
+    created_at: str = Field(default_factory=_now)
+
+
+class Gift(BaseModel):
+    """Catalogue de cadeaux payants, gérable par l'admin."""
+    id: str = Field(default_factory=_uuid)
+    code: str  # "roses", "chocolat"...
+    name: str
+    emoji: str = "🎁"
+    price_xof: int
+    active: bool = True
+
+
+class GiftSent(BaseModel):
+    id: str = Field(default_factory=_uuid)
+    sender_id: str
+    recipient_id: str
+    gift_id: str
+    gift_name: str
+    price_xof: int
+    message: Optional[str] = Field(None, max_length=200)
+    created_at: str = Field(default_factory=_now)
+
+
+class PointsTransfer(BaseModel):
+    id: str = Field(default_factory=_uuid)
+    sender_id: str
+    recipient_id: str
+    amount: int
+    created_at: str = Field(default_factory=_now)
+
+
+class HeartSent(BaseModel):
+    """"Coup de cœur" — geste gratuit, symbolique, sans impact sur le solde
+    de qui que ce soit (voir models.User.hearts_received)."""
+    id: str = Field(default_factory=_uuid)
+    sender_id: str
+    recipient_id: str
+    created_at: str = Field(default_factory=_now)
+
+
+# ---------------------------------------------------------------------------
 # Parrainage social (points)
 # ---------------------------------------------------------------------------
 
 class ReferralPointsSettings(BaseModel):
-    """Barème paramétrable par l'admin — points gagnés par plateforme de partage."""
+    """Barème paramétrable par l'admin — points gagnés par plateforme de
+    partage, et limite sur l'économie de points en général (transfert d'un
+    profil à un autre, voir routes/interactions.py)."""
     id: str = "global"
     points_whatsapp: int = 5
     points_facebook: int = 5
     points_instagram: int = 5
     points_tiktok: int = 5
     max_shares_per_day: int = 3
+    max_points_per_transfer: int = 50
 
 
 class ReferralShare(BaseModel):

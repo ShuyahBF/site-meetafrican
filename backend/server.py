@@ -14,6 +14,7 @@ from routes import (
     admin,
     auth,
     chat,
+    interactions,
     matching,
     payments_pawapay,
     photos,
@@ -23,7 +24,7 @@ from routes import (
     uploads,
     verification,
 )
-from seed import ensure_admin_user, seed_default_plans
+from seed import ensure_admin_user, seed_default_gifts, seed_default_plans
 
 settings = get_settings()
 
@@ -49,6 +50,7 @@ api.include_router(matching.router)
 api.include_router(chat.router)
 api.include_router(ratings.router)
 api.include_router(referrals.router)
+api.include_router(interactions.router)
 
 
 @api.get("/health")
@@ -88,4 +90,5 @@ if settings.storage_backend == "local":
 async def on_startup():
     await ensure_indexes()
     await seed_default_plans()
+    await seed_default_gifts()
     await ensure_admin_user()
