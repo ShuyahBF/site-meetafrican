@@ -1,51 +1,85 @@
 import { Link } from "react-router-dom";
 
-const SLIDES = [
-  { icon: "swipe", title: "Découvrez des profils", text: "Trouvez facilement des personnes compatibles à proximité." },
-  { icon: "chat", title: "Connectez en sécurité", text: "Discutez en toute confiance grâce à notre chat sécurisé." },
-  { icon: "celebration", title: "Vivez de vrais moments", text: "L'application est conçue pour mener à de vraies rencontres." },
+// Trois bénéfices réels de l'app (pas des promesses en l'air : chaque item
+// correspond à une fonctionnalité déjà implémentée côté backend), présentés
+// façon "pourquoi nous choisir" plutôt que le carrousel générique d'avant.
+const FEATURES = [
+  {
+    icon: "verified_user",
+    title: "Profils vérifiés",
+    text: "Chaque pièce d'identité est contrôlée avant validation du profil, pour une communauté plus sûre.",
+  },
+  {
+    icon: "favorite",
+    title: "Des rencontres qui comptent",
+    text: "Un match ne se fait que si l'intérêt est réciproque — fini les messages sans réponse.",
+  },
+  {
+    icon: "chat",
+    title: "Discussion en temps réel",
+    text: "Échangez instantanément avec vos matchs, en toute confidentialité.",
+  },
 ];
 
 export default function Welcome() {
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light font-display dark:bg-background-dark">
+      {/* Barre de marque minimale — juste le wordmark, pas de navigation :
+          cette page n'a que deux destinations (inscription / connexion),
+          déjà mises en avant plus bas. */}
+      <header className="flex items-center justify-center px-4 py-5">
+        <span className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
+          Meet<span className="text-primary">African</span>
+        </span>
+      </header>
+
+      {/* Hero : photo + dégradé pour garder le texte lisible par-dessus,
+          quel que soit le contenu de l'image. */}
       <div className="relative w-full">
-        <div className="flex min-h-[40vh] w-full flex-col items-center justify-center bg-[#181113] md:min-h-[50vh]">
-          <span className="material-symbols-outlined text-5xl text-white">favorite</span>
+        <div className="relative h-[46vh] w-full overflow-hidden md:h-[54vh]">
+          <img
+            src="/images/hero-couple.jpg"
+            alt="Un couple souriant"
+            className="h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/40 to-background-dark/10" />
+        </div>
+
+        <div className="relative -mt-16 px-4 text-center md:-mt-20">
+          <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight text-white drop-shadow-sm md:text-5xl">
+            La rencontre commence ici
+          </h1>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-white/90 md:text-base">
+            La plateforme pensée pour les Africains qui veulent rencontrer,
+            échanger et construire une vraie relation — où qu'ils soient.
+          </p>
         </div>
       </div>
 
-      <h1 className="px-4 pb-3 pt-8 text-center font-display text-3xl font-bold leading-tight tracking-tight text-slate-900 dark:text-white md:text-4xl">
-        La rencontre commence ici
-      </h1>
-
-      <div className="flex-grow">
-        <div className="flex gap-4 overflow-x-auto px-4 py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {SLIDES.map((s) => (
-            <div key={s.title} className="flex h-full w-64 flex-shrink-0 flex-col gap-4 rounded-lg">
-              <div className="flex aspect-square w-full items-center justify-center rounded-xl bg-primary/10">
-                <span className="material-symbols-outlined text-6xl text-primary">{s.icon}</span>
-              </div>
-              <div>
-                <p className="text-base font-bold leading-normal text-slate-800 dark:text-white">{s.title}</p>
-                <p className="text-sm font-normal leading-normal text-slate-500 dark:text-slate-400">{s.text}</p>
-              </div>
+      {/* Bénéfices — grille de cartes, plus lisible qu'un carrousel horizontal
+          qu'une partie du contenu reste hors champ sans indice visuel. */}
+      <div className="mx-auto grid w-full max-w-4xl grid-cols-1 gap-4 px-4 py-10 sm:grid-cols-3">
+        {FEATURES.map((f) => (
+          <div
+            key={f.title}
+            className="flex flex-col items-center gap-3 rounded-xl bg-white p-6 text-center shadow-sm ring-1 ring-black/5 dark:bg-white/5 dark:ring-white/10"
+          >
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+              <span className="material-symbols-outlined text-3xl text-primary">{f.icon}</span>
             </div>
-          ))}
-        </div>
+            <p className="text-base font-bold text-slate-900 dark:text-white">{f.title}</p>
+            <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">{f.text}</p>
+          </div>
+        ))}
       </div>
 
-      <div className="flex w-full flex-row items-center justify-center gap-2 py-5">
-        <div className="h-2 w-6 rounded-full bg-primary" />
-        <div className="h-2 w-2 rounded-full bg-primary/20" />
-        <div className="h-2 w-2 rounded-full bg-primary/20" />
-      </div>
+      <div className="flex-grow" />
 
-      <div className="sticky bottom-0 flex justify-center bg-background-light pb-6 pt-2 dark:bg-background-dark">
+      <div className="sticky bottom-0 flex justify-center bg-background-light pb-6 pt-4 dark:bg-background-dark">
         <div className="flex w-full max-w-[480px] flex-1 flex-col items-stretch gap-3 px-4">
           <Link
             to="/inscription"
-            className="flex h-14 w-full min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-full bg-primary px-5 text-base font-bold leading-normal tracking-[0.015em] text-white"
+            className="flex h-14 w-full min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-full bg-primary px-5 text-base font-bold leading-normal tracking-[0.015em] text-white shadow-lg shadow-primary/30 transition-transform active:scale-[0.98]"
           >
             Créer un compte
           </Link>
