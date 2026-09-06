@@ -61,7 +61,13 @@ async def _persist_message(conversation: dict, sender: dict, text: str) -> Messa
                 {"$set": {"avg_response_seconds": new_avg, "response_count": count + 1}},
             )
 
-    message = Message(conversation_id=conversation_id, sender_id=sender["id"], text=text)
+    # Réutilise le "now" déjà capturé plus haut plutôt que de laisser Message
+    # en générer un nouveau : sans ça, l'aller-retour MongoDB de la mise à
+    # jour du temps de réponse ci-dessus s'intercale entre les deux captures
+    # d'horloge, et created_at fini légèrement en retard sur le calcul du
+    # delta qui a servi à le produire — écart mineur mais qui s'accumule sur
+    # une conversation longue.
+    message = Message(conversation_id=conversation_id, sender_id=sender["id"], text=text, created_at=now.isoformat())
     await db.messages.insert_one(message.model_dump(mode="json"))
     await db.conversations.update_one({"id": conversation_id}, {"$set": {"last_message_at": message.created_at}})
     return message
