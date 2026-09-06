@@ -76,4 +76,8 @@ async def login(payload: UserLogin):
 
 @router.get("/me", response_model=UserPublic)
 async def me(user: dict = Depends(get_current_user)):
-    return to_user_public(user)
+    profile = to_user_public(user)
+    profile.likes_received = await db.swipes.count_documents(
+        {"target_user_id": user["id"], "action": "like"}
+    )
+    return profile

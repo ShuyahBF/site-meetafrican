@@ -2,6 +2,7 @@
 paiement manuelle (pour les moyens de paiement locaux hors PawaPay)."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,6 +13,25 @@ from db import db
 from models import PaymentProof, Subscription, SubscriptionPlan
 
 router = APIRouter(prefix="/subscriptions", tags=["Abonnements"])
+
+
+async def has_active_subscription(user_id: str) -> bool:
+    """Utilisé ailleurs (floutage des photos pour les non-abonnés — voir
+    routes/matching.py) : vérifie le statut ET la date d'expiration, pas
+    seulement status=="active" — rien ne repasse aujourd'hui une
+    souscription à "expired" une fois expires_at dépassé."""
+    sub = await db.subscriptions.find_one(
+        {"user_id": user_id, "status": "active"}, {"_id": 0, "expires_at": 1},
+        sort=[("created_at", -1)],
+    )
+    if not sub:
+        return False
+    if not sub.get("expires_at"):
+        return True
+    try:
+        return datetime.fromisoformat(sub["expires_at"]) > datetime.now(timezone.utc)
+    except ValueError:
+        return True
 
 
 @router.get("/plans", response_model=List[SubscriptionPlan])
@@ -44,7 +64,14 @@ async def my_subscription(user: dict = Depends(get_current_user)):
     sub = await db.subscriptions.find_one(
         {"user_id": user["id"], "status": "active"}, {"_id": 0}, sort=[("created_at", -1)]
     )
-    return sub or {"status": "none"}
+    if not sub:
+        return {"status": "none"}
+    if not await has_active_subscription(user["id"]):
+        # status=="active" en base mais expires_at dépassé — rien ne
+        # repasse la souscription à "expired" aujourd'hui (voir
+        # has_active_subscription ci-dessus) ; ne pas mentir à l'affichage.
+        return {"status": "expired", "expires_at": sub.get("expires_at")}
+    return sub
 
 
 class PaymentProofCreate(BaseModel):

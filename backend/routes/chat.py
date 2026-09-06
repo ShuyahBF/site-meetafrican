@@ -15,9 +15,25 @@ from pydantic import BaseModel, Field
 
 from auth import decode_access_token, get_current_user
 from db import db
-from models import Message
+from models import Message, PhotoStatus
+from routes.subscriptions import has_active_subscription
 
 router = APIRouter(tags=["Chat"])
+
+
+def _masked_photos(photos: list, unlocked: bool) -> list:
+    """Même règle que routes/matching.py:_mask_photos_for_viewer, mais sur
+    un dict brut plutôt qu'un UserPublic — cette route ne passe pas par
+    to_user_public()."""
+    if unlocked:
+        return photos
+    result = []
+    for p in photos:
+        p = dict(p)
+        if p.get("status") == PhotoStatus.approved.value and p.get("masked_url"):
+            p["url"] = p["masked_url"]
+        result.append(p)
+    return result
 
 
 def _now_dt() -> datetime:
@@ -82,6 +98,7 @@ async def list_conversations(user: dict = Depends(get_current_user)):
     other_ids = [c["user_b"] if c["user_a"] == user["id"] else c["user_a"] for c in convs]
     others = await db.users.find({"id": {"$in": other_ids}}, {"_id": 0}).to_list(len(other_ids) or 1)
     others_by_id = {o["id"]: o for o in others}
+    unlocked = await has_active_subscription(user["id"])
 
     results = []
     for c in convs:
@@ -96,7 +113,7 @@ async def list_conversations(user: dict = Depends(get_current_user)):
             "conversation_id": c["id"],
             "other_user": {
                 "id": other["id"], "full_name": other["full_name"],
-                "photos": other.get("photos", []),
+                "photos": _masked_photos(other.get("photos", []), unlocked),
                 "avg_response_seconds": other.get("avg_response_seconds"),
             },
             "last_message": last_message,

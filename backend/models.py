@@ -74,6 +74,11 @@ class UserLogin(BaseModel):
 class Photo(BaseModel):
     id: str = Field(default_factory=_uuid)
     url: str
+    # Version floutée + bandeau de marque, servie à la place de `url` aux
+    # visiteurs sans abonnement actif (voir routes/matching.py). Générée en
+    # même temps que le filigrane sur `url`, au moment de l'approbation —
+    # absente tant que la photo n'est pas encore approuvée.
+    masked_url: Optional[str] = None
     status: PhotoStatus = PhotoStatus.pending
     is_primary: bool = False
     moderation_notes: Optional[str] = None
@@ -96,11 +101,14 @@ class User(BaseModel):
     role: Role = Role.user
     verification_status: VerificationStatus = VerificationStatus.unverified
     points: int = 0
+    wallet_balance_xof: int = 0
     avg_response_seconds: Optional[float] = None
     response_count: int = 0
     referral_code: str = Field(default_factory=lambda: uuid.uuid4().hex[:8])
     referred_by: Optional[str] = None
     is_active: bool = True
+    last_seen_at: Optional[str] = None
+    hearts_received: int = 0
     created_at: str = Field(default_factory=_now)
     updated_at: str = Field(default_factory=_now)
 
@@ -122,6 +130,13 @@ def user_insert_doc(user: User) -> dict:
     return doc
 
 
+# Un profil est considéré "en ligne" si sa dernière activité authentifiée
+# remonte à moins de 5 minutes (voir auth.py:get_current_user, qui met à
+# jour last_seen_at sur chaque requête, avec un throttle à 60s pour éviter
+# une écriture Mongo à chaque appel).
+ONLINE_THRESHOLD_SECONDS = 300
+
+
 class UserPublic(BaseModel):
     """Vue exposée à l'API — jamais de password_hash, ni de date de
     naissance exacte (seulement l'âge calculé)."""
@@ -138,6 +153,12 @@ class UserPublic(BaseModel):
     points: int
     referral_code: str
     avg_response_seconds: Optional[float] = None
+    last_seen_at: Optional[str] = None
+    is_online: bool = False
+    hearts_received: int = 0
+    # Rempli séparément par l'appelant (nécessite une requête d'agrégation,
+    # non disponible depuis le seul document utilisateur) — 0 par défaut.
+    likes_received: int = 0
     created_at: str
 
 
@@ -153,9 +174,20 @@ def _age_from_birthdate(birthdate: Optional[str]) -> Optional[int]:
         return None
 
 
+def _is_online(last_seen_at: Optional[str]) -> bool:
+    if not last_seen_at:
+        return False
+    try:
+        seen = datetime.fromisoformat(last_seen_at)
+    except ValueError:
+        return False
+    return (datetime.now(timezone.utc) - seen).total_seconds() < ONLINE_THRESHOLD_SECONDS
+
+
 def to_user_public(doc: dict) -> "UserPublic":
     data = {k: v for k, v in doc.items() if k in UserPublic.model_fields}
     data["age"] = _age_from_birthdate(doc.get("birthdate"))
+    data["is_online"] = _is_online(doc.get("last_seen_at"))
     return UserPublic(**data)
 
 

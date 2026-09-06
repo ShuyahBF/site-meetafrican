@@ -2,6 +2,7 @@
 `get_current_user`."""
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -53,7 +54,26 @@ async def get_current_user(
     user = await db.users.find_one({"id": user_id}, {"_id": 0})
     if not user or not user.get("is_active", True):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Compte introuvable ou désactivé")
+    _touch_last_seen(user)
     return user
+
+
+def _touch_last_seen(user: dict) -> None:
+    """Marque l'utilisateur comme actif "maintenant", en tâche de fond pour
+    ne pas ralentir la requête en cours. Throttle à 60s (au lieu d'écrire à
+    chaque requête authentifiée) : largement suffisant vu le seuil "en
+    ligne" de 5 minutes (models.ONLINE_THRESHOLD_SECONDS)."""
+    last_seen_at = user.get("last_seen_at")
+    now = datetime.now(timezone.utc)
+    if last_seen_at:
+        try:
+            if (now - datetime.fromisoformat(last_seen_at)).total_seconds() < 60:
+                return
+        except ValueError:
+            pass
+    asyncio.create_task(
+        db.users.update_one({"id": user["id"]}, {"$set": {"last_seen_at": now.isoformat()}})
+    )
 
 
 async def get_current_admin(user: dict = Depends(get_current_user)) -> dict:

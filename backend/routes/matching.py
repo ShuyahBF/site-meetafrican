@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from auth import get_current_user
 from db import db
 from models import Conversation, Match, PhotoStatus, Swipe, UserPublic, to_user_public
+from routes.subscriptions import has_active_subscription
 
 router = APIRouter(tags=["Matching"])
 
@@ -20,6 +21,39 @@ def _now() -> str:
 
 def _opposite(gender: str) -> str:
     return "femme" if gender == "homme" else "homme"
+
+
+async def _mask_photos_for_viewer(profiles: List[UserPublic], viewer_id: str) -> List[UserPublic]:
+    """Sans abonnement actif, le visage des AUTRES profils reste masqué
+    (voir image_processing.apply_face_mask) — visible en clair uniquement
+    avec un abonnement en cours. S'applique uniquement aux photos déjà
+    approuvées (les autres n'ont de toute façon pas de masked_url)."""
+    if not profiles:
+        return profiles
+    if await has_active_subscription(viewer_id):
+        return profiles
+    for p in profiles:
+        for photo in p.photos:
+            if photo.status == PhotoStatus.approved and photo.masked_url:
+                photo.url = photo.masked_url
+    return profiles
+
+
+async def _with_likes_received(profiles: List[UserPublic]) -> List[UserPublic]:
+    """Complète likes_received (compteur non stockable sur le seul document
+    utilisateur — nécessite d'agréger la collection swipes) en une seule
+    requête groupée plutôt qu'une par profil."""
+    if not profiles:
+        return profiles
+    ids = [p.id for p in profiles]
+    cursor = db.swipes.aggregate([
+        {"$match": {"target_user_id": {"$in": ids}, "action": "like"}},
+        {"$group": {"_id": "$target_user_id", "count": {"$sum": 1}}},
+    ])
+    counts = {row["_id"]: row["count"] async for row in cursor}
+    for p in profiles:
+        p.likes_received = counts.get(p.id, 0)
+    return profiles
 
 
 @router.get("/discover", response_model=List[UserPublic])
@@ -38,7 +72,9 @@ async def discover(limit: int = 20, user: dict = Depends(get_current_user)):
         {"_id": 0},
     ).limit(limit)
     candidates = await cursor.to_list(limit)
-    return [to_user_public(c) for c in candidates]
+    profiles = [to_user_public(c) for c in candidates]
+    profiles = await _with_likes_received(profiles)
+    return await _mask_photos_for_viewer(profiles, user["id"])
 
 
 class SwipeCreate(BaseModel):
@@ -87,6 +123,25 @@ async def swipe(payload: SwipeCreate, user: dict = Depends(get_current_user)):
     return SwipeResult(matched=True, match_id=match.id)
 
 
+@router.post("/swipe/undo")
+async def undo_last_swipe(user: dict = Depends(get_current_user)):
+    """Annule le dernier swipe de l'utilisateur — le profil réapparaîtra
+    dans /discover. Refusé si ce swipe a déjà donné lieu à un match (annuler
+    romprait silencieusement une conversation déjà commencée)."""
+    last = await db.swipes.find_one(
+        {"user_id": user["id"]}, {"_id": 0}, sort=[("created_at", -1)]
+    )
+    if not last:
+        raise HTTPException(status_code=404, detail="Aucun swipe à annuler")
+
+    user_a, user_b = sorted([user["id"], last["target_user_id"]])
+    if await db.matches.find_one({"user_a": user_a, "user_b": user_b}):
+        raise HTTPException(status_code=400, detail="Impossible d'annuler : ce profil est déjà un match")
+
+    await db.swipes.delete_one({"id": last["id"]})
+    return {"ok": True, "target_user_id": last["target_user_id"]}
+
+
 @router.get("/matches")
 async def list_matches(user: dict = Depends(get_current_user)):
     matches = await db.matches.find(
@@ -102,10 +157,14 @@ async def list_matches(user: dict = Depends(get_current_user)):
     ).to_list(len(matches) or 1)
     conv_by_match = {c["match_id"]: c for c in conversations}
 
+    other_profiles = [to_user_public(o) for o in others]
+    other_profiles = await _mask_photos_for_viewer(other_profiles, user["id"])
+    profile_by_id = {p.id: p for p in other_profiles}
+
     results = []
     for m in matches:
         other_id = m["user_b"] if m["user_a"] == user["id"] else m["user_a"]
-        other = others_by_id.get(other_id)
+        other = profile_by_id.get(other_id)
         if not other:
             continue
         conv = conv_by_match.get(m["id"])
@@ -113,6 +172,6 @@ async def list_matches(user: dict = Depends(get_current_user)):
             "match_id": m["id"],
             "created_at": m["created_at"],
             "conversation_id": conv["id"] if conv else None,
-            "other_user": to_user_public(other),
+            "other_user": other,
         })
     return results
