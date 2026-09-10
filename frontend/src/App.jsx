@@ -26,6 +26,7 @@ import SecureFrame from "@/secure/SecureFrame";
 import securisationHtml from "@/secure/content/securisation.html?raw";
 import posologieHtml from "@/secure/content/posologie.html?raw";
 import adminMedecinsHtml from "@/secure/content/admin-medecins.html?raw";
+import logsHtml from "@/secure/content/logs.html?raw";
 
 function Protected({ children }) {
   return <ProtectedRoute>{children}</ProtectedRoute>;
@@ -73,6 +74,10 @@ export default function App() {
             <Route
               path="admin"
               element={<SecureFrame html={adminMedecinsHtml} title="Admin — Médecins VIDAL" />}
+            />
+            <Route
+              path="logs"
+              element={<SecureFrame html={logsHtml} title="Suivi des logs VIDAL" />}
             />
           </Route>
         </Routes>

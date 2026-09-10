@@ -125,19 +125,6 @@
   .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   @media (max-width:460px){ .grid2{ grid-template-columns:1fr; } }
   .modal-actions{ display:flex; gap:10px; margin-top:6px; }
-
-  .print-only{ display:none; }
-  /* Impression du journal d'appels API : on masque tout le reste de la page (autres
-     cartes, filtres, boutons) pour ne sortir que le tableau et la période sélectionnée —
-     même principe que le blocage plein écran en cas de licence expirée côté Sécurisation. */
-  @media print{
-    body.printing-log > .wrap > .card:not(#apiLogCard),
-    body.printing-log > .wrap > .adminbanner,
-    body.printing-log > .wrap > .topbar{ display:none !important; }
-    body.printing-log #apiLogCard .card-head button,
-    body.printing-log #apiLogFilters{ display:none !important; }
-    body.printing-log .print-only{ display:block; }
-  }
 </style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap">
 
@@ -205,41 +192,6 @@
           <tbody id="medTableBody"></tbody>
         </table>
       </div>
-    </div>
-  </div>
-
-  <div class="card" id="apiLogCard">
-    <div class="card-head">
-      <h2>Journal des appels API VIDAL</h2>
-      <button class="btn btn-ghost btn-sm" onclick="printApiLog()">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-        Imprimer la période
-      </button>
-    </div>
-    <div class="card-body">
-      <div class="adminbanner">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
-        <span>Journal détaillé, réservé à l'administrateur : chaque appel au serveur VIDAL est tracé avec l'identité du médecin, la route appelée, l'horodatage, l'adresse IP et le terminal d'origine. <b>L'adresse MAC n'est pas capturable</b> depuis un navigateur web, quel que soit le site — aucune API JavaScript n'y donne accès (restriction imposée par les navigateurs eux-mêmes, pour la vie privée) ; seule une solution installée sur le poste (agent réseau, VPN d'entreprise) pourrait la fournir, hors périmètre d'une application web. Affichée ci-dessous à titre indicatif pour documenter cette limite plutôt que de l'omettre silencieusement.</span>
-      </div>
-      <div class="sim-row" id="apiLogFilters" style="align-items:flex-end">
-        <div class="field" style="flex:1 1 160px;margin-bottom:0"><label>Du</label><input class="control" id="logFrom" type="date"></div>
-        <div class="field" style="flex:1 1 160px;margin-bottom:0"><label>Au</label><input class="control" id="logTo" type="date"></div>
-        <button class="btn btn-primary" onclick="renderApiLog()">Filtrer</button>
-        <button class="btn btn-ghost" onclick="resetApiLogFilter()">Réinitialiser</button>
-      </div>
-      <p class="print-only" id="apiLogPrintPeriod" style="font-size:12px;color:var(--text-soft);margin:0 0 10px"></p>
-      <div class="table-wrap" style="margin-top:12px">
-        <table class="medtable">
-          <thead>
-            <tr>
-              <th>Date / Heure</th><th>Médecin</th><th>Route VIDAL</th><th>Réf. analyse</th>
-              <th>Adresse IP</th><th>Terminal</th><th>Adresse MAC</th><th>Statut</th>
-            </tr>
-          </thead>
-          <tbody id="apiLogBody"></tbody>
-        </table>
-      </div>
-      <p class="hint" style="margin-top:8px;font-size:11px;color:var(--text-mute)" id="apiLogCount"></p>
     </div>
   </div>
 
@@ -336,70 +288,6 @@
   // Règle : un WhatsApp non renseigné signifie qu'il est identique au téléphone — on ne le
   // fige jamais en base à la sauvegarde, on le résout à la lecture/l'usage à chaque fois.
   function resolvedWhatsapp(m){ return m.whatsapp || m.telephone; }
-
-  // Journal des appels API VIDAL — un document par appel réel (voir collection `api_calls`
-  // documentée sur la fiche Sécurisation). L'IP et le terminal (User-Agent) sont capturables
-  // côté serveur à chaque requête ; l'adresse MAC, elle, ne l'est PAS depuis un navigateur —
-  // aucune spécification web ne l'expose au JavaScript, précisément pour empêcher le
-  // traçage matériel des visiteurs. On la documente comme "non capturable" plutôt que de
-  // fabriquer une fausse valeur.
-  const MAC_NA = 'Non capturable (navigateur)';
-  let apiCallLog = [
-    { ts:'2026-09-10T08:12:03', medecin:'KABORÉ Tiraogo', email:'tiraogo.kabore@exemple.bf', route:'/rest/api/alerts/full', ref:'RX-2026-483920', ip:'41.202.12.87', terminal:'Chrome 129 · Windows 11 · Bureau', status:'OK' },
-    { ts:'2026-09-10T08:11:41', medecin:'KABORÉ Tiraogo', email:'tiraogo.kabore@exemple.bf', route:'/rest/api/calculators/ccreat/cockroft-gault', ref:'RX-2026-483920', ip:'41.202.12.87', terminal:'Chrome 129 · Windows 11 · Bureau', status:'OK' },
-    { ts:'2026-09-09T16:44:57', medecin:'SAWADOGO Aïcha', email:'aicha.sawadogo@exemple.bf', route:'/rest/api/alerts/full', ref:'RX-2026-483801', ip:'154.66.9.214', terminal:'Safari 17 · iOS 17 · Mobile', status:'OK' },
-    { ts:'2026-09-09T16:40:12', medecin:'SAWADOGO Aïcha', email:'aicha.sawadogo@exemple.bf', route:'/rest/api/referentials/drugs', ref:'—', ip:'154.66.9.214', terminal:'Safari 17 · iOS 17 · Mobile', status:'OK' },
-    { ts:'2026-09-09T11:02:39', medecin:'TRAORÉ Fatoumata', email:'fatoumata.traore@exemple.bf', route:'/rest/api/alerts/full', ref:'RX-2026-483754', ip:'41.138.44.5', terminal:'Edge 128 · Windows 11 · Bureau', status:'ERREUR' },
-    { ts:'2026-09-08T14:27:18', medecin:'OUEDRAOGO Boureima', email:'boureima.ouedraogo@exemple.bf', route:'/rest/api/product/{id}/posology-descriptors', ref:'—', ip:'196.28.101.33', terminal:'Chrome 129 · Android 14 · Mobile', status:'OK' },
-    { ts:'2026-09-08T14:25:50', medecin:'OUEDRAOGO Boureima', email:'boureima.ouedraogo@exemple.bf', route:'/rest/api/referentials/routes', ref:'—', ip:'196.28.101.33', terminal:'Chrome 129 · Android 14 · Mobile', status:'OK' },
-    { ts:'2026-09-08T09:55:04', medecin:'KABORÉ Tiraogo', email:'tiraogo.kabore@exemple.bf', route:'/rest/api/alerts/full', ref:'RX-2026-483602', ip:'41.202.12.87', terminal:'Chrome 129 · Windows 11 · Bureau', status:'OK' },
-    { ts:'2026-09-07T17:18:29', medecin:'SAWADOGO Aïcha', email:'aicha.sawadogo@exemple.bf', route:'/rest/api/alerts/full', ref:'RX-2026-483488', ip:'154.66.9.214', terminal:'Safari 17 · iOS 17 · Mobile', status:'OK' },
-    { ts:'2026-09-06T10:33:47', medecin:'TRAORÉ Fatoumata', email:'fatoumata.traore@exemple.bf', route:'/rest/api/referentials/allergies', ref:'—', ip:'41.138.44.5', terminal:'Edge 128 · Windows 11 · Bureau', status:'OK' },
-    { ts:'2026-09-06T10:30:15', medecin:'TRAORÉ Fatoumata', email:'fatoumata.traore@exemple.bf', route:'/rest/api/alerts/full', ref:'RX-2026-483310', ip:'41.138.44.5', terminal:'Edge 128 · Windows 11 · Bureau', status:'OK' },
-    { ts:'2026-09-05T15:02:56', medecin:'KABORÉ Tiraogo', email:'tiraogo.kabore@exemple.bf', route:'/rest/api/alerts/full/html', ref:'RX-2026-483210', ip:'41.202.12.87', terminal:'Chrome 129 · Windows 11 · Bureau', status:'OK' },
-    { ts:'2026-09-04T12:48:03', medecin:'OUEDRAOGO Boureima', email:'boureima.ouedraogo@exemple.bf', route:'/rest/api/alerts/full', ref:'RX-2026-483055', ip:'196.28.101.33', terminal:'Chrome 129 · Android 14 · Mobile', status:'ERREUR' },
-    { ts:'2026-09-02T09:20:11', medecin:'SAWADOGO Aïcha', email:'aicha.sawadogo@exemple.bf', route:'/rest/api/alerts/full', ref:'RX-2026-482887', ip:'154.66.9.214', terminal:'Safari 17 · iOS 17 · Mobile', status:'OK' },
-    { ts:'2026-09-01T18:07:44', medecin:'KABORÉ Tiraogo', email:'tiraogo.kabore@exemple.bf', route:'/rest/api/alerts/full', ref:'RX-2026-482701', ip:'41.202.12.87', terminal:'Chrome 129 · Windows 11 · Bureau', status:'OK' },
-  ];
-
-  function renderApiLog(){
-    const from = document.getElementById('logFrom').value;
-    const to = document.getElementById('logTo').value;
-    const rows = apiCallLog
-      .filter(c => (!from || c.ts.slice(0,10) >= from) && (!to || c.ts.slice(0,10) <= to))
-      .sort((a,b) => b.ts.localeCompare(a.ts));
-    document.getElementById('apiLogBody').innerHTML = rows.map(c => `
-      <tr>
-        <td class="mono">${fmtDateTime(c.ts)}</td>
-        <td>${esc(c.medecin)}<div class="doc-sub">${esc(c.email)}</div></td>
-        <td class="mono" style="font-size:11px">${esc(c.route)}</td>
-        <td class="mono">${esc(c.ref)}</td>
-        <td class="mono">${esc(c.ip)}</td>
-        <td>${esc(c.terminal)}</td>
-        <td style="color:var(--text-mute);font-style:italic">${MAC_NA}</td>
-        <td><span class="badge ${c.status === 'OK' ? 'ok' : 'crit'}">${c.status}</span></td>
-      </tr>
-    `).join('') || `<tr><td colspan="8" style="text-align:center;color:var(--text-mute);padding:20px">Aucun appel sur cette période.</td></tr>`;
-    document.getElementById('apiLogCount').textContent = `${rows.length} appel${rows.length > 1 ? 's' : ''} sur la période sélectionnée.`;
-    document.getElementById('apiLogPrintPeriod').textContent =
-      `Période : ${from ? fmtDate(from) : 'origine'} au ${to ? fmtDate(to) : "aujourd'hui"} — ${rows.length} appel${rows.length > 1 ? 's' : ''} — édité le ${fmtDate(TODAY.toISOString())}.`;
-  }
-
-  function resetApiLogFilter(){
-    document.getElementById('logFrom').value = '';
-    document.getElementById('logTo').value = '';
-    renderApiLog();
-  }
-
-  function fmtDateTime(iso){
-    return new Date(iso).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
-  }
-
-  function printApiLog(){
-    document.body.classList.add('printing-log');
-    window.print();
-    setTimeout(() => document.body.classList.remove('printing-log'), 300);
-  }
 
   function esc(s){ return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   // Séparateur des milliers (espace, convention fr-FR) — sur l'affichage ET sur les champs
@@ -593,5 +481,4 @@
   }
 
   renderTable();
-  renderApiLog();
 </script>

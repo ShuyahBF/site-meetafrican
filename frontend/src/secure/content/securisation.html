@@ -218,6 +218,7 @@
      pour l'aperçu Claude autonome de cette maquette). */
   .vidal-note{ margin:0 0 14px; }
   html[data-vidal-notes="off"] .vidal-note{ display:none; }
+  html[data-vidal-notes="off"] #persistanceCard{ display:none; }
   .vidal-note-toggle{
     display:flex; align-items:center; gap:6px; width:100%; text-align:left;
     background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px;
@@ -837,8 +838,10 @@
     </div>
   </div>
 
-  <!-- NOTE TECHNIQUE MONGODB -->
-  <div class="card">
+  <!-- NOTE TECHNIQUE MONGODB : réservée à l'admin, même mécanisme que les encarts
+       "Note technique VIDAL" repliables (attribut data-vidal-notes sur <html>, piloté
+       depuis la sidebar /secure) — masquée entièrement plutôt que repliée, vu sa taille. -->
+  <div class="card" id="persistanceCard">
     <div class="card-head"><span class="step">🗄</span><h2>Persistance à créer (MongoDB Atlas)</h2><span class="example-flag">Base « vidal »</span></div>
     <div class="card-body">
       <p class="sectionsub" style="margin-bottom:10px">Base de données MongoDB Atlas dédiée : <code>vidal</code>. Aucune table à créer manuellement : les collections apparaissent automatiquement dès le premier document inséré par le backend. Le patient est une entité à part entière, distincte des contacts existants — mémorisé <b>uniquement si le médecin clique sur « Enregistrer »</b> ; sinon la consultation reste ponctuelle. Six collections dans <code>vidal</code> :</p>
