@@ -147,6 +147,8 @@
             <li><code class="mono">liluvine/numbers/{'{'}phone_e164{'}'}.json</code> — un objet par numéro : <code class="mono">{ phone, authorized, manual_blocked, request_count, free_requests_used, first_request_at, last_request_at, trial_expires_at, subscription: {formula, started_at, expires_at, price} | null }</code>.</li>
           </ul>
           Côté règles WhatsApp Business : un message entrant ouvre une fenêtre de service de 24h pendant laquelle Liluvine peut répondre librement ; l'invitation à s'inscrire et le rappel d'abonnement envoyés <i>hors</i> de cette fenêtre (ex. relance à J+2) devront passer par un modèle pré-approuvé par Meta, catégorie <b>UTILITY</b> (même convention que le modèle <code class="mono">ordonnance_pdf_fr</code> déjà utilisé) — pas MARKETING. WhatsApp ne filtre pas lui-même les expéditeurs autorisés : ce filtrage (numéro connu / en attente / bloqué) est entièrement à la charge de l'application, exactement ce que simule cette page.
+          <br><br>
+          <b>Convention de requête produit — préfixe <code class="mono">!Aizenta</code></b> : un message n'est reconnu comme <i>requête produit VIDAL</i> (celle qui consomme le quota d'essai ou l'abonnement) que s'il commence par <code class="mono">!Aizenta</code> suivi d'un espace puis du nom du médicament — la casse n'a aucune importance, ni sur <code class="mono">!Aizenta</code> ni sur le nom (<code class="mono">!aizenta doliprane</code>, <code class="mono">!AIZENTA Doliprane</code> et <code class="mono">!Aizenta DOLIPRANE</code> sont strictement équivalents). Tout autre message reçu par Liluvine reçoit quand même une réponse (rappel du format attendu), mais <b>sans consommer de requête ni toucher au statut du numéro</b> : ce filtrage évite qu'une simple salutation ou un message hors-sujet soit compté comme une vraie recherche produit.
         </span>
       </div>
     </div>
@@ -200,8 +202,9 @@
           <datalist id="simPhoneList"></datalist>
         </div>
         <div class="field" style="flex:2 1 280px">
-          <label>Message (requête produit)</label>
-          <input class="control" id="simQuery" placeholder="Ex. DOLIPRANE 1000, posologie ?">
+          <label>Message</label>
+          <input class="control" id="simQuery" placeholder="!Aizenta Doliprane 1000">
+          <div class="cfg-hint">Requête produit reconnue seulement si le message commence par <code class="mono">!Aizenta</code> (casse libre) + un espace + le nom du médicament. Tout autre texte déclenche la réponse générique de rappel du format.</div>
         </div>
         <button class="btn btn-primary" onclick="simulateIncoming()">Simuler l'envoi</button>
       </div>
@@ -394,26 +397,43 @@
     el.scrollIntoView({ block:'nearest' });
   }
 
+  // Convention Liluvine : seul un message qui commence par "!Aizenta" + un espace + le nom
+  // du médicament est traité comme une VRAIE requête produit (facturable en essai/abonnement).
+  // Casse libre sur "!Aizenta" (flag /i) ET sur le nom du médicament (capturé tel quel, non
+  // comparé) — "!aizenta doliprane" et "!AIZENTA DOLIPRANE" sont strictement équivalents.
+  const AIZENTA_RE = /^!aizenta\s+(.+)$/i;
+
   // Coeur de la logique métier Liluvine : à chaque message entrant, on regarde l'état du
   // numéro AVANT d'incrémenter les compteurs, on décide de la réponse, puis on met à jour
   // (et on "réécrit sur R2", simulé ici par la mutation de l'objet en mémoire).
   function simulateIncoming(){
     const rawPhone = document.getElementById('simPhone').value.trim();
-    const query = document.getElementById('simQuery').value.trim() || 'DOLIPRANE 1000, posologie ?';
+    const rawMessage = document.getElementById('simQuery').value.trim() || '!Aizenta Doliprane 1000';
     if (!rawPhone) { document.getElementById('simPhone').focus(); return; }
     const phone = rawPhone.replace(/[\s.-]/g, '');
     const nowIso = new Date().toISOString();
     let rec = numbers[phone];
-    const isNew = !rec;
-    if (isNew){
+    if (!rec){
       rec = { phone, authorized:false, manualBlocked:false, requestCount:0, freeRequestsUsed:0, firstRequestAt:nowIso, lastRequestAt:nowIso, trialExpiresAt:null, subscription:null };
       numbers[phone] = rec;
     }
+
+    pushBubble('in', phone, esc(rawMessage));
+
+    // Message hors convention : Liluvine répond quand même (rappel du format attendu),
+    // mais AUCUNE écriture sur R2, aucun compteur touché — ce n'est pas une requête produit.
+    const match = rawMessage.match(AIZENTA_RE);
+    if (!match){
+      pushBubble('out', 'Liluvine', `Je n'ai pas reconnu de requête produit. Pour interroger un médicament, écrivez : <code class="mono">!Aizenta &lt;nom du médicament&gt;</code> (ex. <code class="mono">!Aizenta Doliprane</code>).`);
+      document.getElementById('simWriteLog').textContent =
+        `→ aucune écriture R2 : message hors convention "!Aizenta", pas une requête produit (numéro : ${esc(phone)})`;
+      return;
+    }
+    const query = match[1].trim();
+
     const stateBefore = getAccessState(rec);
     rec.lastRequestAt = nowIso;
     rec.requestCount += 1;
-
-    pushBubble('in', phone, esc(query));
 
     let reply, writeNote;
     if (stateBefore === 'inconnu' || stateBefore === 'en_attente'){
