@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 // Coquille de la zone "/secure" : sidebar à 3 entrées (Sécurisation,
 // Posologie, Admin médecins) + la maquette active en plein cadre.
@@ -6,9 +7,13 @@ import { NavLink, Outlet } from "react-router-dom";
 // (Welcome, BottomNav...) : elle n'est atteignable qu'en tapant l'URL
 // directement, comme demandé ("hidden route").
 //
-// Sur mobile (<640px), une sidebar large en dur mangeait tout l'écran et ne
-// laissait pas de place pour la maquette : on bascule alors en barre
-// horizontale compacte en haut, la maquette prenant tout le reste.
+// Desktop (>=640px) : sidebar colonne fixe, toujours visible.
+// Mobile (<640px) : sidebar en tiroir (drawer) replié par défaut derrière un
+// bouton ☰ — une barre horizontale fixe mangeait sinon l'écran. Le tiroir se
+// referme dès qu'on choisit une page, ou qu'on tape n'importe où sur le
+// fond assombri qui recouvre le contenu tant qu'il est ouvert (la maquette
+// vit dans un <iframe> : un clic dedans ne remonte pas au parent, d'où ce
+// fond qui capte le premier tap pour refermer plutôt que le laisser passer).
 const links = [
   { to: "securisation", label: "Sécurisation" },
   { to: "posologie", label: "Posologie" },
@@ -16,6 +21,13 @@ const links = [
 ];
 
 export default function SecureLayout() {
+  const [open, setOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
+
   return (
     <div className="secure-shell">
       <style>{`
@@ -24,7 +36,8 @@ export default function SecureLayout() {
           flex-direction: row;
           height: 100dvh;
           width: 100%;
-          background: #0e1f3d;
+          background: #eef1f6;
+          position: relative;
         }
         .secure-sidebar {
           width: 220px;
@@ -68,34 +81,70 @@ export default function SecureLayout() {
           min-width: 0;
           background: #eef1f6;
         }
+        .secure-menu-btn {
+          display: none;
+        }
+        .secure-backdrop {
+          display: none;
+        }
         @media (max-width: 640px) {
-          .secure-shell {
-            flex-direction: column;
-          }
           .secure-sidebar {
-            width: 100%;
-            flex: 0 0 auto;
-            padding: 10px 12px;
+            position: fixed;
+            inset: 0 auto 0 0;
+            z-index: 30;
+            transform: translateX(-100%);
+            transition: transform 0.22s ease;
+            box-shadow: 2px 0 16px rgba(0,0,0,0.3);
           }
-          .secure-sidebar-title {
-            margin-bottom: 8px;
+          .secure-sidebar.open {
+            transform: translateX(0);
           }
-          .secure-nav {
-            flex-direction: row;
-            flex-wrap: wrap;
-            gap: 8px;
+          .secure-menu-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 40;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: none;
+            background: #0e1f3d;
+            color: #fff;
+            font-size: 20px;
+            font-family: sans-serif;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
           }
-          .secure-nav a {
-            padding: 8px 10px;
-            font-size: 13px;
+          .secure-backdrop.open {
+            display: block;
+            position: fixed;
+            inset: 0;
+            z-index: 20;
+            background: rgba(0,0,0,0.35);
           }
           .secure-main {
-            flex: 1;
-            min-height: 0;
+            width: 100%;
           }
         }
       `}</style>
-      <aside className="secure-sidebar">
+
+      <button
+        type="button"
+        className="secure-menu-btn"
+        aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {open ? "✕" : "☰"}
+      </button>
+
+      <div
+        className={`secure-backdrop${open ? " open" : ""}`}
+        onClick={() => setOpen(false)}
+      />
+
+      <aside className={`secure-sidebar${open ? " open" : ""}`}>
         <div className="secure-sidebar-title">VIDAL — zone test</div>
         <nav className="secure-nav">
           {links.map((l) => (
@@ -109,7 +158,8 @@ export default function SecureLayout() {
           ))}
         </nav>
       </aside>
-      <main className="secure-main">
+
+      <main className="secure-main" onClick={() => open && setOpen(false)}>
         <Outlet />
       </main>
     </div>
