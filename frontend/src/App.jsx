@@ -28,6 +28,7 @@ import posologieHtml from "@/secure/content/posologie.html?raw";
 import adminMedecinsHtml from "@/secure/content/admin-medecins.html?raw";
 import logsHtml from "@/secure/content/logs.html?raw";
 import ficheProduitHtml from "@/secure/content/fiche-produit.html?raw";
+import liluvineHtml from "@/secure/content/liluvine.html?raw";
 
 function Protected({ children }) {
   return <ProtectedRoute>{children}</ProtectedRoute>;
@@ -83,6 +84,10 @@ export default function App() {
             <Route
               path="logs"
               element={<SecureFrame html={logsHtml} title="Suivi des logs VIDAL" />}
+            />
+            <Route
+              path="liluvine"
+              element={<SecureFrame html={liluvineHtml} title="Liluvine — Requêtes WhatsApp" />}
             />
           </Route>
         </Routes>

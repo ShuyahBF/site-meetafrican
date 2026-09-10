@@ -21,6 +21,7 @@ const links = [
   { to: "fiche-produit", label: "Fiche produit" },
   { to: "admin", label: "Admin (médecins)" },
   { to: "logs", label: "Suivi des logs" },
+  { to: "liluvine", label: "Liluvine (WhatsApp)" },
 ];
 
 export default function SecureLayout() {
