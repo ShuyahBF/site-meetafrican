@@ -237,3 +237,57 @@ Posologie, Fiche produit) sur ce vrai endpoint au lieu du tableau
 `VIDAL_PROXY_SECRET` atteint l'iframe (probablement injecté par
 `SecureFrame` comme le thème/les notes VIDAL, via `postMessage`) et de
 gérer les états de chargement/erreur réseau dans l'UI existante.
+
+## Fiche produit VIDAL — branchée sur de vraies données (10/09/2026)
+
+**Deuxième endpoint réel ajouté** : `GET /api/vidal/products/{id}/detail`
+(`backend/routes/vidal.py` + `vidal_client.py::parse_product_detail`),
+un seul appel VIDAL agrégé `GET /rest/api/product/{id}?aggregate=ROUTE&aggregate=DOCUMENTS`
+qui renvoie en une fois les voies d'administration ET les documents
+disponibles — confirmé par test réel (produit 19649, DOLIPRANE 1000 mg cp).
+
+**Découverte utile par test réel** : les URLs de documents HTML publics
+VIDAL (ex. `https://api.vidal.fr/data/mono/.../full-mono-for-product-19649.html`)
+sont accessibles **sans authentification** et **sans restriction d'affichage
+en iframe** (pas de `X-Frame-Options` ni CSP `frame-ancestors` dans leurs
+en-têtes) — elles peuvent donc être chargées directement dans un
+`<iframe src="...">`, sans avoir à en récupérer et reconstruire le contenu
+côté serveur. Les documents hors référentiel HTML (RCP en PDF sur
+`document-rcp.vidal.fr` notamment) restent en lien externe (`target="_blank"`),
+jamais chargés en iframe.
+
+**Frontend branché** (`frontend/src/secure/content/fiche-produit.html`,
+plus aucune donnée simulée sur cette page) :
+- Recherche produit : `fetch` débounced (300ms) vers `/api/vidal/products/search`,
+  avec numéro de séquence pour ignorer une réponse obsolète si l'utilisateur
+  retape vite. États « recherche en cours » / « erreur VIDAL » / « aucun
+  résultat » gérés explicitement plutôt que masqués.
+- Sélection d'un produit : appel `/api/vidal/products/{id}/detail`, affichage
+  des vraies voies d'administration et des vrais types de documents
+  (badge VIDAL/Externe déterminé par `is_html`, plus par une liste statique).
+- Affichage d'un document : `<iframe src="...">` pointant directement vers
+  l'URL VIDAL réelle pour les documents HTML ; lien externe pour le reste.
+  Plus de date de révision affichée (VIDAL n'en renvoie pas dans ce flux —
+  on ne recrée plus de fausse date « illustrative » comme avant).
+- `SecureFrame.jsx` injecte `window.__VIDAL_API__ = {baseUrl, proxySecret}`
+  dans l'iframe au premier rendu (nouvelle variable Vite
+  `VITE_VIDAL_PROXY_SECRET`, à saisir dans Render en plus de
+  `VITE_API_BASE_URL` — même valeur que `VIDAL_PROXY_SECRET` côté backend).
+
+**Validé en conditions réelles de bout en bout** (backend réel + frontend
+Vite + Playwright, CORS backend↔frontend en local, credentials réels) :
+recherche « doliprane » → 25+ résultats réels, sélection d'un DOLIPRANE
+100 mg **retiré du marché** → voie « orale » réelle, document
+`MONO_SUPP` réel affiché avec le bon badge (confirmant en conditions
+réelles la règle FULL_MONO/MONO_SUPP documentée dans le manuel), bouton
+RCP (Externe) → lien PDF réel vers `document-rcp.vidal.fr` sans charger
+d'iframe. Aucune erreur JS.
+
+**Reste simulé, sciemment, pour l'instant** : le typeahead médicament de
+Sécurisation (`onDrugSelected`, chargement d'historique de démonstration,
+génération XML de `runSecure()`) n'a **pas** été branché sur ces mêmes
+endpoints dans cette itération — il a plus de dépendances internes
+(historique de démo, listes d'unités que VIDAL n'a pas renvoyées pour les
+produits testés) qu'il aurait fallu retravailler en profondeur sans risquer
+de casser un mockup déjà validé. À cadrer séparément si l'utilisateur le
+souhaite.

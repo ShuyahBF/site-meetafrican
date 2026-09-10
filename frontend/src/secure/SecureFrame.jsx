@@ -18,7 +18,18 @@ export default function SecureFrame({ html, title }) {
   const themeMounted = useRef(false);
   const notesMounted = useRef(false);
 
-  const doc = `<!doctype html><html lang="fr" data-theme="${theme}" data-vidal-notes="${vidalNotes ? "on" : "off"}"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/></head><body style="margin:0">${html}<style>
+  // Config d'accès au vrai backend VIDAL (voir backend/routes/vidal.py), injectée
+  // en variable globale plutôt que via postMessage : les maquettes en ont besoin
+  // dès leur premier script inline (recherche produit au chargement), avant tout
+  // échange avec le parent. Le secret est nécessairement visible dans le bundle
+  // JS (Vite expose tout VITE_* au navigateur) — pas un vrai contrôle d'accès,
+  // juste un garde-fou anti-robot (voir PORTAGE-SAWALI-VIDAL.md).
+  const vidalApiConfig = JSON.stringify({
+    baseUrl: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api",
+    proxySecret: import.meta.env.VITE_VIDAL_PROXY_SECRET || "",
+  });
+
+  const doc = `<!doctype html><html lang="fr" data-theme="${theme}" data-vidal-notes="${vidalNotes ? "on" : "off"}"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><script>window.__VIDAL_API__ = ${vidalApiConfig};</script></head><body style="margin:0">${html}<style>
     /* La maquette Posologie a un fond transparent pensé pour un futur hébergement
        dans la page d'un site hôte. Ici, dans la zone /secure, il n'y a pas de tel
        site hôte : on retombe donc sur le fond propre de la maquette (var(--bg),

@@ -126,6 +126,11 @@ services:
       # À renseigner une fois le backend déployé et son URL connue.
       - key: VITE_API_BASE_URL
         sync: false
+      # Même valeur que VIDAL_PROXY_SECRET côté backend (voir plus haut) — à
+      # saisir manuellement des deux côtés, Render ne partage pas les valeurs
+      # "sync: false" entre les deux services.
+      - key: VITE_VIDAL_PROXY_SECRET
+        sync: false
     routes:
       # SPA React Router : toute route inconnue retombe sur index.html,
       # sinon un rechargement sur /connexion (ou toute route non racine) 404.

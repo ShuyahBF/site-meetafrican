@@ -124,7 +124,7 @@
     <div class="vidal-note-body">
       <div class="srcbanner">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-        <span>Conforme au Manuel d'intégration API REST VIDAL Sécurisation France (MI_APIREST, REV_03) : <code>/rest/api/product/{id}/documents</code> (ou <code>/package/{id}/documents</code>, ou via le <code>productId</code> depuis une UCD) renvoie les types de documents disponibles pour ce produit — <code>FULL_MONO</code> (monographie), <code>RCP</code>, <code>RTU</code>, <code>ALD</code>, <code>VDF</code>, <code>SAUMON</code>, <code>FIT</code>, <code>PGR</code>, <code>BUM</code>, <code>AVIS</code>, <code>RAPPE</code>, <code>SMR</code>/<code>ASMR</code>, Fiche Conseil… Pour un produit retiré du marché, <code>FULL_MONO</code> est remplacé par <code>MONO_SUPP</code> (mention explicite « non mise à jour ») — la balise <code>&lt;vidal:bestDocType&gt;</code> sur le PRODUCT indique lequel afficher. Certains documents (RCP en PDF, Fiche Conseil grand public) sont hébergés hors du référentiel HTML VIDAL, sur des domaines VIDAL externes — marqués « Externe » ci-dessous plutôt que présentés comme un HTML VIDAL direct. La date de révision par document n'est pas un champ confirmé dans le manuel : affichée ici à titre illustratif quand disponible, à vérifier auprès du support VIDAL à l'intégration réelle.</span>
+        <span><b>Données réelles</b> (plus de simulation) : la recherche et le détail produit passent par un vrai appel backend vers <code>https://api.vidal.fr</code>, avec les identifiants de production de l'utilisateur (jamais exposés au navigateur). Un seul appel agrégé <code>GET /rest/api/product/{id}?aggregate=ROUTE&amp;aggregate=DOCUMENTS</code> renvoie voies d'administration et documents disponibles, confirmé par test réel le 10/09/2026 — pas une supposition tirée du manuel. Les documents HTML publics (monographie, VDF…) sont affichés tels quels dans l'iframe ci-dessous, en pointant directement vers leur URL VIDAL réelle ; ceux hébergés hors du référentiel HTML (RCP en PDF notamment, sur <code>document-rcp.vidal.fr</code>) s'ouvrent par un lien externe, marqués « Externe ». VIDAL ne renvoie pas de date de révision par document dans ce flux : aucune date n'est affichée plutôt que d'en inventer une.</span>
       </div>
     </div>
   </div>
@@ -162,6 +162,7 @@
           <span id="docRevisionText"></span>
         </div>
         <iframe id="docFrame" sandbox="" title="Document VIDAL" style="width:100%;height:440px;border:1px solid var(--border-soft);border-radius:10px;background:#fff;margin-top:8px"></iframe>
+        <div id="docExternal" class="empty-hint" style="display:none;border:1px solid var(--border-soft);border-radius:10px;margin-top:8px"></div>
         <p class="footnote" id="docFootnote"></p>
       </div>
       <div class="empty-hint" id="docsEmptyHint">Choisissez un type de document ci-dessus pour l'afficher.</div>
@@ -172,74 +173,45 @@
 
 <script>
   function esc(s){ return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function fmtShortDate(iso){ return new Date(iso).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric'}); }
 
-  // Types de documents produit — labels français + provenance réelle d'après le manuel :
-  // "api" = HTML renvoyé tel quel par le référentiel VIDAL (comme /alerts/full/html) ;
-  // "ext" = hébergé hors du référentiel (PDF sur document-rcp.vidal.fr, page sur vidal.fr...).
-  const DOC_TYPES = {
-    FULL_MONO:    { label:'Monographie VIDAL',                          source:'api' },
-    MONO_SUPP:    { label:'Monographie (produit non commercialisé)',    source:'api' },
-    RCP:          { label:'RCP (Résumé des Caractéristiques du Produit)', source:'ext' },
-    VDF:          { label:'VIDAL de la Famille (grand public)',         source:'api' },
-    SAUMON:       { label:'Fiche Saumon (parapharmacie)',               source:'api' },
-    RTU:          { label:"Recommandation Temporaire d'Utilisation",    source:'ext' },
-    ALD:          { label:'Affection de longue durée',                  source:'api' },
-    AVIS:         { label:'Avis de la commission de transparence',      source:'api' },
-    FIT:          { label:"Fiche d'Information Thérapeutique",          source:'api' },
-    PGR:          { label:'Plan de Gestion des Risques',                source:'api' },
-    BUM:          { label:'Fiche de Bon Usage du Médicament',           source:'api' },
-    RAPPE:        { label:"Rapport public d'évaluation",                source:'api' },
-    SMR_ASMR:     { label:'SMR / ASMR',                                 source:'api' },
-    FICHE_CONSEIL:{ label:'Fiche Conseil (surveillance particulière)',  source:'ext' },
-  };
+  // Config d'accès au backend VIDAL, injectée par SecureFrame.jsx (voir le parent React).
+  // Absente hors de /secure (ex. artefact Claude autonome) : on affiche alors une erreur
+  // claire plutôt que d'inventer des résultats — fini les données simulées sur cette page.
+  const VIDAL_API = window.__VIDAL_API__ || null;
 
-  // Même jeu de données que la fiche Sécurisation (mêmes ref confirmées par le manuel :
-  // 19649, 11897, 128351, 67825), complété ici par les documents disponibles par produit —
-  // liste plausible par type de médicament (ex. BOSULIF = médicament d'exception -> FIT/PGR/ALD),
-  // pas elle-même issue du manuel (qui ne donne cet exemple complet que pour MABTHERA).
-  const typeaheadData = {
-    drug: [
-      { label:'DOLIPRANE 100 mg cp', ref:'19649', confirmed:true,
-        routes:[{label:'Voie orale', confirmed:true}],
-        documents:[ {code:'FULL_MONO', date:'2026-06-12'}, {code:'RCP', date:null}, {code:'VDF', date:'2025-11-20'}, {code:'FICHE_CONSEIL', date:null} ] },
-      { label:'NOCTAMIDE 1 mg cp séc', ref:'11897', confirmed:true,
-        routes:[{label:'Voie orale', confirmed:true}],
-        documents:[ {code:'FULL_MONO', date:'2025-11-03'}, {code:'RCP', date:null}, {code:'RTU', date:null}, {code:'PGR', date:'2025-06-01'} ] },
-      { label:'BOSULIF 100 mg cp pellic', ref:'128351', confirmed:true,
-        routes:[{label:'Voie orale', confirmed:false}],
-        documents:[ {code:'FULL_MONO', date:'2026-01-20'}, {code:'RCP', date:null}, {code:'ALD', date:null}, {code:'AVIS', date:'2025-09-14'}, {code:'SMR_ASMR', date:'2025-09-14'}, {code:'FIT', date:null}, {code:'PGR', date:'2025-03-02'} ] },
-      { label:'IBUPROFENE ARROW 400 mg cp pellic', ref:'67825', confirmed:true,
-        routes:[{label:'Voie orale', confirmed:true}],
-        documents:[ {code:'FULL_MONO', date:'2025-09-08'}, {code:'RCP', date:null}, {code:'VDF', date:'2025-05-11'}, {code:'FICHE_CONSEIL', date:null} ] },
-      { label:'TERPONE sirop', ref:'90007', confirmed:false,
-        routes:[{label:'Voie orale', confirmed:false}],
-        documents:[ {code:'FULL_MONO', date:'2025-04-15'}, {code:'RCP', date:null} ] },
-      { label:'DOLIPRANE 1000 mg cp', ref:'90001', confirmed:false,
-        routes:[{label:'Voie orale', confirmed:true}],
-        documents:[ {code:'FULL_MONO', date:'2026-06-12'}, {code:'RCP', date:null}, {code:'VDF', date:'2025-11-20'} ] },
-      { label:'EFFERALGAN 500 mg cp', ref:'90002', confirmed:false,
-        routes:[{label:'Voie orale', confirmed:true}],
-        documents:[ {code:'FULL_MONO', date:'2025-12-02'}, {code:'RCP', date:null} ] },
-      { label:'AMOXICILLINE BIOGARAN 1 g cp', ref:'90003', confirmed:false,
-        routes:[{label:'Voie orale', confirmed:true}],
-        documents:[ {code:'FULL_MONO', date:'2026-02-28'}, {code:'RCP', date:null}, {code:'BUM', date:'2025-07-19'} ] },
-      { label:'TRAMADOL BIOGARAN 50 mg gélule', ref:'90004', confirmed:false,
-        routes:[{label:'Voie orale', confirmed:true}],
-        documents:[ {code:'FULL_MONO', date:'2025-08-19'}, {code:'RCP', date:null}, {code:'PGR', date:'2025-08-19'} ] },
-      { label:'METFORMINE ARROW 1000 mg cp', ref:'90005', confirmed:false,
-        routes:[{label:'Voie orale', confirmed:true}],
-        documents:[ {code:'FULL_MONO', date:'2026-03-30'}, {code:'RCP', date:null} ] },
-      { label:'ASPIRINE DU RHONE 500 mg cp', ref:'90006', confirmed:false,
-        routes:[{label:'Voie orale', confirmed:true}],
-        documents:[ {code:'FULL_MONO', date:'2025-10-11'}, {code:'RCP', date:null} ] },
-    ],
+  // Labels français par type de document VIDAL réel (vidal:itemType) — la distinction
+  // HTML/Externe, elle, vient directement de la donnée renvoyée par le backend (is_html),
+  // pas d'une liste statique : voir vidal_client.py::parse_product_detail.
+  const DOC_TYPE_LABELS = {
+    FULL_MONO:'Monographie VIDAL', MONO:'Monographie VIDAL', MONO_SUPP:'Monographie (produit non commercialisé)',
+    RCP_VIDAL:'RCP (Résumé des Caractéristiques du Produit)', RCP:'RCP (Résumé des Caractéristiques du Produit)',
+    VDF:'VIDAL de la Famille (grand public)', SAUMON:'Fiche Saumon (parapharmacie)',
+    RTU:"Recommandation Temporaire d'Utilisation", ALD:'Affection de longue durée',
+    AVIS:'Avis de la commission de transparence', FIT:"Fiche d'Information Thérapeutique",
+    PGR:'Plan de Gestion des Risques', BUM:'Fiche de Bon Usage du Médicament',
+    RAPPE:"Rapport public d'évaluation", SMR_ASMR:'SMR / ASMR', FICHE_CONSEIL:'Fiche Conseil',
   };
+  function docLabel(itemType){ return DOC_TYPE_LABELS[itemType] || itemType; }
 
   function highlightMatch(label, query){
     const idx = label.toLowerCase().indexOf(query.toLowerCase());
     if (idx === -1) return esc(label);
     return esc(label.slice(0, idx)) + '<mark>' + esc(label.slice(idx, idx + query.length)) + '</mark>' + esc(label.slice(idx + query.length));
+  }
+
+  // Appel au proxy backend (voir backend/routes/vidal.py) — jamais directement à
+  // api.vidal.fr depuis ce navigateur : app_id/app_key restent côté serveur.
+  async function vidalFetch(path){
+    if (!VIDAL_API || !VIDAL_API.baseUrl) throw new Error('Backend VIDAL non configuré dans cet environnement.');
+    const r = await fetch(`${VIDAL_API.baseUrl}${path}`, {
+      headers: { 'X-Vidal-Proxy-Secret': VIDAL_API.proxySecret || '' },
+    });
+    if (!r.ok){
+      let detail = '';
+      try { detail = (await r.json()).detail || ''; } catch(e){ /* réponse non-JSON, on garde le fallback */ }
+      throw new Error(detail || `Erreur VIDAL (${r.status})`);
+    }
+    return r.json();
   }
 
   function initTypeahead(){
@@ -249,112 +221,120 @@
     list.className = 'typeahead-list';
     wrap.appendChild(list);
 
-    function render(){
-      const q = input.value.trim();
-      if (!q) { list.classList.remove('show'); return; }
-      const matches = typeaheadData.drug.filter(d => d.label.toLowerCase().includes(q.toLowerCase())).slice(0, 8);
-      list.innerHTML = matches.length
-        ? matches.map(m => `
-            <div class="typeahead-item" data-ref="${esc(m.ref)}">
-              <span>${highlightMatch(m.label, q)}</span>
-              <span class="typeahead-badge ${m.confirmed ? 'ok' : 'ex'}">${m.confirmed ? 'Manuel ✓' : 'Exemple'}</span>
-            </div>`).join('')
-        : `<div class="typeahead-empty">Aucun résultat pour « ${esc(q)} »</div>`;
+    let debounceTimer = null;
+    let requestSeq = 0; // ignore une réponse arrivée après une saisie plus récente
+
+    function renderMsg(msg, isError){
+      list.innerHTML = `<div class="typeahead-empty"${isError ? ' style="color:var(--crit-text)"' : ''}>${esc(msg)}</div>`;
       list.classList.add('show');
     }
-    input.addEventListener('input', render);
-    input.addEventListener('focus', render);
+
+    async function search(q){
+      const seq = ++requestSeq;
+      renderMsg('Recherche VIDAL en cours…');
+      try {
+        const data = await vidalFetch(`/vidal/products/search?q=${encodeURIComponent(q)}`);
+        if (seq !== requestSeq) return;
+        const results = data.results || [];
+        list.innerHTML = results.length
+          ? results.slice(0, 8).map(m => `
+              <div class="typeahead-item" data-id="${esc(m.id)}" data-name="${esc(m.name)}">
+                <span>${highlightMatch(m.name, q)}</span>
+                <span class="typeahead-badge ok">VIDAL</span>
+              </div>`).join('')
+          : `<div class="typeahead-empty">Aucun résultat pour « ${esc(q)} »</div>`;
+        list.classList.add('show');
+      } catch (err) {
+        if (seq !== requestSeq) return;
+        renderMsg(err.message || 'Erreur VIDAL', true);
+      }
+    }
+
+    input.addEventListener('input', () => {
+      const q = input.value.trim();
+      if (debounceTimer) clearTimeout(debounceTimer);
+      if (q.length < 2) { list.classList.remove('show'); return; }
+      debounceTimer = setTimeout(() => search(q), 300);
+    });
     list.addEventListener('mousedown', (ev) => {
       const item = ev.target.closest('.typeahead-item');
       if (!item) return;
       ev.preventDefault();
-      const entry = typeaheadData.drug.find(d => d.ref === item.dataset.ref);
-      input.value = entry.label;
+      input.value = item.dataset.name;
       list.classList.remove('show');
-      onProductSelected(entry);
+      onProductSelected(item.dataset.id, item.dataset.name);
     });
     document.addEventListener('click', (ev) => {
       if (!wrap.contains(ev.target)) list.classList.remove('show');
     });
   }
 
-  let currentEntry = null;
+  let currentDetail = null; // { name, routes:[{id,name}], documents:[{item_type,title,url,is_html}] }
 
-  function onProductSelected(entry){
-    currentEntry = entry;
-
+  async function onProductSelected(id, name){
+    currentDetail = null;
     document.getElementById('productInfo').style.display = 'block';
-    document.getElementById('pickedName').textContent = entry.label;
+    document.getElementById('pickedName').textContent = name;
     const badge = document.getElementById('pickedBadge');
-    badge.textContent = entry.confirmed ? 'Manuel ✓' : 'Exemple';
-    badge.className = 'typeahead-badge ' + (entry.confirmed ? 'ok' : 'ex');
+    badge.textContent = 'VIDAL';
+    badge.className = 'typeahead-badge ok';
 
-    document.getElementById('routesList').innerHTML = entry.routes.map(r =>
-      `<span class="tag-static${r.confirmed ? '' : ' ex'}">${esc(r.label)}</span>`
-    ).join('');
-
+    document.getElementById('routesList').innerHTML = `<span class="tag-static ex">Chargement…</span>`;
     document.getElementById('docsCard').style.display = 'block';
-    document.getElementById('docButtons').innerHTML = entry.documents.map(d => {
-      const meta = DOC_TYPES[d.code];
-      return `<button type="button" class="doc-btn" data-code="${esc(d.code)}" onclick="showDoc('${esc(d.code)}')">
-        ${esc(meta.label)}<span class="doc-source-tag ${meta.source}">${meta.source === 'api' ? 'VIDAL' : 'Externe'}</span>
-      </button>`;
-    }).join('');
+    document.getElementById('docButtons').innerHTML = '';
     document.getElementById('docViewer').style.display = 'none';
-    document.getElementById('docsEmptyHint').style.display = 'block';
-  }
+    const emptyHint = document.getElementById('docsEmptyHint');
+    emptyHint.textContent = 'Chargement des documents…';
+    emptyHint.style.display = 'block';
 
-  // Contenu HTML illustratif par type de document — même principe que l'onglet "HTML VIDAL
-  // (brut)" de la fiche Sécurisation : en production ce HTML vient tel quel du référentiel
-  // VIDAL pour les types "api" ; pour les types "ext" (RCP en PDF, Fiche Conseil grand public),
-  // il n'y a pas de HTML VIDAL à afficher ici — un lien ouvrirait le document externe.
-  function buildDocHtml(entry, code){
-    const meta = DOC_TYPES[code];
-    if (meta.source === 'ext'){
-      return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>
-        body{ font-family:Arial,Helvetica,sans-serif; font-size:13px; color:#48526b; margin:0; padding:28px; text-align:center; }
-        .badge{ display:inline-block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:#8a5a06; background:#fff6e6; border:1px solid #f2ddab; border-radius:8px; padding:4px 10px; margin-bottom:10px; }
-      </style></head><body>
-        <div class="badge">Document externe</div>
-        <p><b>${esc(meta.label)}</b> — ${esc(entry.label)}</p>
-        <p>Ce document n'est pas un HTML servi par le référentiel VIDAL : en production, un lien ouvre le document (PDF ou page vidal.fr) dans un nouvel onglet plutôt qu'un aperçu intégré ici.</p>
-      </body></html>`;
+    try {
+      const detail = await vidalFetch(`/vidal/products/${encodeURIComponent(id)}/detail`);
+      currentDetail = detail;
+
+      document.getElementById('routesList').innerHTML = (detail.routes || []).length
+        ? detail.routes.map(r => `<span class="tag-static">${esc(r.name)}</span>`).join('')
+        : `<span class="tag-static ex">Aucune voie renvoyée par VIDAL pour ce produit</span>`;
+
+      const docs = detail.documents || [];
+      document.getElementById('docButtons').innerHTML = docs.length
+        ? docs.map(d => `
+            <button type="button" class="doc-btn" data-type="${esc(d.item_type)}" onclick="showDoc('${esc(d.item_type)}')">
+              ${esc(docLabel(d.item_type))}<span class="doc-source-tag ${d.is_html ? 'api' : 'ext'}">${d.is_html ? 'VIDAL' : 'Externe'}</span>
+            </button>`).join('')
+        : '';
+      emptyHint.textContent = docs.length ? "Choisissez un type de document ci-dessus pour l'afficher." : 'Aucun document renvoyé par VIDAL pour ce produit.';
+    } catch (err) {
+      document.getElementById('routesList').innerHTML = `<span class="tag-static ex">Erreur VIDAL : ${esc(err.message)}</span>`;
+      emptyHint.textContent = `Erreur VIDAL : ${err.message}`;
     }
-    return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>
-      body{ font-family:Arial,Helvetica,sans-serif; font-size:13px; color:#222; margin:0; padding:16px; }
-      h2{ font-size:15px; color:#0e1f3d; border-bottom:2px solid #0e1f3d; padding-bottom:6px; }
-      section{ margin-bottom:14px; }
-      section h3{ font-size:12.5px; margin:0 0 6px; color:#0e1f3d; }
-      .src{ font-size:10.5px; color:#889; }
-    </style></head><body>
-      <h2>${esc(meta.label)}</h2>
-      <p class="src">${esc(entry.label)} — reconstitution illustrative pour cet aperçu (structure conforme au manuel : /rest/api/product/{id}/documents)</p>
-      <section><h3>Indications</h3><p>Indications thérapeutiques telles que renvoyées par le référentiel VIDAL pour ce produit.</p></section>
-      <section><h3>Posologie et mode d'administration</h3><p>Contenu de la monographie tel que transmis par VIDAL — affiché sans reconstruction, dans un &lt;iframe sandbox&gt; isolé.</p></section>
-      <section><h3>Contre-indications</h3><p>Liste des contre-indications documentées pour ce produit.</p></section>
-    </body></html>`;
   }
 
-  function showDoc(code){
-    document.querySelectorAll('.doc-btn').forEach(b => b.classList.toggle('active', b.dataset.code === code));
-    const docEntry = currentEntry.documents.find(d => d.code === code);
-    const meta = DOC_TYPES[code];
+  function showDoc(itemType){
+    document.querySelectorAll('.doc-btn').forEach(b => b.classList.toggle('active', b.dataset.type === itemType));
+    const doc = (currentDetail?.documents || []).find(d => d.item_type === itemType);
+    if (!doc) return;
 
     document.getElementById('docsEmptyHint').style.display = 'none';
     document.getElementById('docViewer').style.display = 'block';
-    document.getElementById('docFrame').srcdoc = buildDocHtml(currentEntry, code);
+    document.getElementById('docRevision').style.display = 'none'; // VIDAL ne renvoie pas de date de révision dans ce flux
 
-    const revBox = document.getElementById('docRevision');
-    if (docEntry.date) {
-      revBox.style.display = 'flex';
-      document.getElementById('docRevisionText').innerHTML = `Révision (illustrative) : <b>${esc(fmtShortDate(docEntry.date))}</b>`;
+    const frame = document.getElementById('docFrame');
+    const external = document.getElementById('docExternal');
+    if (doc.is_html){
+      frame.style.display = 'block';
+      frame.src = doc.url;
+      external.style.display = 'none';
+      document.getElementById('docFootnote').textContent =
+        `Document HTML public VIDAL, affiché tel quel (pas de reconstruction) — ${doc.url}`;
     } else {
-      revBox.style.display = 'none';
+      frame.style.display = 'none';
+      frame.removeAttribute('src');
+      external.style.display = 'block';
+      external.innerHTML = `Document externe (hors du référentiel HTML VIDAL) —
+        <a href="${esc(doc.url)}" target="_blank" rel="noopener">ouvrir dans un nouvel onglet</a>.`;
+      document.getElementById('docFootnote').textContent =
+        'Document PDF ou page hébergée hors du référentiel HTML VIDAL — jamais chargé en iframe, uniquement par lien externe.';
     }
-
-    document.getElementById('docFootnote').textContent = meta.source === 'api'
-      ? "Document renvoyé tel quel par le référentiel VIDAL — affiché sans reconstruction dans un iframe isolé, comme pour la synthèse d'alertes de la fiche Sécurisation."
-      : "Document hébergé hors du référentiel HTML VIDAL (PDF ou page vidal.fr) — en production, ouvrir par lien externe plutôt qu'en iframe intégré.";
   }
 
   initTypeahead();

@@ -159,3 +159,56 @@ def parse_products_search(xml_text: str) -> List[Dict[str, Any]]:
             "active_principles": vtext("activePrinciples"),
         })
     return results
+
+
+def parse_product_detail(xml_text: str) -> Dict[str, Any]:
+    """Parse le flux Atom de GET /product/{id}?aggregate=ROUTE&aggregate=DOCUMENTS
+    (un seul appel VIDAL renvoie le produit, ses voies d'administration ET ses
+    documents disponibles — confirmé par test réel, pas par supposition sur le
+    manuel). Chaque <entry> porte vidal:categories="PRODUCT|ROUTE|DOCUMENT" ;
+    on les répartit selon cet attribut plutôt que de deviner leur ordre."""
+    root = ElementTree.fromstring(xml_text)
+    categories_attr = f"{{{VIDAL_NS}}}categories"
+    name: Optional[str] = None
+    routes: List[Dict[str, Any]] = []
+    documents: Dict[str, Dict[str, Any]] = {}  # dédupliqué par item_type (garde la 1ère occurrence = la plus récente)
+
+    for entry in root.findall("a:entry", _NS):
+        category = entry.get(categories_attr)
+
+        if category == "PRODUCT":
+            name_el = entry.find("vidal:name", _NS)
+            name = name_el.text if name_el is not None else None
+
+        elif category == "ROUTE":
+            id_el = entry.find("vidal:id", _NS)
+            name_el = entry.find("vidal:name", _NS)
+            routes.append({
+                "id": id_el.text if id_el is not None else None,
+                "name": name_el.text if name_el is not None else None,
+            })
+
+        elif category == "DOCUMENT":
+            item_type_el = entry.find("vidal:itemType", _NS)
+            item_type = (item_type_el.get("name") if item_type_el is not None else None) or (
+                item_type_el.text if item_type_el is not None else None
+            )
+            if not item_type or item_type in documents:
+                continue  # on ne garde que la 1ère occurrence (la plus récente) par type
+            title_el = entry.find("a:title", _NS)
+            doc_url = None
+            for link in entry.findall("a:link", _NS):
+                if link.get("rel") == "related" and link.get("type") == "application/xhtml+xml":
+                    doc_url = link.get("href")
+                    break
+            documents[item_type] = {
+                "item_type": item_type,
+                "title": title_el.text if title_el is not None else None,
+                "url": doc_url,
+                # HTML public directement affichable en iframe (confirmé par test réel :
+                # api.vidal.fr/data/mono/... répond sans auth, sans X-Frame-Options) — le
+                # reste (PDF sur document-rcp.vidal.fr notamment) doit s'ouvrir en lien externe.
+                "is_html": bool(doc_url and doc_url.lower().endswith((".html", ".htm"))),
+            }
+
+    return {"name": name, "routes": routes, "documents": list(documents.values())}
