@@ -173,3 +173,67 @@ comptage de requêtes et abonnement. Règles métier fixées par l'utilisateur,
   table des numéros et la configuration vivent en mémoire côté navigateur,
   à réimplémenter avec de vrais appels R2 (GET/PUT d'objets JSON) et de
   vrais webhooks WhatsApp Cloud API au portage.
+
+## VIDAL — bascule vers de vrais appels API réels (10/09/2026)
+
+**Changement majeur** : l'utilisateur a fourni un vrai couple `app_id` /
+`app_key` VIDAL (compte de production) et a explicitement demandé d'arrêter
+les suppositions basées sur le manuel pour tester avec de **vrais appels,
+toujours en production** (pas de sandbox distincte pour ce compte — décision
+explicite : « on veut être sûr des bons retours de VIDAL, l'infrastructure
+peut avoir changé depuis la rédaction du manuel »). Ce dépôt (`site-meetafrican`)
+reste le banc d'essai retenu pour cette étape ; la reproduction réelle sur
+`Site-SawaliSmartSystems` se fera au portage, comme convenu.
+
+**Intégration backend ajoutée** (`backend/`) :
+- `config.py` — nouveaux réglages `vidal_base_url`, `vidal_app_id`,
+  `vidal_app_key`, `vidal_timeout_seconds` (12s), `vidal_cache_ttl_hours`
+  (168h), `vidal_quota_per_day` (200), `vidal_proxy_secret`.
+- `vidal_client.py` — client HTTP vers `https://api.vidal.fr/rest/api` :
+  authentification par `app_id`/`app_key` en paramètres de requête (pas de
+  header dédié — confirmé dans le manuel MI_APIREST REV_03 et par test réel),
+  réponses en XML ATOM uniquement (pas de JSON — également confirmé dans le
+  manuel). Cache Mongo (`vidal_api_cache`, TTL réel via index Mongo
+  `expireAfterSeconds` + vérification applicative) et quota journalier
+  (`vidal_api_quota`) qui **bloque avant l'appel** plutôt que de laisser
+  l'abonnement VIDAL être dépassé silencieusement.
+- `routes/vidal.py` — premier endpoint réel : `GET /api/vidal/products/search?q=...`
+  (recherche produit par libellé, `/rest/api/products?q=...` côté VIDAL),
+  protégé par un secret partagé `VIDAL_PROXY_SECRET` (header
+  `X-Vidal-Proxy-Secret`) — nécessaire car `/secure` est une route cachée
+  mais **sans vrai login** ; sans ce garde-fou, n'importe qui tombant sur
+  l'URL pourrait épuiser le quota VIDAL réel. **Point d'attention pour le
+  portage** : ce secret statique est un pis-aller de prototype, pas un
+  vrai contrôle d'accès — à remplacer par le futur système d'authentification
+  médecin de Sawali.
+- `render.yaml` / `.env.example` mis à jour (`VIDAL_APP_ID`/`VIDAL_APP_KEY`/
+  `VIDAL_PROXY_SECRET` en `sync: false`, jamais commités).
+
+**Validé avec de vrais appels contre `https://api.vidal.fr`** (10/09/2026,
+credentials réels fournis par l'utilisateur, mode production) :
+- Recherche produit fonctionne (`doliprane`, `efferalgan`, `aspirine` testés
+  avec de vraies réponses XML ATOM, vrais `productId` VIDAL) ;
+- Le garde-fou de secret partagé refuse bien une requête sans le header ;
+- Le quota journalier bloque bien une requête excédentaire **avant** tout
+  appel réseau vers VIDAL (testé avec un quota réduit à 1, sans consommer
+  de requêtes réelles supplémentaires grâce au cache) ;
+- Le cache Mongo sert bien une requête identique sans re-appeler VIDAL.
+- **Bug réel corrigé pendant ce test** : MongoDB renvoie les dates stockées
+  en `naive UTC` (BSON n'a pas de fuseau horaire) — comparer directement à
+  un `datetime` "aware" (`tzinfo=utc`) levait une `TypeError`. Corrigé en
+  requalifiant explicitement en UTC avant comparaison
+  (`vidal_client.py::_get_cached`) — à surveiller si d'autres comparaisons
+  de dates Mongo sont ajoutées ailleurs dans le projet.
+
+**Confirmation utile** : le produit fictif utilisé dans toutes les
+maquettes (`DOLIPRANE 1000 mg cp`, ref `19649`) est en réalité un **vrai**
+productId VIDAL — la donnée de démonstration choisie pour les mockups
+était donc correcte par coïncidence.
+
+**Reste à faire** (prochaine étape, à cadrer avec l'utilisateur avant de
+se lancer) : brancher le frontend `/secure` (typeahead de Sécurisation,
+Posologie, Fiche produit) sur ce vrai endpoint au lieu du tableau
+`typeaheadData.drug[]` simulé — nécessite de décider comment le secret
+`VIDAL_PROXY_SECRET` atteint l'iframe (probablement injecté par
+`SecureFrame` comme le thème/les notes VIDAL, via `postMessage`) et de
+gérer les états de chargement/erreur réseau dans l'UI existante.

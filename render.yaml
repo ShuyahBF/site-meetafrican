@@ -96,6 +96,24 @@ services:
       - key: ADMIN_BOOTSTRAP_PASSWORD
         sync: false
 
+      # --- VIDAL Sécurisation (api.vidal.fr) — un seul couple app_id/app_key
+      # réel, toujours en production (pas de sandbox distincte pour ce
+      # compte : décision utilisateur, pour être sûr des retours à jour).
+      - key: VIDAL_BASE_URL
+        value: https://api.vidal.fr/rest/api
+      - key: VIDAL_APP_ID
+        sync: false
+      - key: VIDAL_APP_KEY
+        sync: false
+      - key: VIDAL_TIMEOUT_SECONDS
+        value: "12"
+      - key: VIDAL_CACHE_TTL_HOURS
+        value: "168"
+      - key: VIDAL_QUOTA_PER_DAY
+        value: "200"
+      - key: VIDAL_PROXY_SECRET
+        generateValue: true
+
   - type: web
     name: meetafrican-frontend
     runtime: static

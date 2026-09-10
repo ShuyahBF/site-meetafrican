@@ -72,6 +72,23 @@ class Settings(BaseSettings):
     admin_bootstrap_email: Optional[str] = None
     admin_bootstrap_password: Optional[str] = None
 
+    # VIDAL Sécurisation (api.vidal.fr) — un seul couple app_id/app_key réel
+    # fourni par l'utilisateur. Décision explicite (10/09/2026) : pas de
+    # distinction sandbox/production côté VIDAL pour ce compte, on tape
+    # toujours l'API réelle pour être sûr des retours à jour (l'API a pu
+    # évoluer depuis la rédaction du manuel d'intégration MI_APIREST REV_03).
+    vidal_base_url: str = "https://api.vidal.fr/rest/api"
+    vidal_app_id: Optional[str] = None
+    vidal_app_key: Optional[str] = None
+    vidal_timeout_seconds: int = 12
+    vidal_cache_ttl_hours: int = 168  # 168h = 7 jours, cf. manuel : contenu peu volatil
+    vidal_quota_per_day: int = 200  # 0 = illimité
+    # Secret partagé exigé sur les routes /api/vidal/* : la page /secure qui
+    # les appelle n'a pas de vrai login (c'est un prototype, route cachée
+    # mais pas authentifiée) — sans ce garde-fou, quiconque tombe sur l'URL
+    # cachée pourrait épuiser le quota VIDAL réel.
+    vidal_proxy_secret: Optional[str] = None
+
 
 @lru_cache
 def get_settings() -> Settings:
