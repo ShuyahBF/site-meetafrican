@@ -153,6 +153,8 @@
           <b>Recherche par nom de marque ou par DCI</b> : le Burkina Faso ayant généralisé la prescription par <b>DCI</b> (Dénomination Commune Internationale, ex. « paracétamol » plutôt que « Doliprane »), la recherche accepte les deux. Si le texte correspond à un nom de marque (<code class="mono">!doc doliprane 1000</code>), Liluvine renvoie sa fiche documentaire <b>et son principe actif (DCI) avec le dosage</b>. Si le texte correspond directement à un principe actif non rattaché à une marque précise (<code class="mono">!doc paracétamol 1000</code>), Liluvine affiche directement la liste des <b>produits équivalents</b> disponibles pour cette DCI et ce dosage.
           <br><br>
           <b>Équivalences</b> : deux produits sont équivalents s'ils ont exactement les mêmes principes actifs et les mêmes dosages. Sur WhatsApp, la fiche produit est envoyée avec un bouton de template nommé <b>« Équivalences »</b> — appuyer dessus renvoie la liste des produits équivalents sans consommer de nouvelle requête. Sur le site, un bouton « Voir les équivalences » déroule la même liste sur la fiche produit, quand l'information est disponible.
+          <br><br>
+          <b>Agents Liluvine (signature des réponses)</b> : jusqu'à 5 agents configurables par l'Admin (prénom + rôle/spécialité, en texte libre). Un message qui <b>ne commence pas par « ! »</b> est une question libre (pas une commande) : Liluvine détermine quel rôle est concerné par son contenu (ex. une demande de prix → rôle « Commercial ») et la réponse est <b>signée du prénom</b> de l'agent correspondant — en réalité, c'est toujours l'agent IA qui exécute le prompt système du rôle concerné avant de signer, aucun humain ne répond en direct. Les <b>commandes</b> (messages commençant par « ! », comme <code class="mono">!doc</code>/<code class="mono">!rech</code>) suivent une règle différente et stricte : elles ne sont <b>jamais relayées à un agent ni signées</b>, elles sont analysées et traitées directement par le système (réponse structurée, comme la fiche produit VIDAL). Cette maquette simule la réponse de chaque rôle par un court modèle de texte (pas d'appel à un vrai modèle de langage) — en production, la rédaction elle-même serait confiée à un LLM exécutant le prompt système du rôle, la signature restant la même logique.
         </span>
       </div>
     </div>
@@ -194,6 +196,28 @@
   <div class="card">
     <div class="card-head">
       <div>
+        <h2>Agents Liluvine — qui signe les réponses</h2>
+        <p>Jusqu'à 5 agents (prénom + rôle/spécialité, texte libre) — l'agent dont le rôle correspond au sujet du message signe la réponse</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="table-wrap">
+        <table class="medtable" id="agentsTable">
+          <thead><tr><th>Prénom</th><th>Rôle / spécialité</th><th>Actions</th></tr></thead>
+          <tbody id="agentsBody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn btn-ghost btn-sm" id="addAgentBtn" onclick="addAgentRow()">+ Ajouter un agent</button>
+        <button class="btn btn-primary" onclick="saveAgents()">Enregistrer les agents</button>
+        <span class="write-log" id="agentsWriteLog"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
         <h2>Simulateur — requête entrante WhatsApp</h2>
         <p>Simule un message reçu d'un numéro pour tester la réponse automatique de Liluvine</p>
       </div>
@@ -212,9 +236,13 @@
             <option value="!doc Doliprane 1000">
             <option value="!rech paracétamol 1000">
             <option value="!doc Advil 400">
-            <option value="Bonjour, ça va ?">
+            <option value="Quel est le prix du Doliprane ?">
+            <option value="Bonjour, quels sont vos horaires d'ouverture ?">
+            <option value="J'ai une panne sur mon installation, pouvez-vous m'aider ?">
+            <option value="Je voudrais une facture pour mon dernier paiement">
+            <option value="!blabla">
           </datalist>
-          <div class="cfg-hint">Requête produit reconnue seulement si le message commence par <code class="mono">!doc</code> ou <code class="mono">!rech</code> (synonymes, casse libre) + un espace + le nom du médicament <b>ou</b> de son principe actif (DCI). Tout autre texte déclenche la réponse générique de rappel du format.</div>
+          <div class="cfg-hint">Un message commençant par <code class="mono">!doc</code> ou <code class="mono">!rech</code> (synonymes, casse libre) est une <b>commande</b> VIDAL, traitée directement (jamais signée). Tout autre message qui ne commence pas par « ! » est une <b>question libre</b> : Liluvine détermine le rôle concerné et signe la réponse avec l'agent correspondant.</div>
         </div>
         <button class="btn btn-primary" onclick="simulateIncoming()">Simuler l'envoi</button>
       </div>
@@ -271,6 +299,16 @@
       annuel:      { label: 'Annuel',      days: 365, price: 30000 },
     },
   };
+
+  // Agents Liluvine — reflet de liluvine/agents.json sur R2. Exemple donné par l'utilisateur,
+  // repris tel quel comme jeu de données par défaut (max 5 agents, prénom + rôle libre).
+  let agents = [
+    { prenom:'Awa',     specialite:'Secrétaire' },
+    { prenom:'Robert',  specialite:'Comptable' },
+    { prenom:'Gaspard', specialite:'Technicien' },
+    { prenom:'Gédéon',  specialite:'Commercial' },
+  ];
+  const MAX_AGENTS = 5;
 
   // Table des numéros — reflet de liluvine/numbers/{phone}.json sur R2, un objet par numéro.
   // Jeu de données couvrant chaque état possible : abonnement actif, essai en cours, essai
@@ -332,6 +370,42 @@
     renderNumbers();
     document.getElementById('cfgWriteLog').textContent =
       `→ écriture simulée : liluvine/config.json (R2) — enregistré à ${fmtDateTime(new Date().toISOString())}`;
+  }
+
+  function renderAgents(){
+    document.getElementById('agentsBody').innerHTML = agents.map((a, i) => `
+      <tr>
+        <td><input class="control" data-agent-field="prenom" data-agent-idx="${i}" value="${esc(a.prenom)}"></td>
+        <td><input class="control" data-agent-field="specialite" data-agent-idx="${i}" value="${esc(a.specialite)}"></td>
+        <td><button class="btn btn-crit btn-sm" onclick="removeAgentRow(${i})" ${agents.length <= 1 ? 'disabled' : ''}>Supprimer</button></td>
+      </tr>
+    `).join('');
+    document.getElementById('addAgentBtn').disabled = agents.length >= MAX_AGENTS;
+    document.getElementById('addAgentBtn').textContent = agents.length >= MAX_AGENTS
+      ? `Maximum ${MAX_AGENTS} agents atteint` : '+ Ajouter un agent';
+  }
+
+  function addAgentRow(){
+    if (agents.length >= MAX_AGENTS) return;
+    agents.push({ prenom:'', specialite:'' });
+    renderAgents();
+  }
+  function removeAgentRow(idx){
+    if (agents.length <= 1) return;
+    agents.splice(idx, 1);
+    renderAgents();
+  }
+  function saveAgents(){
+    document.querySelectorAll('#agentsBody input[data-agent-field]').forEach(inp => {
+      agents[parseInt(inp.dataset.agentIdx, 10)][inp.dataset.agentField] = inp.value.trim();
+    });
+    agents = agents.filter(a => a.prenom && a.specialite);
+    if (!agents.length){
+      agents = [{ prenom:'Awa', specialite:'Secrétaire' }]; // au moins un agent, sinon plus personne pour signer
+    }
+    renderAgents();
+    document.getElementById('agentsWriteLog').textContent =
+      `→ écriture simulée : liluvine/agents.json (R2) — ${agents.length} agent(s) — enregistré à ${fmtDateTime(new Date().toISOString())}`;
   }
 
   function renderNumbers(){
@@ -482,6 +556,61 @@
   // Coeur de la logique métier Liluvine : à chaque message entrant, on regarde l'état du
   // numéro AVANT d'incrémenter les compteurs, on décide de la réponse, puis on met à jour
   // (et on "réécrit sur R2", simulé ici par la mutation de l'objet en mémoire).
+  // Lexique de mots-clés par rôle courant — sert à deviner quel agent est concerné par une
+  // question libre. Les rôles étant du texte libre paramétré par l'Admin (pas une liste
+  // fermée), ceci n'est qu'une heuristique de démo : en production, ce classement ET la
+  // rédaction de la réponse sont faits par le vrai agent IA (prompt système du rôle), pas
+  // par une recherche de mots-clés.
+  // Clés SANS accent : elles sont comparées à normalizeText(agent.specialite), qui retire
+  // systématiquement les accents (vérifié : normalizeText("Secrétaire") -> "secretaire").
+  const ROLE_KEYWORDS = {
+    'secretaire':   ['rendez-vous', 'rdv', 'horaire', 'ouverture', 'adresse', 'contact', 'disponibilité', 'planning', 'agenda'],
+    'secretariat':  ['rendez-vous', 'rdv', 'horaire', 'ouverture', 'adresse', 'contact', 'disponibilité', 'planning', 'agenda'],
+    'comptable':    ['facture', 'paiement', 'règlement', 'reçu', 'comptabilité', 'tva', 'solde', 'relevé'],
+    'comptabilite': ['facture', 'paiement', 'règlement', 'reçu', 'comptabilité', 'tva', 'solde', 'relevé'],
+    'technicien':   ['panne', 'réparation', 'installation', 'dépannage', 'problème technique', 'ne fonctionne pas', 'maintenance'],
+    'technique':    ['panne', 'réparation', 'installation', 'dépannage', 'problème technique', 'ne fonctionne pas', 'maintenance'],
+    'commercial':   ['prix', 'tarif', 'devis', 'commande', 'achat', 'disponible', 'stock', 'catalogue', 'produit'],
+    'commerce':     ['prix', 'tarif', 'devis', 'commande', 'achat', 'disponible', 'stock', 'catalogue', 'produit'],
+    'vente':        ['prix', 'tarif', 'devis', 'commande', 'achat', 'disponible', 'stock', 'catalogue', 'produit'],
+  };
+
+  // Petits modèles de réponse par rôle — tiennent lieu, dans cette maquette, de ce que le
+  // vrai agent IA rédigerait après exécution de son prompt système. Fallback générique pour
+  // un rôle personnalisé (5e agent) non couvert par ces modèles.
+  function draftReplyForRole(specialite, query){
+    const templates = {
+      'secretaire':  `Bonjour 👋 Concernant votre demande (« ${esc(query)} ») : nos horaires sont 8h-18h du lundi au vendredi. Je reviens vers vous pour tout complément.`,
+      'comptable':   `Bonjour, au sujet de votre demande (« ${esc(query)} ») : votre dossier a bien été noté, un justificatif vous sera transmis sous peu.`,
+      'technicien':  `Bonjour, votre signalement (« ${esc(query)} ») est bien pris en compte : une intervention sera planifiée dans les meilleurs délais.`,
+      'commercial':  `Bonjour, pour votre demande (« ${esc(query)} ») : je vous transmets une proposition/un devis actualisé sous peu.`,
+    };
+    return templates[normalizeText(specialite)]
+      || `Bonjour, votre demande (« ${esc(query)} ») a bien été transmise à notre équipe ${esc(specialite)}. Nous revenons vers vous rapidement.`;
+  }
+
+  // Détermine quel agent est concerné par une question libre : compte les mots-clés de
+  // rôle présents dans le message pour chaque agent connu du lexique, garde le meilleur
+  // score ; à égalité ou si aucun mot-clé ne matche (rôle personnalisé, ex. 5e agent),
+  // retombe sur le premier agent de la liste plutôt que de laisser la question sans réponse.
+  function matchAgentForMessage(queryNorm){
+    let best = null, bestScore = 0;
+    for (const agent of agents){
+      const keywords = ROLE_KEYWORDS[normalizeText(agent.specialite)] || [];
+      const score = keywords.reduce((n, kw) => n + (queryNorm.includes(normalizeText(kw)) ? 1 : 0), 0);
+      if (score > bestScore){ best = agent; bestScore = score; }
+    }
+    return best || agents[0];
+  }
+
+  // Réponse signée pour une question libre (ne commence pas par "!") : jamais utilisée pour
+  // une commande — les commandes sont analysées/traitées directement, jamais relayées à un agent.
+  function buildPersonaReply(query){
+    const agent = matchAgentForMessage(normalizeText(query));
+    if (!agent) return `Votre demande (« ${esc(query)} ») a bien été reçue. Nous revenons vers vous rapidement.`;
+    return `${draftReplyForRole(agent.specialite, query)}<br><br>— <i>${esc(agent.prenom)}, ${esc(agent.specialite)}</i>`;
+  }
+
   // Construit le contenu de la fiche renvoyée par Liluvine pour une requête produit valide :
   // - trouvée par marque -> doc + DCI/dosage + bouton Équivalences ;
   // - trouvée seulement par DCI (prescription DCI, Burkina Faso) -> liste des équivalents direct ;
@@ -514,16 +643,26 @@
 
     pushBubble('in', phone, esc(rawMessage));
 
-    // Message hors convention : Liluvine répond quand même (rappel du format attendu),
-    // mais AUCUNE écriture sur R2, aucun compteur touché — ce n'est pas une requête produit.
-    const match = rawMessage.match(DOC_RE);
-    if (!match){
-      pushBubble('out', 'Liluvine', `Je n'ai pas reconnu de requête produit. Pour interroger un médicament (ou son principe actif), écrivez : <code class="mono">!doc &lt;nom&gt;</code> ou <code class="mono">!rech &lt;nom&gt;</code> (ex. <code class="mono">!doc Doliprane 1000</code>).`);
-      document.getElementById('simWriteLog').textContent =
-        `→ aucune écriture R2 : message hors convention "!doc"/"!rech", pas une requête produit (numéro : ${esc(phone)})`;
-      return;
+    // Règle stricte : un message commençant par "!" est une COMMANDE — jamais relayée à un
+    // agent, jamais signée, analysée et traitée directement par le système (ex. !doc/!rech).
+    // Un message qui ne commence PAS par "!" est une question libre, éligible au routage
+    // vers l'agent concerné (voir buildPersonaReply/matchAgentForMessage plus haut).
+    const isCommand = rawMessage.startsWith('!');
+    let query;
+    if (isCommand){
+      const match = rawMessage.match(DOC_RE);
+      if (!match){
+        // Commande non reconnue : traitée (on l'a bien analysée), mais aucune écriture R2,
+        // aucun compteur touché — ce n'est pas une requête produit valide.
+        pushBubble('out', 'Liluvine', `Commande non reconnue. Commandes disponibles : <code class="mono">!doc</code> ou <code class="mono">!rech</code> &lt;nom&gt; (ex. <code class="mono">!doc Doliprane 1000</code>).`);
+        document.getElementById('simWriteLog').textContent =
+          `→ aucune écriture R2 : commande "!" non reconnue, pas une requête produit (numéro : ${esc(phone)})`;
+        return;
+      }
+      query = match[1].trim();
+    } else {
+      query = rawMessage; // question libre : le message entier est le contenu à traiter
     }
-    const query = match[1].trim();
 
     const stateBefore = getAccessState(rec);
     rec.lastRequestAt = nowIso;
@@ -539,11 +678,11 @@
       writeNote = `liluvine/numbers/${phone}.json (requête refusée — numéro bloqué)`;
     } else if (stateBefore === 'essai'){
       rec.freeRequestsUsed += 1;
-      reply = buildDocReply(query) + ` <span style="opacity:.7">(Requête gratuite ${rec.freeRequestsUsed}/${config.freeRequestsThreshold} — essai jusqu'au ${fmtDate(rec.trialExpiresAt)}.)</span>`;
+      reply = (isCommand ? buildDocReply(query) : buildPersonaReply(query)) + ` <span style="opacity:.7">(Requête gratuite ${rec.freeRequestsUsed}/${config.freeRequestsThreshold} — essai jusqu'au ${fmtDate(rec.trialExpiresAt)}.)</span>`;
       writeNote = `liluvine/numbers/${phone}.json (free_requests_used: ${rec.freeRequestsUsed})`;
     } else if (stateBefore === 'abonne'){
       const f = config.formulas[rec.subscription.formula];
-      reply = buildDocReply(query) + ` <span style="opacity:.7">(Abonnement ${esc(f.label)} actif jusqu'au ${fmtDate(rec.subscription.expiresAt)}.)</span>`;
+      reply = (isCommand ? buildDocReply(query) : buildPersonaReply(query)) + ` <span style="opacity:.7">(Abonnement ${esc(f.label)} actif jusqu'au ${fmtDate(rec.subscription.expiresAt)}.)</span>`;
       writeNote = `liluvine/numbers/${phone}.json (request_count: ${rec.requestCount})`;
     } else {
       const list = Object.entries(config.formulas).map(([,f]) => `${f.label} : ${fmtFcfa(f.price)}`).join(' · ');
@@ -556,5 +695,6 @@
   }
 
   renderFormulas();
+  renderAgents();
   renderNumbers();
 </script>

@@ -474,3 +474,56 @@ vrais identifiants VIDAL, navigateur Playwright) : sélection de DOLIPRANE
 1000 → `vmp_id` reçu → clic « Voir les équivalences » → 24 produits réels
 affichés (DOLIPRANE exclu) → re-clic masque la liste sans re-solliciter
 l'API.
+
+## Liluvine — agents nommés qui signent les réponses (10/09/2026)
+
+**Règle métier** : jusqu'à **5 agents** configurables par l'Admin (prénom +
+rôle/spécialité, texte libre — pas une liste fermée). Exemple donné par
+l'utilisateur, repris comme jeu de données par défaut : Awa (Secrétaire),
+Robert (Comptable), Gaspard (Technicien), Gédéon (Commercial).
+
+- Un message qui **ne commence pas par `!`** est une **question libre** :
+  Liluvine détermine quel rôle est concerné par son contenu (ex. une
+  demande de prix sur un produit → rôle « Commercial ») et la réponse est
+  **signée du prénom** de l'agent correspondant. En réalité c'est toujours
+  l'agent IA qui exécute le prompt système du rôle concerné avant de
+  signer — aucun humain ne répond en direct.
+- Une **commande** (message commençant par `!`, ex. `!doc`/`!rech`) suit une
+  règle stricte et différente : elle n'est **jamais relayée à un agent ni
+  signée** — analysée et traitée directement par le système (réponse
+  structurée). Une commande commençant par `!` mais non reconnue (ex.
+  `!blabla`) reste dans cette famille : réponse de rappel des commandes
+  disponibles, **aucune écriture ni compteur touché** — elle n'est jamais
+  routée vers un agent.
+- Les questions libres, elles, passent par la **même passerelle
+  d'accès/abonnement** que les commandes `!doc`/`!rech` (essai gratuit,
+  abonnement, blocage) : toute interaction réelle avec Liluvine consomme
+  la même ressource, qu'il s'agisse d'une recherche VIDAL ou d'une question
+  générale.
+
+**Limite technique de cette maquette (à ne pas reproduire telle quelle au
+portage)** : le classement du rôle concerné et la rédaction de la réponse
+sont simulés par un **lexique de mots-clés** (`ROLE_KEYWORDS`) et de courts
+modèles de texte par rôle (`draftReplyForRole`) — pas d'appel à un vrai
+modèle de langage. En production, ces deux étapes seraient confiées à un
+vrai agent IA exécutant le prompt système du rôle concerné (Sawali expose
+déjà `liluvine_business_rag.py` côté `albarka-portal` pour ce type de
+logique) ; seule la règle de signature (prénom + rôle, jamais pour une
+commande) doit être conservée à l'identique.
+
+**Piège corrigé pendant le développement** : les clés du lexique de rôles et
+des modèles de réponse doivent être **sans accent**, car elles sont comparées
+au résultat de `normalizeText(agent.specialite)` qui retire systématiquement
+les accents (`normalizeText("Secrétaire")` → `"secretaire"`) — une clé
+`'secrétaire'` (accentuée) dans ces dictionnaires ne matche jamais et
+retombe silencieusement sur le premier agent de la liste, masquant le bug
+tant que cet agent est justement celui attendu. Vérifié en réordonnant la
+liste des agents dans un test Playwright : le routage reste bien basé sur
+les mots-clés du message, pas sur la position de l'agent dans la liste.
+
+**Validé par test Playwright** : demande de prix → Gédéon (Commercial) ;
+question d'horaires → Awa (Secrétaire) ; signalement de panne → Gaspard
+(Technicien) ; demande de facture → Robert (Comptable) ; `!doc Doliprane
+1000` toujours traité normalement (non signé) ; `!blabla` → commande non
+reconnue, compteur de requêtes inchangé ; ajout d'un 5<sup>e</sup> agent
+via l'UI Admin → bouton "Ajouter" désactivé au maximum.
