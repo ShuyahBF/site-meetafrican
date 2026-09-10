@@ -1,0 +1,446 @@
+<title>Liluvine — Requêtes WhatsApp</title>
+<style>
+  :root{
+    --bg:#eef1f6; --surface:#ffffff; --surface-2:#f6f8fb; --surface-3:#eef0f5;
+    --border:#e1e6ef; --border-soft:#eaedf3; --text:#101827; --text-soft:#48526b; --text-mute:#8790a3;
+    --navy:#0e1f3d; --accent:#0a58ca; --accent-dark:#073e8f; --accent-tint:#e8f3ff; --accent-tint-2:#d7ebff;
+    --focus:#0a58ca; --input-text:#0a58ca;
+    --ok-bg:#e9f7f0; --ok-text:#0d6b47; --ok-ring:#bfe6d2;
+    --crit-bg:#fdecec; --crit-text:#a01818; --crit-ring:#f4c6c6;
+    --warn-bg:#fff6e6; --warn-text:#8a5a06; --warn-ring:#f2ddab;
+    --info-bg:#eaf4fb; --info-text:#0a5a8c; --info-ring:#bfe0f2;
+    --wa-bubble-in:#dcf8c6; --wa-bubble-out:#ffffff;
+    --shadow-card:0 1px 2px rgba(16,24,39,.05); --shadow-pop:0 16px 40px -14px rgba(16,24,39,.28);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0c1220; --surface:#141b2c; --surface-2:#182036; --surface-3:#1d2740;
+      --border:#26314c; --border-soft:#212a42; --text:#e8ecf6; --text-soft:#aab2c8; --text-mute:#77809a;
+      --navy:#c9d6f2; --accent:#4da3ff; --accent-dark:#7fc0ff; --accent-tint:#12233a; --accent-tint-2:#173049;
+      --input-text:#4a8ee0;
+      --ok-bg:#0f2a20; --ok-text:#6fd6a8; --ok-ring:#1d4a37;
+      --crit-bg:#2a1517; --crit-text:#ff9b93; --crit-ring:#4d2226;
+      --warn-bg:#2b230f; --warn-text:#f0c46a; --warn-ring:#4a3a15;
+      --info-bg:#0f2233; --info-text:#7fc4ea; --info-ring:#204a67;
+      --wa-bubble-in:#144d33; --wa-bubble-out:#1d2740;
+      --shadow-card:0 1px 2px rgba(0,0,0,.4); --shadow-pop:0 16px 40px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0c1220; --surface:#141b2c; --surface-2:#182036; --surface-3:#1d2740;
+    --border:#26314c; --border-soft:#212a42; --text:#e8ecf6; --text-soft:#aab2c8; --text-mute:#77809a;
+    --navy:#c9d6f2; --accent:#4da3ff; --accent-dark:#7fc0ff; --accent-tint:#12233a; --accent-tint-2:#173049;
+    --input-text:#4a8ee0;
+    --ok-bg:#0f2a20; --ok-text:#6fd6a8; --ok-ring:#1d4a37;
+    --crit-bg:#2a1517; --crit-text:#ff9b93; --crit-ring:#4d2226;
+    --warn-bg:#2b230f; --warn-text:#f0c46a; --warn-ring:#4a3a15;
+    --info-bg:#0f2233; --info-text:#7fc4ea; --info-ring:#204a67;
+    --wa-bubble-in:#144d33; --wa-bubble-out:#1d2740;
+    --shadow-card:0 1px 2px rgba(0,0,0,.4); --shadow-pop:0 16px 40px -14px rgba(0,0,0,.6);
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--text); font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; }
+  h1,h2{ font-family:"Space Grotesk","Inter",sans-serif; }
+  .mono{ font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; }
+  .wrap{ max-width:1080px; margin:0 auto; padding:20px 16px 40px; }
+
+  .topbar{ display:flex; align-items:center; gap:12px; padding:6px 4px 18px; }
+  .topbar .icon{ width:40px; height:40px; border-radius:12px; flex:none; background:var(--accent-tint); color:var(--accent-dark); display:flex; align-items:center; justify-content:center; }
+  .topbar h1{ font-size:18px; font-weight:700; margin:0; color:var(--navy); }
+  .topbar p{ margin:2px 0 0; font-size:12.5px; color:var(--text-mute); }
+
+  .adminbanner{ display:flex; align-items:flex-start; gap:8px; font-size:11.5px; line-height:1.5; color:var(--info-text); background:var(--info-bg); border:1px solid var(--info-ring); border-radius:10px; padding:9px 12px; margin:0 0 14px; }
+  .adminbanner svg{ flex:none; margin-top:1px; }
+
+  .vidal-note{ margin:0 0 16px; }
+  .vidal-note-toggle{ display:flex; align-items:center; gap:6px; width:100%; text-align:left; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px; padding:8px 12px; font-size:11px; font-weight:700; color:var(--text-soft); cursor:pointer; font-family:inherit; }
+  .vidal-note-toggle svg{ flex:none; transition:transform .15s ease; }
+  .vidal-note.expanded .vidal-note-toggle svg{ transform:rotate(90deg); }
+  .vidal-note-body{ display:none; margin-top:6px; }
+  .vidal-note.expanded .vidal-note-body{ display:block; }
+  .vidal-note-body ul{ margin:6px 0 0; padding-left:18px; }
+  .vidal-note-body li{ margin-bottom:4px; }
+
+  .card{ background:var(--surface); border:1px solid var(--border-soft); border-radius:16px; box-shadow:var(--shadow-card); margin-bottom:16px; overflow:hidden; }
+  .card-head{ display:flex; align-items:center; gap:9px; padding:14px 16px; border-bottom:1px solid var(--border-soft); }
+  .card-head h2{ font-size:14.5px; font-weight:700; margin:0; color:var(--navy); flex:1; }
+  .card-head p{ margin:2px 0 0; font-size:11.5px; color:var(--text-mute); }
+  .card-body{ padding:14px 16px 16px; }
+
+  .btn{ display:inline-flex; align-items:center; gap:6px; border-radius:10px; font-size:12.5px; font-weight:700; padding:9px 14px; border:1px solid var(--border); background:var(--surface); color:var(--text-soft); cursor:pointer; font-family:inherit; white-space:nowrap; }
+  .btn-ghost:hover{ background:var(--surface-3); }
+  .btn-primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn-primary:hover{ background:var(--accent-dark); border-color:var(--accent-dark); }
+  .btn-sm{ padding:6px 10px; font-size:11px; }
+  .btn-crit{ background:var(--crit-bg); border-color:var(--crit-ring); color:var(--crit-text); }
+  .btn-ok{ background:var(--ok-bg); border-color:var(--ok-ring); color:var(--ok-text); }
+
+  .field{ margin-bottom:0; }
+  .field label{ display:block; font-size:11.5px; font-weight:600; color:var(--text-soft); margin-bottom:5px; }
+  .control{ width:100%; font-size:13.5px; font-weight:600; font-family:inherit; color:var(--input-text); background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:9px 11px; }
+  .control:focus{ outline:none; border-color:var(--focus); box-shadow:0 0 0 3px var(--accent-tint); }
+  .sim-row{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:10px; }
+
+  .cfg-grid{ display:flex; flex-wrap:wrap; gap:12px; margin-bottom:14px; }
+  .cfg-grid .field{ flex:1 1 220px; }
+  .cfg-hint{ font-size:10.5px; color:var(--text-mute); margin-top:4px; }
+
+  .table-wrap{ overflow-x:auto; }
+  table.medtable{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:760px; }
+  table.medtable th, table.medtable td{ padding:10px 12px; text-align:left; border-bottom:1px solid var(--border-soft); vertical-align:top; }
+  table.medtable th{ font-size:10px; text-transform:uppercase; letter-spacing:.03em; color:var(--text-mute); background:var(--surface-2); white-space:nowrap; }
+  table.medtable tr:last-child td{ border-bottom:none; }
+  table.medtable input.control{ padding:6px 8px; font-size:12.5px; }
+
+  .badge{ display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:999px; white-space:nowrap; }
+  .badge.ok{ background:var(--ok-bg); color:var(--ok-text); }
+  .badge.crit{ background:var(--crit-bg); color:var(--crit-text); }
+  .badge.warn{ background:var(--warn-bg); color:var(--warn-text); }
+  .badge.info{ background:var(--info-bg); color:var(--info-text); }
+  .row-actions{ display:flex; flex-wrap:wrap; gap:6px; }
+
+  /* Zone "conversation" façon WhatsApp : bulles alignées à droite pour le numéro qui
+     écrit, à gauche pour la réponse automatique Liluvine — juste pour rendre le
+     scénario lisible d'un coup d'oeil, ce n'est pas un vrai client WhatsApp. */
+  .chat-area{ background:#e9ecf1; border:1px solid var(--border-soft); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:8px; min-height:60px; }
+  html[data-theme="dark"] .chat-area, html:not([data-theme="light"]) .chat-area{ background:#0a0f1a; }
+  @media (prefers-color-scheme: dark){ html:not([data-theme="light"]) .chat-area{ background:#0a0f1a; } }
+  .bubble{ max-width:80%; padding:8px 11px; border-radius:10px; font-size:12.5px; line-height:1.45; box-shadow:0 1px 1px rgba(0,0,0,.08); }
+  .bubble .who{ display:block; font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; margin-bottom:3px; opacity:.6; }
+  .bubble.in{ align-self:flex-end; background:var(--wa-bubble-in); color:#0b2b1a; }
+  .bubble.out{ align-self:flex-start; background:var(--wa-bubble-out); color:var(--text); border:1px solid var(--border-soft); }
+  .bubble.admin{ align-self:center; background:var(--warn-bg); color:var(--warn-text); border:1px solid var(--warn-ring); max-width:92%; }
+  .chat-empty{ text-align:center; color:var(--text-mute); font-size:12px; padding:14px; }
+  .write-log{ font-size:10.5px; color:var(--text-mute); margin-top:8px; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap">
+
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+    </div>
+    <div>
+      <h1>Liluvine — Requêtes produit par WhatsApp</h1>
+      <p>Autorisation des numéros, compteur de requêtes, essai gratuit et abonnements — accès admin</p>
+    </div>
+  </div>
+
+  <div class="adminbanner">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+    <span>Maquette 100&nbsp;% simulée côté client : aucun numéro WhatsApp Business réel, aucun webhook Meta et aucun identifiant VIDAL de production ne sont utilisés ici. La logique d'autorisation, le compteur de requêtes et la table des numéros reproduisent la règle métier définie pour Liluvine, à réimplémenter côté serveur au portage.</span>
+  </div>
+
+  <div class="vidal-note" id="techNote">
+    <button type="button" class="vidal-note-toggle" onclick="this.closest('.vidal-note').classList.toggle('expanded')">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      Note technique — stockage R2 et règles WhatsApp Business
+    </button>
+    <div class="vidal-note-body">
+      <div class="adminbanner" style="margin:0">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        <span>
+          Table des numéros et configuration <b>stockées dans le bucket Cloudflare R2 dédié VIDAL</b> (pas MongoDB, comme demandé) — un objet JSON par ressource, pas de base relationnelle :
+          <ul>
+            <li><code class="mono">liluvine/config.json</code> — <code class="mono">{ free_requests_threshold, trial_days, formulas: {jour, semaine, mois, trimestriel, annuel} }</code>, éditable par l'Admin ci-dessous.</li>
+            <li><code class="mono">liluvine/numbers/{'{'}phone_e164{'}'}.json</code> — un objet par numéro : <code class="mono">{ phone, authorized, manual_blocked, request_count, free_requests_used, first_request_at, last_request_at, trial_expires_at, subscription: {formula, started_at, expires_at, price} | null }</code>.</li>
+          </ul>
+          Côté règles WhatsApp Business : un message entrant ouvre une fenêtre de service de 24h pendant laquelle Liluvine peut répondre librement ; l'invitation à s'inscrire et le rappel d'abonnement envoyés <i>hors</i> de cette fenêtre (ex. relance à J+2) devront passer par un modèle pré-approuvé par Meta, catégorie <b>UTILITY</b> (même convention que le modèle <code class="mono">ordonnance_pdf_fr</code> déjà utilisé) — pas MARKETING. WhatsApp ne filtre pas lui-même les expéditeurs autorisés : ce filtrage (numéro connu / en attente / bloqué) est entièrement à la charge de l'application, exactement ce que simule cette page.
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Configuration (admin)</h2>
+        <p>Seuils et tarifs — modifiables par l'administrateur, appliqués aux prochaines requêtes</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="cfg-grid">
+        <div class="field">
+          <label>Nombre de requêtes gratuites avant abonnement</label>
+          <input class="control" id="cfgFreeRequests" type="number" min="0" step="1">
+          <div class="cfg-hint">Par défaut 3 — au-delà, un abonnement est requis à partir de la requête suivante.</div>
+        </div>
+        <div class="field">
+          <label>Durée d'essai accordée par l'Admin (jours)</label>
+          <input class="control" id="cfgTrialDays" type="number" min="0" step="1">
+          <div class="cfg-hint">Accordée quand l'Admin autorise un numéro pas encore inscrit.</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="medtable" id="formulasTable">
+          <thead><tr><th>Formule</th><th>Durée</th><th>Coût (FCFA)</th></tr></thead>
+          <tbody id="formulasBody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn btn-primary" onclick="saveConfig()">Enregistrer la configuration</button>
+        <span class="write-log" id="cfgWriteLog"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Simulateur — requête entrante WhatsApp</h2>
+        <p>Simule un message reçu d'un numéro pour tester la réponse automatique de Liluvine</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="sim-row" style="align-items:flex-end">
+        <div class="field" style="flex:1 1 220px">
+          <label>Numéro expéditeur</label>
+          <input class="control" id="simPhone" list="simPhoneList" placeholder="+226 XX XX XX XX">
+          <datalist id="simPhoneList"></datalist>
+        </div>
+        <div class="field" style="flex:2 1 280px">
+          <label>Message (requête produit)</label>
+          <input class="control" id="simQuery" placeholder="Ex. DOLIPRANE 1000, posologie ?">
+        </div>
+        <button class="btn btn-primary" onclick="simulateIncoming()">Simuler l'envoi</button>
+      </div>
+      <div class="chat-area" id="chatArea">
+        <div class="chat-empty" id="chatEmpty">Aucun message simulé pour l'instant.</div>
+      </div>
+      <div class="write-log" id="simWriteLog"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Numéros — table d'autorisation (R2)</h2>
+        <p>État en temps réel de chaque numéro connu de Liluvine</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="table-wrap">
+        <table class="medtable">
+          <thead>
+            <tr>
+              <th>Numéro</th><th>Statut</th><th>Requêtes</th><th>Essai / Abonnement</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="numbersBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const TODAY = new Date('2026-09-10');
+  function esc(s){ return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmtDate(iso){ return new Date(iso).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric'}); }
+  function fmtDateTime(iso){ return new Date(iso).toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+  function addDays(base, n){ const d = new Date(base); d.setDate(d.getDate() + n); return d.toISOString().slice(0,10); }
+  function isPastOrToday(iso){ return new Date(iso) <= TODAY; }
+  function fmtFcfa(n){ return n.toLocaleString('fr-FR') + ' FCFA'; }
+
+  // Config Liluvine — reflet de liluvine/config.json sur R2. Le "3" cité par l'utilisateur
+  // sert deux fois (nb de requêtes gratuites ET durée d'essai en jours) : les deux sont
+  // volontairement des réglages distincts, tous deux configurables par l'Admin.
+  let config = {
+    freeRequestsThreshold: 3,
+    trialDays: 3,
+    formulas: {
+      jour:        { label: 'Jour',        days: 1,   price: 200 },
+      semaine:     { label: 'Semaine',     days: 7,   price: 1000 },
+      mois:        { label: 'Mois',        days: 30,  price: 3500 },
+      trimestriel: { label: 'Trimestriel', days: 90,  price: 9000 },
+      annuel:      { label: 'Annuel',      days: 365, price: 30000 },
+    },
+  };
+
+  // Table des numéros — reflet de liluvine/numbers/{phone}.json sur R2, un objet par numéro.
+  // Jeu de données couvrant chaque état possible : abonnement actif, essai en cours, essai
+  // expiré sans abonnement, en attente de validation Admin, abonnement expiré, bloqué manuellement.
+  let numbers = {
+    '+22670123456': { phone:'+22670123456', authorized:true,  manualBlocked:false, requestCount:47, freeRequestsUsed:3, firstRequestAt:'2026-07-02T09:10:00', lastRequestAt:'2026-09-10T07:40:00', trialExpiresAt:'2026-07-05', subscription:{ formula:'mois', startedAt:'2026-08-15', expiresAt:'2026-09-15', price:3500 } },
+    '+22676984512': { phone:'+22676984512', authorized:true,  manualBlocked:false, requestCount:2,  freeRequestsUsed:2, firstRequestAt:'2026-09-09T14:00:00', lastRequestAt:'2026-09-10T08:05:00', trialExpiresAt:'2026-09-12', subscription:null },
+    '+22665442109': { phone:'+22665442109', authorized:true,  manualBlocked:false, requestCount:5,  freeRequestsUsed:3, firstRequestAt:'2026-08-28T11:20:00', lastRequestAt:'2026-09-04T16:00:00', trialExpiresAt:'2026-09-03', subscription:null },
+    '+22678339011': { phone:'+22678339011', authorized:false, manualBlocked:false, requestCount:1,  freeRequestsUsed:0, firstRequestAt:'2026-09-10T08:52:00', lastRequestAt:'2026-09-10T08:52:00', trialExpiresAt:null, subscription:null },
+    '+22671221045': { phone:'+22671221045', authorized:true,  manualBlocked:false, requestCount:20, freeRequestsUsed:3, firstRequestAt:'2026-08-01T10:00:00', lastRequestAt:'2026-08-31T09:00:00', trialExpiresAt:'2026-08-04', subscription:{ formula:'semaine', startedAt:'2026-08-25', expiresAt:'2026-09-01', price:1000 } },
+    '+22701020304': { phone:'+22701020304', authorized:true,  manualBlocked:true,  requestCount:8,  freeRequestsUsed:1, firstRequestAt:'2026-09-05T12:00:00', lastRequestAt:'2026-09-08T18:00:00', trialExpiresAt:'2026-09-08', subscription:null },
+  };
+
+  // Détermine l'état d'accès d'un numéro à l'instant présent — c'est cette fonction qui,
+  // en production, déciderait si Liluvine répond normalement, invite à s'abonner, ou bloque.
+  function getAccessState(rec){
+    if (!rec) return 'inconnu';
+    if (rec.manualBlocked) return 'bloque';
+    if (!rec.authorized) return 'en_attente';
+    if (rec.subscription){
+      if (new Date(rec.subscription.expiresAt) >= TODAY) return 'abonne';
+      return 'abonnement_expire';
+    }
+    if (rec.trialExpiresAt && new Date(rec.trialExpiresAt) >= TODAY && rec.freeRequestsUsed < config.freeRequestsThreshold){
+      return 'essai';
+    }
+    return 'abonnement_requis';
+  }
+
+  const STATE_META = {
+    inconnu:            { label:'Nouveau numéro',        cls:'info' },
+    en_attente:         { label:"En attente d'Admin",    cls:'warn' },
+    essai:              { label:'Essai gratuit',         cls:'info' },
+    abonne:             { label:'Abonné actif',          cls:'ok' },
+    abonnement_expire:  { label:'Abonnement expiré',     cls:'warn' },
+    abonnement_requis:  { label:'Abonnement requis',     cls:'crit' },
+    bloque:             { label:'Bloqué (Admin)',        cls:'crit' },
+  };
+
+  function renderFormulas(){
+    document.getElementById('cfgFreeRequests').value = config.freeRequestsThreshold;
+    document.getElementById('cfgTrialDays').value = config.trialDays;
+    document.getElementById('formulasBody').innerHTML = Object.entries(config.formulas).map(([key, f]) => `
+      <tr>
+        <td><b>${esc(f.label)}</b></td>
+        <td class="mono">${f.days} j</td>
+        <td><input class="control" type="number" min="0" step="50" data-formula="${key}" value="${f.price}"></td>
+      </tr>
+    `).join('');
+  }
+
+  function saveConfig(){
+    config.freeRequestsThreshold = Math.max(0, parseInt(document.getElementById('cfgFreeRequests').value, 10) || 0);
+    config.trialDays = Math.max(0, parseInt(document.getElementById('cfgTrialDays').value, 10) || 0);
+    document.querySelectorAll('#formulasBody input[data-formula]').forEach(inp => {
+      config.formulas[inp.dataset.formula].price = Math.max(0, parseInt(inp.value, 10) || 0);
+    });
+    renderFormulas();
+    renderNumbers();
+    document.getElementById('cfgWriteLog').textContent =
+      `→ écriture simulée : liluvine/config.json (R2) — enregistré à ${fmtDateTime(new Date().toISOString())}`;
+  }
+
+  function renderNumbers(){
+    const rows = Object.values(numbers).sort((a,b) => b.lastRequestAt.localeCompare(a.lastRequestAt));
+    document.getElementById('numbersBody').innerHTML = rows.map(rec => {
+      const state = getAccessState(rec);
+      const meta = STATE_META[state];
+      const reqCell = `${rec.requestCount} total${rec.subscription ? '' : ` · ${rec.freeRequestsUsed}/${config.freeRequestsThreshold} gratuites`}`;
+      let periodCell = '—';
+      if (rec.subscription){
+        periodCell = `${esc(config.formulas[rec.subscription.formula]?.label || rec.subscription.formula)} · jusqu'au ${fmtDate(rec.subscription.expiresAt)}`;
+      } else if (rec.trialExpiresAt){
+        periodCell = `Essai jusqu'au ${fmtDate(rec.trialExpiresAt)}`;
+      }
+      const actions = [];
+      if (state === 'en_attente'){
+        actions.push(`<button class="btn btn-ok btn-sm" onclick="authorizeNumber('${rec.phone}')">Autoriser (essai ${config.trialDays}j)</button>`);
+      }
+      if (state === 'abonnement_requis' || state === 'abonnement_expire'){
+        actions.push(`
+          <select class="control" style="width:auto;display:inline-block;padding:5px 8px;font-size:11px" id="sub-${rec.phone.replace('+','')}">
+            ${Object.entries(config.formulas).map(([k,f]) => `<option value="${k}">${esc(f.label)} — ${fmtFcfa(f.price)}</option>`).join('')}
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="subscribeNumber('${rec.phone}')">Souscrire</button>`);
+      }
+      if (!rec.manualBlocked){
+        actions.push(`<button class="btn btn-crit btn-sm" onclick="blockNumber('${rec.phone}')">Bloquer</button>`);
+      } else {
+        actions.push(`<button class="btn btn-ok btn-sm" onclick="unblockNumber('${rec.phone}')">Débloquer</button>`);
+      }
+      actions.push(`<button class="btn btn-ghost btn-sm" onclick="resetCounter('${rec.phone}')">Réinitialiser</button>`);
+      return `
+        <tr>
+          <td class="mono">${esc(rec.phone)}</td>
+          <td><span class="badge ${meta.cls}">${meta.label}</span></td>
+          <td>${reqCell}</td>
+          <td>${periodCell}</td>
+          <td><div class="row-actions">${actions.join('')}</div></td>
+        </tr>`;
+    }).join('');
+
+    document.getElementById('simPhoneList').innerHTML = Object.keys(numbers).map(p => `<option value="${esc(p)}">`).join('');
+  }
+
+  function authorizeNumber(phone){
+    const rec = numbers[phone];
+    rec.authorized = true;
+    rec.trialExpiresAt = addDays(TODAY, config.trialDays);
+    renderNumbers();
+  }
+  function blockNumber(phone){ numbers[phone].manualBlocked = true; renderNumbers(); }
+  function unblockNumber(phone){ numbers[phone].manualBlocked = false; renderNumbers(); }
+  function resetCounter(phone){
+    const rec = numbers[phone];
+    rec.requestCount = 0;
+    rec.freeRequestsUsed = 0;
+    renderNumbers();
+  }
+  function subscribeNumber(phone){
+    const select = document.getElementById('sub-' + phone.replace('+',''));
+    const key = select.value;
+    const f = config.formulas[key];
+    numbers[phone].subscription = { formula:key, startedAt: TODAY.toISOString().slice(0,10), expiresAt: addDays(TODAY, f.days), price: f.price };
+    renderNumbers();
+  }
+
+  function pushBubble(cls, who, html){
+    document.getElementById('chatEmpty')?.remove();
+    const el = document.createElement('div');
+    el.className = 'bubble ' + cls;
+    el.innerHTML = `<span class="who">${esc(who)}</span>${html}`;
+    document.getElementById('chatArea').appendChild(el);
+    el.scrollIntoView({ block:'nearest' });
+  }
+
+  // Coeur de la logique métier Liluvine : à chaque message entrant, on regarde l'état du
+  // numéro AVANT d'incrémenter les compteurs, on décide de la réponse, puis on met à jour
+  // (et on "réécrit sur R2", simulé ici par la mutation de l'objet en mémoire).
+  function simulateIncoming(){
+    const rawPhone = document.getElementById('simPhone').value.trim();
+    const query = document.getElementById('simQuery').value.trim() || 'DOLIPRANE 1000, posologie ?';
+    if (!rawPhone) { document.getElementById('simPhone').focus(); return; }
+    const phone = rawPhone.replace(/[\s.-]/g, '');
+    const nowIso = new Date().toISOString();
+    let rec = numbers[phone];
+    const isNew = !rec;
+    if (isNew){
+      rec = { phone, authorized:false, manualBlocked:false, requestCount:0, freeRequestsUsed:0, firstRequestAt:nowIso, lastRequestAt:nowIso, trialExpiresAt:null, subscription:null };
+      numbers[phone] = rec;
+    }
+    const stateBefore = getAccessState(rec);
+    rec.lastRequestAt = nowIso;
+    rec.requestCount += 1;
+
+    pushBubble('in', phone, esc(query));
+
+    let reply, writeNote;
+    if (stateBefore === 'inconnu' || stateBefore === 'en_attente'){
+      reply = "Bonjour 👋 Je suis Liluvine, l'assistant produit VIDAL. Votre numéro n'est pas encore inscrit — un administrateur va valider votre accès sous peu (essai gratuit offert à l'activation). Merci de votre patience !";
+      pushBubble('admin', 'Notification → Admin', `Nouveau numéro à valider : <b>${esc(phone)}</b> (1<sup>re</sup> requête : « ${esc(query)} »). <button class="btn btn-ok btn-sm" style="margin-top:6px" onclick="authorizeNumber('${phone}'); renderNumbers();">Autoriser (essai ${config.trialDays}j)</button>`);
+      writeNote = `liluvine/numbers/${phone}.json (statut: en attente) + notification Admin`;
+    } else if (stateBefore === 'bloque'){
+      reply = "Votre accès à Liluvine est actuellement bloqué. Merci de contacter l'administrateur pour plus d'informations.";
+      writeNote = `liluvine/numbers/${phone}.json (requête refusée — numéro bloqué)`;
+    } else if (stateBefore === 'essai'){
+      rec.freeRequestsUsed += 1;
+      reply = `📄 <b>${esc(query.split(',')[0] || query)}</b> — fiche produit VIDAL envoyée en pièce jointe. (Requête gratuite ${rec.freeRequestsUsed}/${config.freeRequestsThreshold} — essai jusqu'au ${fmtDate(rec.trialExpiresAt)}.)`;
+      writeNote = `liluvine/numbers/${phone}.json (free_requests_used: ${rec.freeRequestsUsed})`;
+    } else if (stateBefore === 'abonne'){
+      const f = config.formulas[rec.subscription.formula];
+      reply = `📄 <b>${esc(query.split(',')[0] || query)}</b> — fiche produit VIDAL envoyée en pièce jointe. (Abonnement ${esc(f.label)} actif jusqu'au ${fmtDate(rec.subscription.expiresAt)}.)`;
+      writeNote = `liluvine/numbers/${phone}.json (request_count: ${rec.requestCount})`;
+    } else {
+      const list = Object.entries(config.formulas).map(([,f]) => `${f.label} : ${fmtFcfa(f.price)}`).join(' · ');
+      reply = `Vos ${config.freeRequestsThreshold} requêtes gratuites sont épuisées${rec.subscription ? ' et votre abonnement a expiré' : ''}. Pour continuer, choisissez une formule : ${esc(list)}. Répondez avec la formule souhaitée pour l'activer.`;
+      writeNote = `liluvine/numbers/${phone}.json (statut: abonnement requis — aucune écriture de compteur)`;
+    }
+    pushBubble('out', 'Liluvine', reply);
+    renderNumbers();
+    document.getElementById('simWriteLog').textContent = `→ écriture simulée : ${writeNote}`;
+  }
+
+  renderFormulas();
+  renderNumbers();
+</script>

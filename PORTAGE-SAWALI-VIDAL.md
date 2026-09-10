@@ -36,6 +36,8 @@ tout est simulé côté client.
 | [#5](https://github.com/ShuyahBF/site-meetafrican/pull/5) | Fond opaque Posologie + en-tête Sécurisation compact au défilement |
 | [#6](https://github.com/ShuyahBF/site-meetafrican/pull/6) | Thème clair (défaut) / sombre pilotable depuis la sidebar, notes VIDAL repliables réservées à l'admin, boutons d'action égaux/repliables |
 | [#7](https://github.com/ShuyahBF/site-meetafrican/pull/7) | Journal des appels API VIDAL (page "Suivi des logs" dédiée, filtre par période, impression), bloc persistance MongoDB réservé à l'admin |
+| [#14](https://github.com/ShuyahBF/site-meetafrican/pull/14) | Nouvelle page "Fiche produit VIDAL" — consultation en ligne par les pharmacies/établissements de santé (recherche produit, voies d'administration, documents disponibles par type avec distinction HTML VIDAL direct / document externe) |
+| (à venir) | Page "Liluvine — Requêtes WhatsApp" — voir section dédiée ci-dessous |
 
 ## Points à ne pas perdre au portage
 
@@ -130,3 +132,44 @@ endpoint `https://{account_id}.r2.cloudflarestorage.com`) :
 ordonnances anonymisées décrit plus haut, dès que le portage vers
 `Site-SawaliSmartSystems` implémente réellement l'upload/téléchargement
 (absent de ce prototype, qui reste 100 % simulé côté client).
+
+## Liluvine — requêtes produit par WhatsApp (règles métier, à porter)
+
+Nouvelle page `/secure/liluvine` ("Liluvine (WhatsApp)" dans la sidebar) :
+simulation de bout en bout de l'assistant WhatsApp Liluvine qui répond aux
+demandes de fiche produit envoyées par un numéro WhatsApp, avec autorisation,
+comptage de requêtes et abonnement. Règles métier fixées par l'utilisateur,
+à réimplémenter à l'identique côté serveur au portage :
+
+- **Stockage dans le bucket R2 dédié VIDAL, pas MongoDB** (demande explicite) :
+  - `liluvine/config.json` — `{ free_requests_threshold, trial_days, formulas: {jour, semaine, mois, trimestriel, annuel} }`, chaque formule avec sa durée et son coût, éditable par l'Admin.
+  - `liluvine/numbers/{phone_e164}.json` — un objet par numéro : `{ phone, authorized, manual_blocked, request_count, free_requests_used, first_request_at, last_request_at, trial_expires_at, subscription: {formula, started_at, expires_at, price} | null }`.
+- **Numéro pas encore autorisé** → Liluvine répond par une invitation polie à
+  s'inscrire, **et** envoie une notification à l'Admin ; l'Admin autorise le
+  numéro, ce qui lui accorde un **essai de N jours** (`trial_days`, par
+  défaut 3, **configurable par l'Admin**).
+- **Comptage des requêtes en temps réel** par numéro. **N requêtes gratuites**
+  (`free_requests_threshold`, par défaut 3, **configurable par l'Admin** —
+  distinct de `trial_days` bien que l'utilisateur emploie le même "3" par
+  défaut pour les deux), puis **abonnement obligatoire à partir de la
+  requête N+1**.
+- **Formules d'abonnement** avec expiration selon la formule souscrite :
+  jour, semaine, mois, trimestriel, annuel — chacune avec son coût propre
+  (montants de démonstration en FCFA, à fixer réellement par l'utilisateur).
+- Un état "bloqué" manuel (indépendant du compteur) permet à l'Admin de
+  couper l'accès d'un numéro abusif sans toucher à son historique.
+- **Règles WhatsApp Business à respecter à l'intégration réelle** : un
+  message entrant ouvre une fenêtre de service de 24h pendant laquelle
+  Liluvine peut répondre librement (document produit compris) ; toute
+  relance envoyée hors de cette fenêtre (invitation à s'inscrire à froid,
+  rappel d'abonnement expiré) doit passer par un **modèle pré-approuvé par
+  Meta, catégorie UTILITY** (même convention que le modèle
+  `ordonnance_pdf_fr` déjà utilisé ailleurs dans ce prototype) — jamais
+  MARKETING. WhatsApp ne filtre pas lui-même les expéditeurs autorisés :
+  ce filtrage est entièrement applicatif, exactement ce que simule cette
+  page.
+- Comme pour le reste du module VIDAL : **aucun identifiant WhatsApp
+  Business ni identifiant R2 réel n'est utilisé** dans ce prototype — la
+  table des numéros et la configuration vivent en mémoire côté navigateur,
+  à réimplémenter avec de vrais appels R2 (GET/PUT d'objets JSON) et de
+  vrais webhooks WhatsApp Cloud API au portage.
