@@ -27,6 +27,7 @@ import securisationHtml from "@/secure/content/securisation.html?raw";
 import posologieHtml from "@/secure/content/posologie.html?raw";
 import adminMedecinsHtml from "@/secure/content/admin-medecins.html?raw";
 import logsHtml from "@/secure/content/logs.html?raw";
+import ficheProduitHtml from "@/secure/content/fiche-produit.html?raw";
 
 function Protected({ children }) {
   return <ProtectedRoute>{children}</ProtectedRoute>;
@@ -70,6 +71,10 @@ export default function App() {
             <Route
               path="posologie"
               element={<SecureFrame html={posologieHtml} title="Recherche de posologie" />}
+            />
+            <Route
+              path="fiche-produit"
+              element={<SecureFrame html={ficheProduitHtml} title="Fiche produit VIDAL" />}
             />
             <Route
               path="admin"

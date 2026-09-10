@@ -18,6 +18,7 @@ import { SecureSettingsProvider, useSecureSettings } from "./SecureSettingsConte
 const links = [
   { to: "securisation", label: "Sécurisation" },
   { to: "posologie", label: "Posologie" },
+  { to: "fiche-produit", label: "Fiche produit" },
   { to: "admin", label: "Admin (médecins)" },
   { to: "logs", label: "Suivi des logs" },
 ];

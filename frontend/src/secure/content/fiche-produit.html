@@ -1,0 +1,361 @@
+<title>Fiche produit VIDAL</title>
+<style>
+  :root{
+    --bg:#eef1f6; --surface:#ffffff; --surface-2:#f6f8fb; --surface-3:#eef0f5;
+    --border:#e1e6ef; --border-soft:#eaedf3; --text:#101827; --text-soft:#48526b; --text-mute:#8790a3;
+    --navy:#0e1f3d; --accent:#dc2626; --accent-dark:#b91c1c; --accent-tint:#fdecec; --accent-tint-2:#fbdede;
+    --focus:#dc2626; --input-text:#0a58ca;
+    --crit-bg:#fdecec; --crit-text:#a01818; --crit-ring:#f4c6c6;
+    --warn-bg:#fff6e6; --warn-text:#8a5a06; --warn-ring:#f2ddab;
+    --info-bg:#eaf4fb; --info-text:#0a5a8c; --info-ring:#bfe0f2;
+    --ok-bg:#e9f7f0;   --ok-text:#0d6b47;  --ok-ring:#bfe6d2;
+    --shadow-card:0 1px 2px rgba(16,24,39,.05);
+    --shadow-pop:0 16px 40px -14px rgba(16,24,39,.28);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0c1220; --surface:#141b2c; --surface-2:#182036; --surface-3:#1d2740;
+      --border:#26314c; --border-soft:#212a42; --text:#e8ecf6; --text-soft:#aab2c8;
+      --text-mute:#77809a; --navy:#c9d6f2; --accent:#f0554f; --accent-dark:#ff6b64;
+      --accent-tint:#2a1518; --accent-tint-2:#331a1c; --input-text:#4a8ee0;
+      --crit-bg:#2a1517; --crit-text:#ff9b93; --crit-ring:#4d2226;
+      --warn-bg:#2b230f; --warn-text:#f0c46a; --warn-ring:#4a3a15;
+      --info-bg:#0f2233; --info-text:#7fc4ea; --info-ring:#204a67;
+      --ok-bg:#0f2a20;   --ok-text:#6fd6a8;  --ok-ring:#1d4a37;
+      --shadow-card:0 1px 2px rgba(0,0,0,.4); --shadow-pop:0 16px 40px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0c1220; --surface:#141b2c; --surface-2:#182036; --surface-3:#1d2740;
+    --border:#26314c; --border-soft:#212a42; --text:#e8ecf6; --text-soft:#aab2c8;
+    --text-mute:#77809a; --navy:#c9d6f2; --accent:#f0554f; --accent-dark:#ff6b64;
+    --accent-tint:#2a1518; --accent-tint-2:#331a1c; --input-text:#4a8ee0;
+    --crit-bg:#2a1517; --crit-text:#ff9b93; --crit-ring:#4d2226;
+    --warn-bg:#2b230f; --warn-text:#f0c46a; --warn-ring:#4a3a15;
+    --info-bg:#0f2233; --info-text:#7fc4ea; --info-ring:#204a67;
+    --ok-bg:#0f2a20;   --ok-text:#6fd6a8;  --ok-ring:#1d4a37;
+    --shadow-card:0 1px 2px rgba(0,0,0,.4); --shadow-pop:0 16px 40px -14px rgba(0,0,0,.6);
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--text); font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; }
+  h1,h2{ font-family:"Space Grotesk","Inter",sans-serif; text-wrap:balance; }
+  .mono{ font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; }
+  .wrap{ max-width:720px; margin:0 auto; padding:20px 16px 40px; }
+
+  .topbar{ display:flex; align-items:center; gap:12px; padding:14px 4px 18px; }
+  .topbar .icon{ width:40px; height:40px; border-radius:12px; flex:none; background:var(--accent-tint); color:var(--accent-dark); display:flex; align-items:center; justify-content:center; }
+  .topbar h1{ font-size:18px; font-weight:700; margin:0; color:var(--navy); }
+  .topbar p{ margin:2px 0 0; font-size:12.5px; color:var(--text-mute); }
+
+  .srcbanner{ display:flex; align-items:flex-start; gap:8px; font-size:11.5px; line-height:1.5; color:var(--ok-text); background:var(--ok-bg); border:1px solid var(--ok-ring); border-radius:10px; padding:9px 12px; }
+  .srcbanner svg{ flex:none; margin-top:1px; }
+  .vidal-note{ margin:0 0 14px; }
+  html[data-vidal-notes="off"] .vidal-note{ display:none; }
+  .vidal-note-toggle{ display:flex; align-items:center; gap:6px; width:100%; text-align:left; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px; padding:8px 12px; font-size:11px; font-weight:700; color:var(--text-soft); cursor:pointer; font-family:inherit; }
+  .vidal-note-toggle svg{ flex:none; transition:transform .15s ease; }
+  .vidal-note.expanded .vidal-note-toggle svg{ transform:rotate(90deg); }
+  .vidal-note-body{ display:none; margin-top:6px; }
+  .vidal-note.expanded .vidal-note-body{ display:block; }
+
+  .card{ background:var(--surface); border:1px solid var(--border-soft); border-radius:16px; box-shadow:var(--shadow-card); margin-bottom:14px; overflow:hidden; }
+  .card-head{ display:flex; align-items:center; gap:9px; padding:14px 16px 10px; }
+  .card-head .step{ width:22px; height:22px; border-radius:999px; background:var(--navy); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex:none; }
+  .card-head h2{ font-size:14.5px; font-weight:700; margin:0; color:var(--navy); flex:1; }
+  .card-body{ padding:2px 16px 16px; }
+
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:11.5px; font-weight:600; color:var(--text-soft); margin-bottom:5px; }
+  .control{ width:100%; font-size:14px; font-weight:600; font-family:inherit; color:var(--input-text); background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 12px; min-height:42px; }
+  .control:focus{ outline:none; border-color:var(--focus); box-shadow:0 0 0 3px var(--accent-tint); }
+  .control::placeholder{ color:var(--text-mute); font-weight:400; }
+
+  .typeahead-wrap{ position:relative; }
+  .typeahead-list{ position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:35; background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-pop); max-height:230px; overflow-y:auto; display:none; }
+  .typeahead-list.show{ display:block; }
+  .typeahead-item{ padding:9px 12px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid var(--border-soft); }
+  .typeahead-item:last-child{ border-bottom:none; }
+  .typeahead-item:hover{ background:var(--surface-2); }
+  .typeahead-item mark{ background:transparent; color:var(--accent); font-weight:800; }
+  .typeahead-badge{ font-size:8.5px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; padding:2px 6px; border-radius:6px; flex:none; white-space:nowrap; }
+  .typeahead-badge.ok{ background:var(--ok-bg); color:var(--ok-text); }
+  .typeahead-badge.ex{ background:var(--surface-3); color:var(--text-mute); }
+  .typeahead-empty{ padding:10px 12px; font-size:12px; color:var(--text-mute); }
+
+  .product-picked{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 12px; background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px; margin-bottom:12px; }
+  .product-picked .pname{ font-weight:700; color:var(--navy); font-size:13.5px; }
+
+  .tagbox-static{ display:flex; flex-wrap:wrap; gap:6px; }
+  .tag-static{ display:inline-flex; align-items:center; font-size:12px; font-weight:600; padding:4px 10px; border-radius:999px; background:var(--info-bg); color:var(--info-text); }
+  .tag-static.ex{ background:var(--surface-3); color:var(--text-mute); }
+
+  .doc-btn-grid{ display:flex; flex-wrap:wrap; gap:8px; }
+  .doc-btn{ border:1.5px solid var(--border); background:var(--surface); color:var(--text-soft); font-size:12.5px; font-weight:700; padding:9px 14px; border-radius:10px; cursor:pointer; font-family:inherit; }
+  .doc-btn:hover{ background:var(--surface-2); }
+  .doc-btn.active{ background:var(--navy); border-color:var(--navy); color:#fff; }
+  .doc-source-tag{ font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; padding:2px 6px; border-radius:6px; margin-left:6px; vertical-align:middle; }
+  .doc-source-tag.api{ background:var(--ok-bg); color:var(--ok-text); }
+  .doc-source-tag.ext{ background:var(--warn-bg); color:var(--warn-text); }
+
+  .doc-revision{ display:flex; align-items:center; gap:7px; font-size:11.5px; color:var(--text-soft); background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px; padding:8px 12px; }
+  .doc-revision svg{ flex:none; color:var(--text-mute); }
+  .footnote{ font-size:10.5px; color:var(--text-mute); line-height:1.5; margin-top:8px; }
+
+  .empty-hint{ padding:24px 12px; text-align:center; color:var(--text-mute); font-size:12.5px; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap">
+
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 21 10a4.95 4.95 0 1 0-7-7L3.5 13.5a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>
+    </div>
+    <div>
+      <h1>Fiche produit VIDAL</h1>
+      <p>Consultation en ligne — pharmacies et établissements de santé</p>
+    </div>
+  </div>
+
+  <div class="vidal-note" id="vidalNote">
+    <button type="button" class="vidal-note-toggle" onclick="this.closest('.vidal-note').classList.toggle('expanded')">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      Note technique VIDAL (documents produit)
+    </button>
+    <div class="vidal-note-body">
+      <div class="srcbanner">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        <span>Conforme au Manuel d'intégration API REST VIDAL Sécurisation France (MI_APIREST, REV_03) : <code>/rest/api/product/{id}/documents</code> (ou <code>/package/{id}/documents</code>, ou via le <code>productId</code> depuis une UCD) renvoie les types de documents disponibles pour ce produit — <code>FULL_MONO</code> (monographie), <code>RCP</code>, <code>RTU</code>, <code>ALD</code>, <code>VDF</code>, <code>SAUMON</code>, <code>FIT</code>, <code>PGR</code>, <code>BUM</code>, <code>AVIS</code>, <code>RAPPE</code>, <code>SMR</code>/<code>ASMR</code>, Fiche Conseil… Pour un produit retiré du marché, <code>FULL_MONO</code> est remplacé par <code>MONO_SUPP</code> (mention explicite « non mise à jour ») — la balise <code>&lt;vidal:bestDocType&gt;</code> sur le PRODUCT indique lequel afficher. Certains documents (RCP en PDF, Fiche Conseil grand public) sont hébergés hors du référentiel HTML VIDAL, sur des domaines VIDAL externes — marqués « Externe » ci-dessous plutôt que présentés comme un HTML VIDAL direct. La date de révision par document n'est pas un champ confirmé dans le manuel : affichée ici à titre illustratif quand disponible, à vérifier auprès du support VIDAL à l'intégration réelle.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="step">1</span><h2>Rechercher un produit</h2></div>
+    <div class="card-body">
+      <div class="field">
+        <label>Nom du produit</label>
+        <div class="typeahead-wrap">
+          <input class="control" id="productSearch" data-typeahead="drug" placeholder="Rechercher un produit (ex. DOLIPRANE)…" autocomplete="off">
+        </div>
+      </div>
+
+      <div id="productInfo" style="display:none">
+        <div class="product-picked">
+          <span class="pname" id="pickedName"></span>
+          <span class="typeahead-badge" id="pickedBadge"></span>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label>Voies d'administration disponibles</label>
+          <div class="tagbox-static" id="routesList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="docsCard" style="display:none">
+    <div class="card-head"><span class="step">2</span><h2>Documents disponibles</h2></div>
+    <div class="card-body">
+      <div class="doc-btn-grid" id="docButtons"></div>
+      <div id="docViewer" style="display:none;margin-top:14px">
+        <div class="doc-revision" id="docRevision" style="display:none">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <span id="docRevisionText"></span>
+        </div>
+        <iframe id="docFrame" sandbox="" title="Document VIDAL" style="width:100%;height:440px;border:1px solid var(--border-soft);border-radius:10px;background:#fff;margin-top:8px"></iframe>
+        <p class="footnote" id="docFootnote"></p>
+      </div>
+      <div class="empty-hint" id="docsEmptyHint">Choisissez un type de document ci-dessus pour l'afficher.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function esc(s){ return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function fmtShortDate(iso){ return new Date(iso).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric'}); }
+
+  // Types de documents produit — labels français + provenance réelle d'après le manuel :
+  // "api" = HTML renvoyé tel quel par le référentiel VIDAL (comme /alerts/full/html) ;
+  // "ext" = hébergé hors du référentiel (PDF sur document-rcp.vidal.fr, page sur vidal.fr...).
+  const DOC_TYPES = {
+    FULL_MONO:    { label:'Monographie VIDAL',                          source:'api' },
+    MONO_SUPP:    { label:'Monographie (produit non commercialisé)',    source:'api' },
+    RCP:          { label:'RCP (Résumé des Caractéristiques du Produit)', source:'ext' },
+    VDF:          { label:'VIDAL de la Famille (grand public)',         source:'api' },
+    SAUMON:       { label:'Fiche Saumon (parapharmacie)',               source:'api' },
+    RTU:          { label:"Recommandation Temporaire d'Utilisation",    source:'ext' },
+    ALD:          { label:'Affection de longue durée',                  source:'api' },
+    AVIS:         { label:'Avis de la commission de transparence',      source:'api' },
+    FIT:          { label:"Fiche d'Information Thérapeutique",          source:'api' },
+    PGR:          { label:'Plan de Gestion des Risques',                source:'api' },
+    BUM:          { label:'Fiche de Bon Usage du Médicament',           source:'api' },
+    RAPPE:        { label:"Rapport public d'évaluation",                source:'api' },
+    SMR_ASMR:     { label:'SMR / ASMR',                                 source:'api' },
+    FICHE_CONSEIL:{ label:'Fiche Conseil (surveillance particulière)',  source:'ext' },
+  };
+
+  // Même jeu de données que la fiche Sécurisation (mêmes ref confirmées par le manuel :
+  // 19649, 11897, 128351, 67825), complété ici par les documents disponibles par produit —
+  // liste plausible par type de médicament (ex. BOSULIF = médicament d'exception -> FIT/PGR/ALD),
+  // pas elle-même issue du manuel (qui ne donne cet exemple complet que pour MABTHERA).
+  const typeaheadData = {
+    drug: [
+      { label:'DOLIPRANE 100 mg cp', ref:'19649', confirmed:true,
+        routes:[{label:'Voie orale', confirmed:true}],
+        documents:[ {code:'FULL_MONO', date:'2026-06-12'}, {code:'RCP', date:null}, {code:'VDF', date:'2025-11-20'}, {code:'FICHE_CONSEIL', date:null} ] },
+      { label:'NOCTAMIDE 1 mg cp séc', ref:'11897', confirmed:true,
+        routes:[{label:'Voie orale', confirmed:true}],
+        documents:[ {code:'FULL_MONO', date:'2025-11-03'}, {code:'RCP', date:null}, {code:'RTU', date:null}, {code:'PGR', date:'2025-06-01'} ] },
+      { label:'BOSULIF 100 mg cp pellic', ref:'128351', confirmed:true,
+        routes:[{label:'Voie orale', confirmed:false}],
+        documents:[ {code:'FULL_MONO', date:'2026-01-20'}, {code:'RCP', date:null}, {code:'ALD', date:null}, {code:'AVIS', date:'2025-09-14'}, {code:'SMR_ASMR', date:'2025-09-14'}, {code:'FIT', date:null}, {code:'PGR', date:'2025-03-02'} ] },
+      { label:'IBUPROFENE ARROW 400 mg cp pellic', ref:'67825', confirmed:true,
+        routes:[{label:'Voie orale', confirmed:true}],
+        documents:[ {code:'FULL_MONO', date:'2025-09-08'}, {code:'RCP', date:null}, {code:'VDF', date:'2025-05-11'}, {code:'FICHE_CONSEIL', date:null} ] },
+      { label:'TERPONE sirop', ref:'90007', confirmed:false,
+        routes:[{label:'Voie orale', confirmed:false}],
+        documents:[ {code:'FULL_MONO', date:'2025-04-15'}, {code:'RCP', date:null} ] },
+      { label:'DOLIPRANE 1000 mg cp', ref:'90001', confirmed:false,
+        routes:[{label:'Voie orale', confirmed:true}],
+        documents:[ {code:'FULL_MONO', date:'2026-06-12'}, {code:'RCP', date:null}, {code:'VDF', date:'2025-11-20'} ] },
+      { label:'EFFERALGAN 500 mg cp', ref:'90002', confirmed:false,
+        routes:[{label:'Voie orale', confirmed:true}],
+        documents:[ {code:'FULL_MONO', date:'2025-12-02'}, {code:'RCP', date:null} ] },
+      { label:'AMOXICILLINE BIOGARAN 1 g cp', ref:'90003', confirmed:false,
+        routes:[{label:'Voie orale', confirmed:true}],
+        documents:[ {code:'FULL_MONO', date:'2026-02-28'}, {code:'RCP', date:null}, {code:'BUM', date:'2025-07-19'} ] },
+      { label:'TRAMADOL BIOGARAN 50 mg gélule', ref:'90004', confirmed:false,
+        routes:[{label:'Voie orale', confirmed:true}],
+        documents:[ {code:'FULL_MONO', date:'2025-08-19'}, {code:'RCP', date:null}, {code:'PGR', date:'2025-08-19'} ] },
+      { label:'METFORMINE ARROW 1000 mg cp', ref:'90005', confirmed:false,
+        routes:[{label:'Voie orale', confirmed:true}],
+        documents:[ {code:'FULL_MONO', date:'2026-03-30'}, {code:'RCP', date:null} ] },
+      { label:'ASPIRINE DU RHONE 500 mg cp', ref:'90006', confirmed:false,
+        routes:[{label:'Voie orale', confirmed:true}],
+        documents:[ {code:'FULL_MONO', date:'2025-10-11'}, {code:'RCP', date:null} ] },
+    ],
+  };
+
+  function highlightMatch(label, query){
+    const idx = label.toLowerCase().indexOf(query.toLowerCase());
+    if (idx === -1) return esc(label);
+    return esc(label.slice(0, idx)) + '<mark>' + esc(label.slice(idx, idx + query.length)) + '</mark>' + esc(label.slice(idx + query.length));
+  }
+
+  function initTypeahead(){
+    const input = document.getElementById('productSearch');
+    const wrap = input.parentElement;
+    const list = document.createElement('div');
+    list.className = 'typeahead-list';
+    wrap.appendChild(list);
+
+    function render(){
+      const q = input.value.trim();
+      if (!q) { list.classList.remove('show'); return; }
+      const matches = typeaheadData.drug.filter(d => d.label.toLowerCase().includes(q.toLowerCase())).slice(0, 8);
+      list.innerHTML = matches.length
+        ? matches.map(m => `
+            <div class="typeahead-item" data-ref="${esc(m.ref)}">
+              <span>${highlightMatch(m.label, q)}</span>
+              <span class="typeahead-badge ${m.confirmed ? 'ok' : 'ex'}">${m.confirmed ? 'Manuel ✓' : 'Exemple'}</span>
+            </div>`).join('')
+        : `<div class="typeahead-empty">Aucun résultat pour « ${esc(q)} »</div>`;
+      list.classList.add('show');
+    }
+    input.addEventListener('input', render);
+    input.addEventListener('focus', render);
+    list.addEventListener('mousedown', (ev) => {
+      const item = ev.target.closest('.typeahead-item');
+      if (!item) return;
+      ev.preventDefault();
+      const entry = typeaheadData.drug.find(d => d.ref === item.dataset.ref);
+      input.value = entry.label;
+      list.classList.remove('show');
+      onProductSelected(entry);
+    });
+    document.addEventListener('click', (ev) => {
+      if (!wrap.contains(ev.target)) list.classList.remove('show');
+    });
+  }
+
+  let currentEntry = null;
+
+  function onProductSelected(entry){
+    currentEntry = entry;
+
+    document.getElementById('productInfo').style.display = 'block';
+    document.getElementById('pickedName').textContent = entry.label;
+    const badge = document.getElementById('pickedBadge');
+    badge.textContent = entry.confirmed ? 'Manuel ✓' : 'Exemple';
+    badge.className = 'typeahead-badge ' + (entry.confirmed ? 'ok' : 'ex');
+
+    document.getElementById('routesList').innerHTML = entry.routes.map(r =>
+      `<span class="tag-static${r.confirmed ? '' : ' ex'}">${esc(r.label)}</span>`
+    ).join('');
+
+    document.getElementById('docsCard').style.display = 'block';
+    document.getElementById('docButtons').innerHTML = entry.documents.map(d => {
+      const meta = DOC_TYPES[d.code];
+      return `<button type="button" class="doc-btn" data-code="${esc(d.code)}" onclick="showDoc('${esc(d.code)}')">
+        ${esc(meta.label)}<span class="doc-source-tag ${meta.source}">${meta.source === 'api' ? 'VIDAL' : 'Externe'}</span>
+      </button>`;
+    }).join('');
+    document.getElementById('docViewer').style.display = 'none';
+    document.getElementById('docsEmptyHint').style.display = 'block';
+  }
+
+  // Contenu HTML illustratif par type de document — même principe que l'onglet "HTML VIDAL
+  // (brut)" de la fiche Sécurisation : en production ce HTML vient tel quel du référentiel
+  // VIDAL pour les types "api" ; pour les types "ext" (RCP en PDF, Fiche Conseil grand public),
+  // il n'y a pas de HTML VIDAL à afficher ici — un lien ouvrirait le document externe.
+  function buildDocHtml(entry, code){
+    const meta = DOC_TYPES[code];
+    if (meta.source === 'ext'){
+      return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>
+        body{ font-family:Arial,Helvetica,sans-serif; font-size:13px; color:#48526b; margin:0; padding:28px; text-align:center; }
+        .badge{ display:inline-block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:#8a5a06; background:#fff6e6; border:1px solid #f2ddab; border-radius:8px; padding:4px 10px; margin-bottom:10px; }
+      </style></head><body>
+        <div class="badge">Document externe</div>
+        <p><b>${esc(meta.label)}</b> — ${esc(entry.label)}</p>
+        <p>Ce document n'est pas un HTML servi par le référentiel VIDAL : en production, un lien ouvre le document (PDF ou page vidal.fr) dans un nouvel onglet plutôt qu'un aperçu intégré ici.</p>
+      </body></html>`;
+    }
+    return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>
+      body{ font-family:Arial,Helvetica,sans-serif; font-size:13px; color:#222; margin:0; padding:16px; }
+      h2{ font-size:15px; color:#0e1f3d; border-bottom:2px solid #0e1f3d; padding-bottom:6px; }
+      section{ margin-bottom:14px; }
+      section h3{ font-size:12.5px; margin:0 0 6px; color:#0e1f3d; }
+      .src{ font-size:10.5px; color:#889; }
+    </style></head><body>
+      <h2>${esc(meta.label)}</h2>
+      <p class="src">${esc(entry.label)} — reconstitution illustrative pour cet aperçu (structure conforme au manuel : /rest/api/product/{id}/documents)</p>
+      <section><h3>Indications</h3><p>Indications thérapeutiques telles que renvoyées par le référentiel VIDAL pour ce produit.</p></section>
+      <section><h3>Posologie et mode d'administration</h3><p>Contenu de la monographie tel que transmis par VIDAL — affiché sans reconstruction, dans un &lt;iframe sandbox&gt; isolé.</p></section>
+      <section><h3>Contre-indications</h3><p>Liste des contre-indications documentées pour ce produit.</p></section>
+    </body></html>`;
+  }
+
+  function showDoc(code){
+    document.querySelectorAll('.doc-btn').forEach(b => b.classList.toggle('active', b.dataset.code === code));
+    const docEntry = currentEntry.documents.find(d => d.code === code);
+    const meta = DOC_TYPES[code];
+
+    document.getElementById('docsEmptyHint').style.display = 'none';
+    document.getElementById('docViewer').style.display = 'block';
+    document.getElementById('docFrame').srcdoc = buildDocHtml(currentEntry, code);
+
+    const revBox = document.getElementById('docRevision');
+    if (docEntry.date) {
+      revBox.style.display = 'flex';
+      document.getElementById('docRevisionText').innerHTML = `Révision (illustrative) : <b>${esc(fmtShortDate(docEntry.date))}</b>`;
+    } else {
+      revBox.style.display = 'none';
+    }
+
+    document.getElementById('docFootnote').textContent = meta.source === 'api'
+      ? "Document renvoyé tel quel par le référentiel VIDAL — affiché sans reconstruction dans un iframe isolé, comme pour la synthèse d'alertes de la fiche Sécurisation."
+      : "Document hébergé hors du référentiel HTML VIDAL (PDF ou page vidal.fr) — en production, ouvrir par lien externe plutôt qu'en iframe intégré.";
+  }
+
+  initTypeahead();
+</script>
