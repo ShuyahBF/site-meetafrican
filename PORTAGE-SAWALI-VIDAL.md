@@ -74,3 +74,25 @@ les 6 collections documentées ci-dessus (`medecins`, `api_calls`,
 `securisation` préexistait, déjà vide). Le bucket Cloudflare R2 dédié
 VIDAL, lui, **reste à créer** — aucun accès Cloudflare disponible depuis
 cette session pour le faire.
+
+## Bucket R2 dédié VIDAL — en attente (mise à jour 10/09/2026)
+
+Des identifiants R2 étaient bien présents dans l'environnement de cette
+session, mais **vérifiés inutilisables pour ce besoin** : le token
+(`R2_ACCESS_KEY_ID`/`R2_SECRET_ACCESS_KEY`/`R2_ACCOUNT_ID`/`R2_BUCKET`)
+est scopé sur un unique bucket existant, `aizenta-inventaires-clients`,
+qui contient déjà de vraies données d'un projet tiers sans rapport
+(« Aizenta », inventaires/rapports classés par client — ex.
+`AMY/inventaires/...`, `PHL/inventaires/...`). `ListBuckets` et
+`CreateBucket` renvoient tous deux `AccessDenied` avec ce token : il ne
+permet ni de voir d'autres buckets, ni d'en créer un nouveau. Stocker des
+ordonnances (même anonymisées) dans ce bucket mélangerait des données
+santé avec celles d'un client tiers — écarté.
+
+**Décision de l'utilisateur (10/09/2026)** : il va créer lui-même un
+nouveau bucket Cloudflare dédié à VIDAL et fournira les identifiants
+correspondants plus tard. **Ne pas utiliser le token `aizenta-*` déjà
+présent dans l'environnement pour le stockage des ordonnances**, même si
+de nouveaux identifiants R2 apparaissent dans l'environnement sans
+précision explicite de l'utilisateur — vérifier le nom du bucket et son
+contenu avant d'y écrire quoi que ce soit.
