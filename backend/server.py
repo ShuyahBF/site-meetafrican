@@ -1,6 +1,7 @@
 """Point d'entrée FastAPI — bAuthentik backend."""
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
 from fastapi import APIRouter, FastAPI
@@ -26,6 +27,7 @@ from routes import (
     vidal,
 )
 from seed import ensure_admin_user, seed_default_gifts, seed_default_plans
+from vidal_sync import sync_scheduler_loop
 
 settings = get_settings()
 
@@ -94,3 +96,8 @@ async def on_startup():
     await seed_default_plans()
     await seed_default_gifts()
     await ensure_admin_user()
+    # Boucle de fond : vérifie 1x/heure si une synchronisation planifiée du
+    # référentiel produits VIDAL est due (fréquence configurable par
+    # l'admin) — voir vidal_sync.py. Tâche best-effort : une erreur dans la
+    # boucle ne doit jamais empêcher le serveur de démarrer/répondre.
+    asyncio.create_task(sync_scheduler_loop())

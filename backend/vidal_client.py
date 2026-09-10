@@ -91,12 +91,30 @@ async def _check_and_increment_quota() -> None:
     )
 
 
-async def vidal_get(path: str, params: Optional[Dict[str, Any]] = None, use_cache: bool = True) -> str:
+async def vidal_get(
+    path: str,
+    params: Optional[Dict[str, Any]] = None,
+    use_cache: bool = True,
+    bypass_quota: bool = False,
+    client: Optional[httpx.AsyncClient] = None,
+) -> str:
     """GET https://api.vidal.fr/rest/api{path} avec app_id/app_key ajoutés
     automatiquement. Passe par le cache Mongo sauf use_cache=False (utile
     pour un diagnostic où on veut forcer un vrai appel). Retourne le corps
     XML ATOM brut ; lève HTTPException sur erreur VIDAL, quota dépassé,
-    timeout ou identifiants manquants."""
+    timeout ou identifiants manquants.
+
+    bypass_quota=True : réservé aux opérations internes/admin (ex. la
+    synchronisation complète du référentiel produits, ~628 appels) — le
+    quota journalier existe pour éviter les abus d'utilisateurs finaux,
+    pas pour brider une opération explicitement déclenchée par l'admin.
+
+    client : réutiliser un httpx.AsyncClient existant (connexion TLS gardée
+    ouverte entre appels) plutôt que d'en ouvrir un nouveau à chaque fois —
+    essentiel pour un enchaînement de nombreux appels (ex. les 628 appels
+    d'une synchronisation complète du référentiel, voir vidal_sync.py) :
+    testé en réel, sans réutilisation la synchronisation complète prend
+    ~16 minutes essentiellement en négociations TLS répétées."""
     settings = get_settings()
     if not settings.vidal_app_id or not settings.vidal_app_key:
         raise HTTPException(status_code=503, detail="VIDAL non configuré (app_id/app_key manquants côté serveur)")
@@ -108,13 +126,17 @@ async def vidal_get(path: str, params: Optional[Dict[str, Any]] = None, use_cach
         if cached is not None:
             return cached
 
-    await _check_and_increment_quota()
+    if not bypass_quota:
+        await _check_and_increment_quota()
 
     query = {**params, "app_id": settings.vidal_app_id, "app_key": settings.vidal_app_key}
     url = f"{settings.vidal_base_url.rstrip('/')}{path}"
     try:
-        async with httpx.AsyncClient(timeout=settings.vidal_timeout_seconds) as client:
+        if client is not None:
             r = await client.get(url, params=query)
+        else:
+            async with httpx.AsyncClient(timeout=settings.vidal_timeout_seconds) as one_shot_client:
+                r = await one_shot_client.get(url, params=query)
     except httpx.TimeoutException:
         raise HTTPException(status_code=504, detail="Délai dépassé lors de l'appel à VIDAL")
     except httpx.HTTPError as exc:
@@ -159,6 +181,20 @@ def parse_products_search(xml_text: str) -> List[Dict[str, Any]]:
             "active_principles": vtext("activePrinciples"),
         })
     return results
+
+
+OPENSEARCH_NS = "http://a9.com/-/spec/opensearch/1.1/"
+
+
+def parse_products_search_page(xml_text: str) -> tuple[List[Dict[str, Any]], int]:
+    """Comme parse_products_search, mais renvoie aussi le nombre total de
+    résultats (balise opensearch:totalResults) — nécessaire pour paginer
+    jusqu'au bout lors de la synchronisation complète du référentiel
+    (vidal_sync.py), sans deviner combien de pages il reste à parcourir."""
+    root = ElementTree.fromstring(xml_text)
+    total_el = root.find(f"{{{OPENSEARCH_NS}}}totalResults")
+    total = int(total_el.text) if total_el is not None and total_el.text else 0
+    return parse_products_search(xml_text), total
 
 
 def parse_product_detail(xml_text: str) -> Dict[str, Any]:

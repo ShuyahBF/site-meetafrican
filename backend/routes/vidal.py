@@ -10,13 +10,17 @@ quota VIDAL réel.
 """
 from __future__ import annotations
 
+import re
 from urllib.parse import urlparse
 
 import httpx
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, Response
+from pydantic import BaseModel, Field
 
 from config import get_settings
+from db import db
 from vidal_client import parse_product_detail, parse_products_search, vidal_get
+from vidal_sync import get_sync_config, has_cached_referentiel, run_referentiel_sync, update_sync_config
 
 router = APIRouter(prefix="/vidal", tags=["VIDAL Sécurisation"])
 
@@ -32,13 +36,39 @@ def _require_proxy_secret(x_vidal_proxy_secret: str | None = Header(default=None
         raise HTTPException(status_code=403, detail="Accès VIDAL refusé (secret manquant ou invalide)")
 
 
+def _cache_doc_to_result(doc: dict) -> dict:
+    return {
+        "id": doc.get("product_id"),
+        "name": doc.get("name"),
+        "market_status": doc.get("market_status"),
+        "best_doc_type": doc.get("best_doc_type"),
+        "without_prescription": doc.get("without_prescription"),
+        "active_principles": doc.get("active_principles"),
+    }
+
+
 @router.get("/products/search", dependencies=[Depends(_require_proxy_secret)])
 async def search_products(q: str = Query(..., min_length=2, max_length=100)):
-    """Recherche de produit par libellé — GET /rest/api/products?q=...
-    Utilisé pour remplacer le typeahead simulé de /secure (Sécurisation,
-    Posologie, Fiche produit) par de vrais résultats VIDAL."""
+    """Recherche de produit par libellé. Deux sources possibles, pilotées par
+    la config admin (voir /vidal/admin/sync-config) :
+    - "cache" : recherche dans vidal_cache_referentiel_produits (pas d'appel
+      VIDAL, donc pas d'aller-retour réseau à chaque frappe) — seulement si
+      une synchronisation a déjà eu lieu au moins une fois, sinon repli
+      automatique sur le temps réel pour ne jamais renvoyer une liste vide
+      faute de cache peuplé.
+    - "temps_reel" (par défaut) : GET /rest/api/products?q=... comme avant.
+    Une fois un produit sélectionné, /products/{id}/detail reste TOUJOURS
+    en temps réel, quel que soit le mode — seule la recherche est concernée."""
+    config = await get_sync_config()
+    if config.get("mode") == "cache" and await has_cached_referentiel():
+        cursor = db.vidal_cache_referentiel_produits.find(
+            {"name": {"$regex": re.escape(q), "$options": "i"}}
+        ).limit(25)
+        results = [_cache_doc_to_result(doc) async for doc in cursor]
+        return {"query": q, "results": results, "source": "cache"}
+
     xml_text = await vidal_get("/products", {"q": q})
-    return {"query": q, "results": parse_products_search(xml_text)}
+    return {"query": q, "results": parse_products_search(xml_text), "source": "temps_reel"}
 
 
 @router.get("/products/{product_id}/detail", dependencies=[Depends(_require_proxy_secret)])
@@ -78,3 +108,48 @@ async def proxy_document(url: str = Query(..., min_length=1)):
         raise HTTPException(status_code=502, detail=f"Document VIDAL introuvable ({r.status_code})")
 
     return Response(content=r.content, media_type=r.headers.get("content-type", "application/octet-stream"))
+
+
+# --- Administration du cache référentiel produits ---------------------------
+# Fréquence de synchronisation et mode recherche (cache/temps réel)
+# paramétrables par l'admin, déclenchement manuel possible, journalisation
+# systématique (type fixe "sync_refer") — voir vidal_sync.py pour la logique.
+
+class SyncConfigUpdate(BaseModel):
+    mode: str | None = Field(None, description="temps_reel | cache")
+    frequency_days: int | None = Field(None, ge=0, le=365)
+
+
+@router.get("/admin/sync-config", dependencies=[Depends(_require_proxy_secret)])
+async def get_sync_config_route():
+    return await get_sync_config()
+
+
+@router.put("/admin/sync-config", dependencies=[Depends(_require_proxy_secret)])
+async def update_sync_config_route(payload: SyncConfigUpdate):
+    try:
+        return await update_sync_config(mode=payload.mode, frequency_days=payload.frequency_days)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/admin/sync-now", dependencies=[Depends(_require_proxy_secret)])
+async def trigger_sync_now(background_tasks: BackgroundTasks):
+    """Synchronisation manuelle — lancée en tâche de fond (le parcours complet
+    du référentiel, ~628 appels VIDAL, prend quelques minutes) : la requête
+    HTTP répond immédiatement, le résultat est consultable ensuite via
+    /admin/sync-log."""
+    config = await get_sync_config()
+    if config.get("sync_in_progress"):
+        return {"status": "already_running"}
+    # FastAPI détecte que run_referentiel_sync est une coroutine et l'exécute
+    # sur la même boucle asyncio après la réponse — ne jamais appeler la
+    # fonction ici (elle serait exécutée immédiatement au lieu d'être différée).
+    background_tasks.add_task(run_referentiel_sync, triggered_by="manuel")
+    return {"status": "started"}
+
+
+@router.get("/admin/sync-log", dependencies=[Depends(_require_proxy_secret)])
+async def get_sync_log(limit: int = Query(20, ge=1, le=100)):
+    cursor = db.vidal_sync_log.find({}, {"_id": 0}).sort("ts", -1).limit(limit)
+    return {"entries": [entry async for entry in cursor]}
