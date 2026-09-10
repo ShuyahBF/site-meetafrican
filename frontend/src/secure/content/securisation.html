@@ -927,8 +927,9 @@
       </div>
 
       <div class="pane" id="pane-result-html">
-        <iframe id="vidalHtmlFrame" sandbox="" title="Synthèse des alertes VIDAL" style="width:100%;height:440px;border:1px solid var(--border-soft);border-radius:10px;background:#fff;"></iframe>
-        <p class="footnote">Document renvoyé tel quel par <code>/rest/api/alerts/full/html</code> (« Synthèse des alertes VIDAL »), affiché sans reconstruction dans un <code>&lt;iframe sandbox&gt;</code> isolé — pratique standard pour du HTML d'un tiers, même une source fiable. <b>Reconstitution illustrative</b> pour cet aperçu (structure/ancres conformes au manuel : menu_synthesis, menu_posology, menu_allergy...) — le vrai contenu viendra directement de VIDAL en production.</p>
+        <div id="vidalHtmlEmpty" style="padding:32px 12px;text-align:center;color:var(--text-mute);font-size:12.5px">Aucun résultat à afficher — cliquez sur « Sécuriser » pour lancer l'analyse.</div>
+        <iframe id="vidalHtmlFrame" sandbox="" title="Synthèse des alertes VIDAL" style="display:none;width:100%;height:440px;border:1px solid var(--border-soft);border-radius:10px;background:#fff;"></iframe>
+        <p class="footnote" id="vidalHtmlFootnote" style="display:none">Document renvoyé tel quel par <code>/rest/api/alerts/full/html</code> (« Synthèse des alertes VIDAL »), affiché sans reconstruction dans un <code>&lt;iframe sandbox&gt;</code> isolé — pratique standard pour du HTML d'un tiers, même une source fiable. <b>Reconstitution illustrative</b> pour cet aperçu (structure/ancres conformes au manuel : menu_synthesis, menu_posology, menu_allergy...) — le vrai contenu viendra directement de VIDAL en production.</p>
       </div>
 
       <div class="pane" id="pane-result-garde">
@@ -1461,6 +1462,7 @@
     currentAnalysisId = generateAnalysisId();
     analysisPdfGenerated = false;
     setAnalysisBadge(true, currentAnalysisId);
+    setVidalHtmlResult(true);
     document.getElementById('pdfMemo').classList.remove('show');
     document.getElementById('printBtn').disabled = false;
     updateWaButtonState();
@@ -1880,6 +1882,7 @@
       currentAnalysisId = null;
       analysisPdfGenerated = false;
       setAnalysisBadge(false, null);
+      setVidalHtmlResult(false);
       document.getElementById('pdfMemo').classList.remove('show');
       document.getElementById('printBtn').disabled = true;
     }
@@ -2149,7 +2152,15 @@
     <p>Profil clinique et prescription tels que transmis dans le corps de la requête <code>/rest/api/alerts/full</code>.</p>
   </section>
 </body></html>`;
-  document.getElementById('vidalHtmlFrame').srcdoc = vidalHtmlSample;
+  // Vide à l'ouverture (aucune analyse n'a encore été lancée) : peuplé uniquement par
+  // runSecure(), et revidé si une modification invalide l'analyse en cours (voir
+  // validateAllNumbers) — pas de contenu VIDAL affiché tant qu'aucun résultat n'existe.
+  function setVidalHtmlResult(show){
+    document.getElementById('vidalHtmlEmpty').style.display = show ? 'none' : 'block';
+    document.getElementById('vidalHtmlFrame').style.display = show ? 'block' : 'none';
+    document.getElementById('vidalHtmlFootnote').style.display = show ? 'block' : 'none';
+    document.getElementById('vidalHtmlFrame').srcdoc = show ? vidalHtmlSample : '';
+  }
 
   addLine(true);
   addLine(false);
