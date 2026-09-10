@@ -58,3 +58,6 @@ async def ensure_indexes() -> None:
     await db.swipes.create_index([("user_id", 1), ("target_user_id", 1)], unique=True)
     await db.conversations.create_index("match_id", unique=True)
     await db.identity_verifications.create_index("user_id")
+    await db.vidal_api_cache.create_index("key", unique=True)
+    await db.vidal_api_cache.create_index("expires_at", expireAfterSeconds=0)
+    await db.vidal_api_quota.create_index("day", unique=True)

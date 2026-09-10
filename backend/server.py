@@ -23,6 +23,7 @@ from routes import (
     subscriptions,
     uploads,
     verification,
+    vidal,
 )
 from seed import ensure_admin_user, seed_default_gifts, seed_default_plans
 
@@ -51,6 +52,7 @@ api.include_router(chat.router)
 api.include_router(ratings.router)
 api.include_router(referrals.router)
 api.include_router(interactions.router)
+api.include_router(vidal.router)
 
 
 @api.get("/health")
