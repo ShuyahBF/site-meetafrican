@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
@@ -21,6 +21,11 @@ import AdminPayments from "@/pages/admin/AdminPayments";
 import AdminReports from "@/pages/admin/AdminReports";
 import AdminSubscriptionPlans from "@/pages/admin/AdminSubscriptionPlans";
 import AdminSettings from "@/pages/admin/AdminSettings";
+import SecureLayout from "@/secure/SecureLayout";
+import SecureFrame from "@/secure/SecureFrame";
+import securisationHtml from "@/secure/content/securisation.html?raw";
+import posologieHtml from "@/secure/content/posologie.html?raw";
+import adminMedecinsHtml from "@/secure/content/admin-medecins.html?raw";
 
 function Protected({ children }) {
   return <ProtectedRoute>{children}</ProtectedRoute>;
@@ -51,6 +56,24 @@ export default function App() {
             <Route path="signalements" element={<AdminReports />} />
             <Route path="abonnements" element={<AdminSubscriptionPlans />} />
             <Route path="parametres" element={<AdminSettings />} />
+          </Route>
+
+          {/* Route cachée (non liée dans la navigation du site) : accessible
+              uniquement en tapant /secure directement dans l'URL. */}
+          <Route path="/secure" element={<SecureLayout />}>
+            <Route index element={<Navigate to="securisation" replace />} />
+            <Route
+              path="securisation"
+              element={<SecureFrame html={securisationHtml} title="Sécurisation de prescription" />}
+            />
+            <Route
+              path="posologie"
+              element={<SecureFrame html={posologieHtml} title="Recherche de posologie" />}
+            />
+            <Route
+              path="admin"
+              element={<SecureFrame html={adminMedecinsHtml} title="Admin — Médecins VIDAL" />}
+            />
           </Route>
         </Routes>
       </BrowserRouter>

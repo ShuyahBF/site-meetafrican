@@ -1,0 +1,498 @@
+<title>Recherche Posologie</title>
+<style>
+  :root{
+    --bg:#eef1f6; --surface:#ffffff; --surface-2:#f6f8fb; --surface-3:#eef0f5;
+    --border:#e1e6ef; --border-soft:#eaedf3; --text:#101827; --text-soft:#48526b; --text-mute:#8790a3;
+    --navy:#0e1f3d; --accent:#dc2626; --accent-dark:#b91c1c; --accent-deep:#9c1616;
+    --accent-tint:#fdecec; --accent-tint-2:#fbdede; --focus:#dc2626;
+    --input-text:#0a58ca;
+    --crit-bg:#fdecec; --crit-text:#a01818; --crit-ring:#f4c6c6;
+    --warn-bg:#fff6e6; --warn-text:#8a5a06; --warn-ring:#f2ddab;
+    --info-bg:#eaf4fb; --info-text:#0a5a8c; --info-ring:#bfe0f2;
+    --ok-bg:#e9f7f0; --ok-text:#0d6b47; --ok-ring:#bfe6d2;
+    --code-bg:#0e1626; --code-text:#d7e0f5; --code-tag:#7fb3f5; --code-str:#a8e0b0; --code-mute:#7686a3;
+    --shadow-card:0 1px 2px rgba(16,24,39,.05); --shadow-pop:0 16px 40px -14px rgba(16,24,39,.28);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0c1220; --surface:#141b2c; --surface-2:#182036; --surface-3:#1d2740;
+      --border:#26314c; --border-soft:#212a42; --text:#e8ecf6; --text-soft:#aab2c8; --text-mute:#77809a;
+      --navy:#c9d6f2; --accent:#f0554f; --accent-dark:#ff6b64; --accent-deep:#c94a44;
+      --accent-tint:#2a1518; --accent-tint-2:#331a1c; --input-text:#4a8ee0;
+      --crit-bg:#2a1517; --crit-text:#ff9b93; --crit-ring:#4d2226;
+      --warn-bg:#2b230f; --warn-text:#f0c46a; --warn-ring:#4a3a15;
+      --info-bg:#0f2233; --info-text:#7fc4ea; --info-ring:#204a67;
+      --ok-bg:#0f2a20; --ok-text:#6fd6a8; --ok-ring:#1d4a37;
+      --code-bg:#0a0f1c; --code-text:#d7e0f5; --code-tag:#7fb3f5; --code-str:#a8e0b0; --code-mute:#5c6b8a;
+      --shadow-card:0 1px 2px rgba(0,0,0,.4); --shadow-pop:0 16px 40px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0c1220; --surface:#141b2c; --surface-2:#182036; --surface-3:#1d2740;
+    --border:#26314c; --border-soft:#212a42; --text:#e8ecf6; --text-soft:#aab2c8; --text-mute:#77809a;
+    --navy:#c9d6f2; --accent:#f0554f; --accent-dark:#ff6b64; --accent-deep:#c94a44;
+    --accent-tint:#2a1518; --accent-tint-2:#331a1c; --input-text:#4a8ee0;
+    --crit-bg:#2a1517; --crit-text:#ff9b93; --crit-ring:#4d2226;
+    --warn-bg:#2b230f; --warn-text:#f0c46a; --warn-ring:#4a3a15;
+    --info-bg:#0f2233; --info-text:#7fc4ea; --info-ring:#204a67;
+    --ok-bg:#0f2a20; --ok-text:#6fd6a8; --ok-ring:#1d4a37;
+    --code-bg:#0a0f1c; --code-text:#d7e0f5; --code-tag:#7fb3f5; --code-str:#a8e0b0; --code-mute:#5c6b8a;
+    --shadow-card:0 1px 2px rgba(0,0,0,.4); --shadow-pop:0 16px 40px -14px rgba(0,0,0,.6);
+  }
+  *{ box-sizing:border-box; }
+  /* Fond transparent : ce module est pensé pour être intégré dans un site hôte (sa propre
+     couleur de page doit transparaître dans les marges) — seules les cartes restent opaques. */
+  body{ margin:0; background:transparent; color:var(--text); font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; padding-bottom:24px; }
+  h1,h2,h3{ font-family:"Space Grotesk","Inter",sans-serif; }
+  .mono{ font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-variant-numeric:tabular-nums; }
+  .wrap{ max-width:640px; margin:0 auto; padding:20px 16px 24px; }
+  @media (min-width:900px){ .wrap{ max-width:1000px; } .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; } .two-col > .card{ margin-bottom:0; } }
+  .two-col{ display:block; }
+
+  .topbar{ display:flex; align-items:center; gap:12px; padding:14px 4px 18px; }
+  .topbar .icon{ width:40px; height:40px; border-radius:12px; flex:none; background:var(--accent-tint); color:var(--accent-dark); display:flex; align-items:center; justify-content:center; }
+  .topbar h1{ font-size:18px; font-weight:700; margin:0; color:var(--navy); }
+  .topbar p{ margin:2px 0 0; font-size:12.5px; color:var(--text-mute); }
+
+  .srcbanner{ display:flex; align-items:flex-start; gap:8px; font-size:11.5px; line-height:1.5; color:var(--ok-text); background:var(--ok-bg); border:1px solid var(--ok-ring); border-radius:10px; padding:9px 12px; margin:0 0 14px; }
+  .srcbanner svg{ flex:none; margin-top:1px; }
+
+  .card{ background:var(--surface); border:1px solid var(--border-soft); border-radius:16px; box-shadow:var(--shadow-card); margin-bottom:14px; overflow:hidden; }
+  .card-head{ display:flex; align-items:center; gap:9px; padding:14px 16px 10px; }
+  .card-head .step{ width:22px; height:22px; border-radius:999px; background:var(--navy); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex:none; }
+  .card-head h2{ font-size:14.5px; font-weight:700; margin:0; color:var(--navy); flex:1; }
+  .card-body{ padding:2px 16px 16px; }
+  .example-flag{ font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--text-mute); background:var(--surface-2); border:1px solid var(--border-soft); border-radius:999px; padding:4px 9px; white-space:nowrap; }
+
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .grid4{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+  @media (max-width:460px){ .grid4{ grid-template-columns:repeat(2,1fr); } }
+
+  .field label{ display:block; font-size:11.5px; font-weight:600; color:var(--text-soft); margin-bottom:5px; }
+  .control{ width:100%; font-size:14px; font-weight:600; font-family:inherit; color:var(--input-text); background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:10px 12px; min-height:42px; appearance:none; }
+  .control:focus{ outline:none; border-color:var(--focus); box-shadow:0 0 0 3px var(--accent-tint); }
+  .control::placeholder{ color:var(--text-mute); font-weight:400; }
+  select.control{ background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'><path d='M5.5 7.5l4.5 4.5 4.5-4.5' stroke='%238790a3' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>"); background-repeat:no-repeat; background-position:right 12px center; padding-right:32px; }
+
+  /* Profil rapide : pictogrammes plats illustratifs (personnages à teinte de peau africaine,
+     cohérents avec le contexte du produit) plutôt que du texte seul ou des émoji système —
+     grille qui se replie proprement, pas de défilement caché. */
+  .profilwrap{ display:grid; grid-template-columns:repeat(auto-fill,minmax(68px,1fr)); gap:6px; margin-bottom:14px; }
+  .profil-chip{
+    display:flex; flex-direction:column; align-items:center; gap:5px; padding:8px 4px 7px;
+    border-radius:12px; border:1.5px solid transparent; cursor:pointer; background:transparent; text-align:center;
+  }
+  .profil-chip:hover{ background:var(--surface-2); }
+  .profil-chip.on{ border-color:var(--navy); background:var(--surface-2); }
+  .profil-chip .avatar{ width:46px; height:46px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex:none; }
+  .profil-chip .avatar svg{ width:32px; height:32px; }
+  .profil-chip .lbl{ font-size:9.5px; font-weight:700; color:var(--text-soft); line-height:1.2; }
+  .profil-chip.on .lbl{ color:var(--navy); }
+
+  .tagbox{ display:flex; flex-wrap:wrap; gap:6px; padding:8px; border:1px solid var(--border); border-radius:10px; background:var(--surface); }
+  .tag{ display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600; padding:4px 8px 4px 10px; border-radius:999px; }
+  .tag.allergy{ background:var(--crit-bg); color:var(--crit-text); }
+  .tag.patho{ background:var(--info-bg); color:var(--info-text); }
+  .tag.mol{ background:var(--warn-bg); color:var(--warn-text); }
+  .tag.ald{ background:var(--surface-3); color:var(--text-soft); }
+  .tag button{ border:none; background:transparent; color:inherit; cursor:pointer; padding:1px; line-height:0; opacity:.7; }
+  .tag-input{ border:none; outline:none; flex:1; min-width:110px; font-size:13px; font-weight:600; padding:4px 2px; background:transparent; color:var(--input-text); }
+
+  .disclose{ display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--text-soft); cursor:pointer; padding:9px 0 3px; user-select:none; }
+  .disclose svg{ width:13px; height:13px; transition:transform .15s ease; color:var(--text-mute); }
+  .disclose.open svg{ transform:rotate(90deg); }
+  .disclose-body{ display:none; padding-top:8px; }
+  .disclose-body.open{ display:block; }
+  .hint{ font-size:11px; color:var(--text-mute); margin-top:5px; line-height:1.4; }
+  .opt-label{ font-size:10px; font-weight:700; color:var(--text-mute); text-transform:uppercase; letter-spacing:.03em; margin-left:5px; }
+
+  .typeahead-wrap{ position:relative; }
+  .typeahead-list{ position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:35; background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-pop); max-height:220px; overflow-y:auto; display:none; }
+  .typeahead-list.show{ display:block; }
+  .typeahead-item{ padding:9px 12px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid var(--border-soft); }
+  .typeahead-item:last-child{ border-bottom:none; }
+  .typeahead-item:hover{ background:var(--surface-2); }
+  .typeahead-item mark{ background:transparent; color:var(--accent); font-weight:800; }
+  .typeahead-badge{ font-size:8.5px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; padding:2px 6px; border-radius:6px; flex:none; }
+  .typeahead-badge.ex{ background:var(--surface-3); color:var(--text-mute); }
+  .typeahead-empty{ padding:10px 12px; font-size:12px; color:var(--text-mute); }
+
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:7px; border-radius:11px; font-size:14px; font-weight:700; padding:12px 16px; border:none; cursor:pointer; font-family:inherit; }
+  .btn-primary{ background:var(--accent-deep); color:#fff; width:100%; }
+  .btn-primary:hover{ filter:brightness(0.9); }
+
+  .codecard .card-head{ padding-bottom:0; }
+  .codebox{ background:var(--code-bg); border-radius:0 0 16px 16px; padding:14px 16px 16px; position:relative; }
+  .copybtn{ position:absolute; top:10px; right:12px; font-size:10.5px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--code-mute); background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:7px; padding:5px 9px; cursor:pointer; font-family:inherit; }
+  .copybtn:hover{ color:var(--code-text); }
+  pre.code{ margin:0; font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:11.5px; line-height:1.6; color:var(--code-text); white-space:pre-wrap; word-break:break-word; max-height:360px; overflow:auto; }
+  .code .tag-tok{ color:var(--code-tag); } .code .str-tok{ color:var(--code-str); } .code .mute-tok{ color:var(--code-mute); }
+  .codenote{ font-size:10.5px; color:var(--code-mute); margin:8px 0 0; line-height:1.5; }
+
+  .result-row{ border:1px solid var(--border-soft); border-radius:12px; padding:11px 13px; margin-bottom:8px; background:var(--surface-2); }
+  .result-row .rname{ font-size:13.5px; font-weight:700; color:var(--navy); }
+  .result-row .rdose{ font-size:12.5px; color:var(--text-soft); margin-top:3px; }
+  .result-row .rmax{ font-size:10.5px; color:var(--warn-text); background:var(--warn-bg); border-radius:6px; padding:2px 7px; display:inline-block; margin-top:5px; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap">
+
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4"/><path d="M9 15h4l9-9-4-4-9 9v4z"/></svg>
+    </div>
+    <div>
+      <h1>Recherche de posologie</h1>
+      <p>Posologie indiquée pour un patient — VIDAL Sécurisation</p>
+    </div>
+  </div>
+
+  <div class="srcbanner">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    <span>Structure <code>&lt;posology-request&gt;</code> conforme à votre capture de référence (racine, <code>&lt;patient&gt;</code>, <code>&lt;routes&gt;</code> imbriquées). Les champs de recherche (allergies, pathologies, voies, indications) sont simulés avec des exemples — en production ils interrogent le référentiel VIDAL en direct, comme sur la page Sécurisation.</span>
+  </div>
+
+  <div class="two-col">
+  <div>
+
+  <!-- PATIENT -->
+  <div class="card">
+    <div class="card-head"><span class="step">1</span><h2>Profil du patient</h2></div>
+    <div class="card-body">
+      <div class="field" style="margin-bottom:2px"><label>Profil rapide</label></div>
+      <div class="profilwrap" id="profilScroll">
+        <span class="profil-chip" data-p="bebe">
+          <span class="avatar" style="background:#FFF1D6"><svg viewBox="0 0 40 40" width="24" height="24"><ellipse cx="20" cy="29" rx="11" ry="9" fill="#BFD7F5"/><circle cx="20" cy="17" r="6.5" fill="#8B5E3C"/><circle cx="20" cy="10.5" r="1.6" fill="#20120a"/></svg></span>
+          <span class="lbl">Bébé</span>
+        </span>
+        <span class="profil-chip" data-p="fille">
+          <span class="avatar" style="background:#FDE2ED"><svg viewBox="0 0 40 40" width="24" height="24"><path d="M5 36c0-9.5 6.7-15 15-15s15 5.5 15 15" fill="#F49AC2"/><circle cx="20" cy="16.5" r="7" fill="#8B5E3C"/><circle cx="11.5" cy="15" r="3" fill="#20120a"/><circle cx="28.5" cy="15" r="3" fill="#20120a"/></svg></span>
+          <span class="lbl">Fille</span>
+        </span>
+        <span class="profil-chip" data-p="garcon">
+          <span class="avatar" style="background:#DCEAFB"><svg viewBox="0 0 40 40" width="24" height="24"><path d="M6 36c0-9 6-14 14-14s14 5 14 14" fill="#7EB2E8"/><circle cx="20" cy="16.5" r="7" fill="#8B5E3C"/><path d="M12.5 15a7.5 7.5 0 0 1 15 0" fill="#20120a"/></svg></span>
+          <span class="lbl">Garçon</span>
+        </span>
+        <span class="profil-chip" data-p="femme">
+          <span class="avatar" style="background:#EAE1F7"><svg viewBox="0 0 40 40" width="24" height="24"><path d="M5 36c0-9.5 6.7-15 15-15s15 5.5 15 15" fill="#B79CE0"/><circle cx="20" cy="16" r="9" fill="#20120a"/><circle cx="20" cy="17" r="6.7" fill="#8B5E3C"/></svg></span>
+          <span class="lbl">Femme</span>
+        </span>
+        <span class="profil-chip" data-p="allergique">
+          <span class="avatar" style="background:#FBE0E0"><svg viewBox="0 0 40 40" width="24" height="24"><path d="M6 36c0-9 6-14 14-14s14 5 14 14" fill="#C9C9C9"/><circle cx="20" cy="16.5" r="7" fill="#8B5E3C"/><path d="M12.5 15a7.5 7.5 0 0 1 15 0" fill="#20120a"/><circle cx="30" cy="10" r="5.5" fill="#DC2626"/><text x="30" y="13" font-size="8" font-weight="700" fill="#fff" text-anchor="middle">!</text></svg></span>
+          <span class="lbl">Allergique</span>
+        </span>
+        <span class="profil-chip" data-p="enceinte">
+          <span class="avatar" style="background:#DCF3EC"><svg viewBox="0 0 40 40" width="24" height="24"><path d="M4 36c0-11 7-16.5 16-16.5s16 5.5 16 16.5" fill="#6FC3A0"/><circle cx="20" cy="16" r="9" fill="#20120a"/><circle cx="20" cy="17" r="6.7" fill="#8B5E3C"/></svg></span>
+          <span class="lbl">Enceinte</span>
+        </span>
+        <span class="profil-chip on" data-p="homme">
+          <span class="avatar" style="background:#DDE7EA"><svg viewBox="0 0 40 40" width="24" height="24"><path d="M6 36c0-9 6-14 14-14s14 5 14 14" fill="#6B8CA3"/><path d="M17 22l3 4 3-4" fill="none" stroke="#fff" stroke-width="1.4" stroke-linejoin="round"/><circle cx="20" cy="16.5" r="7" fill="#8B5E3C"/><path d="M12.5 15a7.5 7.5 0 0 1 15 0" fill="#20120a"/></svg></span>
+          <span class="lbl">Homme</span>
+        </span>
+        <span class="profil-chip" data-p="renal">
+          <span class="avatar" style="background:#FBEAD2"><svg viewBox="0 0 40 40" width="24" height="24"><path d="M6 36c0-9 6-14 14-14s14 5 14 14" fill="#C9C9C9"/><circle cx="20" cy="16.5" r="7" fill="#8B5E3C"/><path d="M12.5 15a7.5 7.5 0 0 1 15 0" fill="#20120a"/><path d="M27 6c3 0 5.5 2.5 5.5 5.5S32 16 29.5 16c-1.5 0-2-1-2-2.5 0 1.2-.8 2-2 2-1.8 0-3-1.5-3-3.5S25 6 27 6Z" fill="#C97B3D"/></svg></span>
+          <span class="lbl">Insuff. rénale</span>
+        </span>
+        <span class="profil-chip" data-p="age">
+          <span class="avatar" style="background:#E7E7E7"><svg viewBox="0 0 40 40" width="24" height="24"><path d="M6 36c0-9 6-14 14-14s14 5 14 14" fill="#9AA5AE"/><circle cx="20" cy="16" r="9" fill="#c9cdd2"/><circle cx="20" cy="17" r="6.7" fill="#8B5E3C"/><circle cx="16" cy="17" r="2.2" fill="none" stroke="#2b2b2b" stroke-width="1"/><circle cx="24" cy="17" r="2.2" fill="none" stroke="#2b2b2b" stroke-width="1"/><line x1="18.2" y1="17" x2="21.8" y2="17" stroke="#2b2b2b" stroke-width="1"/></svg></span>
+          <span class="lbl">Sujet âgé</span>
+        </span>
+      </div>
+
+      <div class="grid2" style="margin-bottom:10px">
+        <div class="field"><label>Date de naissance</label><input class="control" data-k="dob" type="date" value="1986-09-10"></div>
+        <div class="field"><label>Genre</label>
+          <select class="control" data-k="gender">
+            <option value="MALE">MALE</option>
+            <option value="FEMALE">FEMALE</option>
+            <option value="UNKNOWN">UNKNOWN</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" style="margin-bottom:10px"><label>Insuffisance hépatique</label>
+        <select class="control" data-k="hepatic">
+          <option value="NONE">NONE</option>
+          <option value="MODERATE">MODERATE</option>
+          <option value="SEVERE">SEVERE</option>
+        </select>
+      </div>
+      <div class="grid2" style="margin-bottom:10px">
+        <div class="field"><label>Taille (cm)</label><input class="control" data-k="height" type="number" min="0" value="178"></div>
+        <div class="field"><label>Poids (kg)</label><input class="control" data-k="weight" type="number" min="0" value="80"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Créatinine (µmol/L)</label><input class="control" data-k="creatUmol" type="number" min="0" oninput="syncCreat('umol')"></div>
+        <div class="field"><label>Créatinine sérique (mg/dL)</label><input class="control" data-k="creatMg" type="number" min="0" step="0.1" oninput="syncCreat('mg')"></div>
+      </div>
+      <p class="hint">Affichée à titre informatif (double unité, conversion automatique) — non confirmée dans le schéma <code>&lt;posology-request&gt;</code> du manuel principal (l'exemple de référence ne contient aucun champ créatinine) ; à vérifier auprès de VIDAL avant l'implémentation réelle.</p>
+
+      <div class="disclose" onclick="toggleDisclose(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+        Allergies, pathologies, molécules…
+      </div>
+      <div class="disclose-body">
+        <div class="grid2" style="margin-bottom:10px">
+          <div class="field">
+            <label>Allergies</label>
+            <div class="tagbox" data-taglist="allergies"><input class="tag-input" placeholder="Rechercher une allergie…" onkeydown="onTagKey(event,'allergy')"></div>
+          </div>
+          <div class="field">
+            <label>Pathologies (CIM10)</label>
+            <div class="tagbox" data-taglist="pathologies"><input class="tag-input" placeholder="Rechercher une pathologie…" onkeydown="onTagKey(event,'patho')"></div>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label>Molécules</label>
+            <div class="tagbox" data-taglist="molecules"><input class="tag-input" placeholder="Rechercher une molécule…" onkeydown="onTagKey(event,'mol')"></div>
+          </div>
+          <div class="field">
+            <label>ALD</label>
+            <div class="tagbox" data-taglist="alds"><input class="tag-input" placeholder="Rechercher une ALD…" onkeydown="onTagKey(event,'ald')"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:14px"><label>Voie d'administration <span class="opt-label">Optionnel</span></label>
+        <input class="control" id="routeInput" data-typeahead="route" autocomplete="off" placeholder="Rechercher une voie…">
+      </div>
+      <div class="field" style="margin-top:10px"><label>Indication <span class="opt-label">Optionnel</span></label>
+        <input class="control" id="indicationInput" data-typeahead="indication" autocomplete="off" placeholder="Rechercher une indication…">
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="runSearch()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+    Rechercher la posologie indiquée
+  </button>
+
+  </div>
+  <div>
+
+  <!-- XML LIVE -->
+  <div class="card codecard">
+    <div class="card-head"><span class="step">⚙</span><h2>Structure technique générée</h2><span class="example-flag">En direct</span></div>
+    <div class="codebox">
+      <button class="copybtn" onclick="copyXml()">Copier</button>
+      <pre class="code" id="outXml"></pre>
+      <p class="codenote" id="codeNote"></p>
+    </div>
+  </div>
+
+  <!-- RESULTAT -->
+  <div class="card" id="resultCard" style="display:none">
+    <div class="card-head"><span class="step">✓</span><h2>Posologies indiquées</h2><span class="example-flag">Aperçu</span></div>
+    <div class="card-body" id="resultBody"></div>
+  </div>
+
+  </div>
+  </div>
+
+</div>
+
+<script>
+  function esc(s){ return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function toggleDisclose(el){ el.classList.toggle('open'); el.nextElementSibling.classList.toggle('open'); }
+
+  function tagClassFor(kind){ return { allergy:'allergy', patho:'patho', mol:'mol', ald:'ald' }[kind] || ''; }
+  function onTagKey(ev, kind){
+    if (ev.key !== 'Enter') return;
+    ev.preventDefault();
+    const input = ev.target;
+    const val = input.value.trim();
+    if (!val) return;
+    const span = document.createElement('span');
+    span.className = 'tag ' + tagClassFor(kind);
+    span.innerHTML = val.replace(/</g,'&lt;') + ' <button onclick="removeTag(this)">✕</button>';
+    input.parentElement.insertBefore(span, input);
+    input.value = '';
+    renderPreview();
+  }
+  function removeTag(btn){ btn.parentElement.remove(); renderPreview(); }
+  function collectTags(name){
+    const box = document.querySelector(`[data-taglist="${name}"]`);
+    return Array.from(box.querySelectorAll('.tag')).map(t => t.firstChild.textContent.trim());
+  }
+
+  // Créatinine : double unité affichée, conversion clinique standard 1 mg/dL = 88.4 µmol/L.
+  function syncCreat(from){
+    const umolEl = document.querySelector('[data-k="creatUmol"]');
+    const mgEl = document.querySelector('[data-k="creatMg"]');
+    if (from === 'umol' && umolEl.value) mgEl.value = (Number(umolEl.value) / 88.4).toFixed(2);
+    else if (from === 'mg' && mgEl.value) umolEl.value = Math.round(Number(mgEl.value) * 88.4);
+    renderPreview();
+  }
+
+  // "Profil rapide" : préréglages patient reproduisant les archétypes de la capture de
+  // référence (Homme = valeurs exactes de l'exemple VIDAL : 10/09/1986, 178 cm, 80 kg).
+  const profils = {
+    bebe:   { dob:'2026-01-15', gender:'MALE',   height:68,  weight:8  },
+    fille:  { dob:'2018-05-02', gender:'FEMALE', height:128, weight:25 },
+    garcon: { dob:'2018-02-20', gender:'MALE',   height:130, weight:26 },
+    femme:  { dob:'1991-04-12', gender:'FEMALE', height:162, weight:62 },
+    enceinte:{ dob:'1998-06-30', gender:'FEMALE', height:165, weight:68 },
+    homme:  { dob:'1986-09-10', gender:'MALE',   height:178, weight:80 },
+    renal:  { dob:'1966-03-01', gender:'MALE',   height:170, weight:75, creatUmol:180 },
+    age:    { dob:'1944-11-08', gender:'FEMALE', height:158, weight:58 },
+  };
+  function applyProfil(el){
+    document.querySelectorAll('.profil-chip').forEach(p => p.classList.remove('on'));
+    el.classList.add('on');
+    const key = el.dataset.p;
+    if (key === 'allergique') {
+      const box = document.querySelector('[data-taglist="allergies"]');
+      if (!box.querySelector('.tag')) {
+        const span = document.createElement('span');
+        span.className = 'tag allergy';
+        span.innerHTML = 'Pénicilline <button onclick="removeTag(this)">✕</button>';
+        box.insertBefore(span, box.querySelector('.tag-input'));
+      }
+      renderPreview();
+      return;
+    }
+    const p = profils[key];
+    if (!p) return;
+    document.querySelector('[data-k="dob"]').value = p.dob;
+    document.querySelector('[data-k="gender"]').value = p.gender;
+    document.querySelector('[data-k="height"]').value = p.height;
+    document.querySelector('[data-k="weight"]').value = p.weight;
+    document.querySelector('[data-k="creatUmol"]').value = p.creatUmol || '';
+    document.querySelector('[data-k="creatMg"]').value = p.creatUmol ? (p.creatUmol / 88.4).toFixed(2) : '';
+    renderPreview();
+  }
+  document.getElementById('profilScroll').addEventListener('click', (ev) => {
+    const chip = ev.target.closest('.profil-chip');
+    if (chip) applyProfil(chip);
+  });
+
+  // Recherche interactive (voie / indication) — mêmes conventions que la page Sécurisation :
+  // "Manuel ✓" = valeur citée telle quelle dans le manuel VIDAL, "Exemple" = nom inventé pour l'aperçu.
+  const typeaheadData = {
+    route: [
+      { label:'Voie orale', ref:'38', confirmed:true },
+      { label:'Voie cutanée', ref:'90101', confirmed:false },
+      { label:'Voie injectable', ref:'90102', confirmed:false },
+      { label:'Voie rectale', ref:'90103', confirmed:false },
+    ],
+    indication: [
+      { label:'Douleur d\'intensité légère à modérée', ref:'8470', confirmed:false },
+      { label:'Fièvre', ref:'90301', confirmed:false },
+      { label:'Douleur arthrosique', ref:'90302', confirmed:false },
+      { label:'Infection urinaire', ref:'90303', confirmed:false },
+    ],
+  };
+  function highlightMatch(label, query){
+    const idx = label.toLowerCase().indexOf(query.toLowerCase());
+    if (idx === -1) return esc(label);
+    return esc(label.slice(0, idx)) + '<mark>' + esc(label.slice(idx, idx + query.length)) + '</mark>' + esc(label.slice(idx + query.length));
+  }
+  function initTypeahead(input){
+    const kind = input.dataset.typeahead;
+    const dataset = typeaheadData[kind];
+    const wrap = document.createElement('div');
+    wrap.className = 'typeahead-wrap';
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+    const list = document.createElement('div');
+    list.className = 'typeahead-list';
+    wrap.appendChild(list);
+    function render(){
+      const q = input.value.trim();
+      if (!q) { list.classList.remove('show'); return; }
+      const matches = dataset.filter(d => d.label.toLowerCase().includes(q.toLowerCase())).slice(0, 8);
+      list.innerHTML = matches.length
+        ? matches.map(m => `<div class="typeahead-item" data-ref="${esc(m.ref)}" data-label="${esc(m.label)}"><span>${highlightMatch(m.label, q)}</span><span class="typeahead-badge ${m.confirmed ? '' : 'ex'}" style="${m.confirmed ? 'background:var(--ok-bg);color:var(--ok-text)' : ''}">${m.confirmed ? 'Manuel ✓' : 'Exemple'}</span></div>`).join('')
+        : `<div class="typeahead-empty">Aucun résultat pour « ${esc(q)} »</div>`;
+      list.classList.add('show');
+    }
+    input.addEventListener('input', render);
+    input.addEventListener('focus', render);
+    list.addEventListener('mousedown', (ev) => {
+      const item = ev.target.closest('.typeahead-item');
+      if (!item) return;
+      ev.preventDefault();
+      input.value = item.dataset.label;
+      input.dataset.ref = item.dataset.ref;
+      list.classList.remove('show');
+      renderPreview();
+    });
+    document.addEventListener('click', (ev) => { if (!wrap.contains(ev.target)) list.classList.remove('show'); });
+  }
+  document.querySelectorAll('[data-typeahead]').forEach(initTypeahead);
+
+  function xmlTag(name, value, depth){
+    const pad = '  '.repeat(depth);
+    if (value === null || value === undefined || value === '') return `${pad}<span class="tag-tok">&lt;${name}/&gt;</span>\n`;
+    return `${pad}<span class="tag-tok">&lt;${name}&gt;</span><span class="str-tok">${esc(value)}</span><span class="tag-tok">&lt;/${name}&gt;</span>\n`;
+  }
+  function xmlBlock(name, inner, depth){
+    const pad = '  '.repeat(depth);
+    if (!inner) return `${pad}<span class="tag-tok">&lt;${name}/&gt;</span>\n`;
+    return `${pad}<span class="tag-tok">&lt;${name}&gt;</span>\n${inner}${pad}<span class="tag-tok">&lt;/${name}&gt;</span>\n`;
+  }
+
+  function renderPreview(){
+    const dob = document.querySelector('[data-k="dob"]').value;
+    const gender = document.querySelector('[data-k="gender"]').value;
+    const height = document.querySelector('[data-k="height"]').value;
+    const weight = document.querySelector('[data-k="weight"]').value;
+    const hepatic = document.querySelector('[data-k="hepatic"]').value;
+    const routeRef = document.getElementById('routeInput').dataset.ref;
+
+    let patientInner = '';
+    patientInner += xmlTag('dateOfBirth', dob ? dob + 'T00:00:00' : null, 2);
+    patientInner += xmlTag('gender', gender, 2);
+    patientInner += xmlTag('height', height, 2);
+    patientInner += xmlTag('weight', weight, 2);
+    patientInner += xmlTag('hepaticInsufficiency', hepatic, 2);
+    const allergies = collectTags('allergies'), pathos = collectTags('pathologies'),
+          mols = collectTags('molecules'), alds = collectTags('alds');
+    if (allergies.length) patientInner += xmlBlock('allergies', allergies.map(a => xmlTag('allergy', `vidal://allergy/EXEMPLE`, 3)).join(''), 2);
+    if (pathos.length) patientInner += xmlBlock('pathologies', pathos.map(p => xmlTag('pathology', `vidal://cim10/EXEMPLE`, 3)).join(''), 2);
+    if (mols.length) patientInner += xmlBlock('molecules', mols.map(m => xmlTag('molecule', `vidal://molecule/EXEMPLE`, 3)).join(''), 2);
+    if (alds.length) patientInner += xmlBlock('alds', alds.map(a => xmlTag('ald', a, 3)).join(''), 2);
+    if (routeRef) patientInner += xmlBlock('routes', xmlTag('route', `vidal://route/${routeRef}`, 3), 2);
+
+    let out = '<span class="mute-tok">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>\n';
+    let root = xmlBlock('patient', patientInner, 1);
+    const indicationRef = document.getElementById('indicationInput').dataset.ref;
+    if (indicationRef) root += xmlBlock('indications', xmlTag('indication', `vidal://indication/${indicationRef}`, 2), 1);
+    out += xmlBlock('posology-request', root, 0);
+    document.getElementById('outXml').innerHTML = out;
+    document.getElementById('codeNote').textContent = indicationRef
+      ? "Bloc <indications> en sibling de <patient> : estimé par symétrie avec le reste du schéma VIDAL, non confirmé dans l'exemple du manuel (qui ne montre que <patient> avec <routes> imbriquées)."
+      : "Structure <patient> avec <routes> imbriquées conforme à l'exemple du manuel de posologie complexe.";
+  }
+
+  function copyXml(){
+    navigator.clipboard?.writeText(document.getElementById('outXml').textContent).then(() => {
+      const btn = document.querySelector('.copybtn');
+      const old = btn.textContent; btn.textContent = 'Copié !';
+      setTimeout(() => btn.textContent = old, 1200);
+    }).catch(() => {});
+  }
+
+  function runSearch(){
+    const card = document.getElementById('resultCard');
+    card.style.display = 'block';
+    document.getElementById('resultBody').innerHTML = `
+      <div class="result-row">
+        <div class="rname">DOLIPRANE 1000 mg cp</div>
+        <div class="rdose">1 à 4 comprimés par jour, en 1 à 4 prises</div>
+        <span class="rmax">Maximum 4 comprimés / jour</span>
+      </div>
+      <div class="result-row">
+        <div class="rname">EFFERALGAN 500 mg cp</div>
+        <div class="rdose">1 à 6 comprimés par jour, en 3 à 6 prises</div>
+        <span class="rmax">Maximum 6 comprimés / jour</span>
+      </div>
+      <p class="hint">Aperçu illustratif — le vrai résultat dépend de <code>/rest/api/product/{id}/posology-descriptors</code> pour le patient et la voie/indication choisis.</p>`;
+    card.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+
+  document.addEventListener('input', renderPreview);
+  document.addEventListener('change', renderPreview);
+  renderPreview();
+</script>

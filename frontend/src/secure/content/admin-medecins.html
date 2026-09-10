@@ -1,0 +1,484 @@
+<title>Médecins VIDAL</title>
+<style>
+  :root{
+    --bg:#eef1f6; --surface:#ffffff; --surface-2:#f6f8fb; --surface-3:#eef0f5;
+    --border:#e1e6ef; --border-soft:#eaedf3; --text:#101827; --text-soft:#48526b; --text-mute:#8790a3;
+    --navy:#0e1f3d; --accent:#0a58ca; --accent-dark:#073e8f; --accent-tint:#e8f3ff; --accent-tint-2:#d7ebff;
+    --focus:#0a58ca;
+    --ok-bg:#e9f7f0; --ok-text:#0d6b47; --ok-ring:#bfe6d2;
+    --warn-bg:#fff6e6; --warn-text:#8a5a06; --warn-ring:#f2ddab;
+    --crit-bg:#fdecec; --crit-text:#a01818; --crit-ring:#f4c6c6;
+    --info-bg:#eaf4fb; --info-text:#0a5a8c; --info-ring:#bfe0f2;
+    --shadow-card:0 1px 2px rgba(16,24,39,.05); --shadow-pop:0 16px 40px -14px rgba(16,24,39,.28);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0c1220; --surface:#141b2c; --surface-2:#182036; --surface-3:#1d2740;
+      --border:#26314c; --border-soft:#212a42; --text:#e8ecf6; --text-soft:#aab2c8; --text-mute:#77809a;
+      --navy:#c9d6f2; --accent:#4da3ff; --accent-dark:#7fc0ff; --accent-tint:#12233a; --accent-tint-2:#173049;
+      --ok-bg:#0f2a20; --ok-text:#6fd6a8; --ok-ring:#1d4a37;
+      --warn-bg:#2b230f; --warn-text:#f0c46a; --warn-ring:#4a3a15;
+      --crit-bg:#2a1517; --crit-text:#ff9b93; --crit-ring:#4d2226;
+      --info-bg:#0f2233; --info-text:#7fc4ea; --info-ring:#204a67;
+      --shadow-card:0 1px 2px rgba(0,0,0,.4); --shadow-pop:0 16px 40px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0c1220; --surface:#141b2c; --surface-2:#182036; --surface-3:#1d2740;
+    --border:#26314c; --border-soft:#212a42; --text:#e8ecf6; --text-soft:#aab2c8; --text-mute:#77809a;
+    --navy:#c9d6f2; --accent:#4da3ff; --accent-dark:#7fc0ff; --accent-tint:#12233a; --accent-tint-2:#173049;
+    --ok-bg:#0f2a20; --ok-text:#6fd6a8; --ok-ring:#1d4a37;
+    --warn-bg:#2b230f; --warn-text:#f0c46a; --warn-ring:#4a3a15;
+    --crit-bg:#2a1517; --crit-text:#ff9b93; --crit-ring:#4d2226;
+    --info-bg:#0f2233; --info-text:#7fc4ea; --info-ring:#204a67;
+    --shadow-card:0 1px 2px rgba(0,0,0,.4); --shadow-pop:0 16px 40px -14px rgba(0,0,0,.6);
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--text); font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3{ font-family:"Space Grotesk","Inter",sans-serif; }
+  .mono{ font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; }
+  .wrap{ max-width:1080px; margin:0 auto; padding:20px 16px 40px; }
+
+  .topbar{ display:flex; align-items:center; gap:12px; padding:6px 4px 18px; }
+  .topbar .icon{ width:40px; height:40px; border-radius:12px; flex:none; background:var(--accent-tint); color:var(--accent-dark); display:flex; align-items:center; justify-content:center; }
+  .topbar h1{ font-size:18px; font-weight:700; margin:0; color:var(--navy); }
+  .topbar p{ margin:2px 0 0; font-size:12.5px; color:var(--text-mute); }
+
+  .adminbanner{
+    display:flex; align-items:flex-start; gap:8px; font-size:11.5px; line-height:1.5;
+    color:var(--info-text); background:var(--info-bg); border:1px solid var(--info-ring);
+    border-radius:10px; padding:9px 12px; margin:0 0 16px;
+  }
+  .adminbanner svg{ flex:none; margin-top:1px; }
+
+  .card{ background:var(--surface); border:1px solid var(--border-soft); border-radius:16px; box-shadow:var(--shadow-card); margin-bottom:16px; overflow:hidden; }
+  .card-head{ display:flex; align-items:center; gap:9px; padding:14px 16px; border-bottom:1px solid var(--border-soft); }
+  .card-head h2{ font-size:14.5px; font-weight:700; margin:0; color:var(--navy); flex:1; }
+  .card-body{ padding:14px 16px 16px; }
+  .btn{ display:inline-flex; align-items:center; gap:6px; border-radius:10px; font-size:12.5px; font-weight:700; padding:9px 14px; border:1px solid var(--border); background:var(--surface); color:var(--text-soft); cursor:pointer; font-family:inherit; white-space:nowrap; }
+  .btn-primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn-primary:hover{ background:var(--accent-dark); border-color:var(--accent-dark); }
+  .btn-ghost:hover{ background:var(--surface-3); }
+  .btn-sm{ padding:6px 10px; font-size:11.5px; }
+
+  .table-wrap{ overflow-x:auto; }
+  table.medtable{ width:100%; border-collapse:collapse; font-size:12.5px; min-width:920px; }
+  table.medtable th, table.medtable td{ padding:10px 12px; text-align:left; border-bottom:1px solid var(--border-soft); vertical-align:top; }
+  table.medtable th{ font-size:10px; text-transform:uppercase; letter-spacing:.03em; color:var(--text-mute); background:var(--surface-2); white-space:nowrap; }
+  table.medtable tr:last-child td{ border-bottom:none; }
+  .doc-name{ font-weight:700; color:var(--text); }
+  .doc-sub{ font-size:10.5px; color:var(--text-mute); }
+  .spec-tag{ display:inline-block; font-size:10px; font-weight:600; background:var(--surface-3); color:var(--text-soft); border-radius:6px; padding:2px 6px; margin:1px 3px 1px 0; }
+  .clinic-tag{ background:var(--accent-tint); color:var(--accent-dark); }
+  .badge{ display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:999px; white-space:nowrap; }
+  .badge.ok{ background:var(--ok-bg); color:var(--ok-text); }
+  .badge.crit{ background:var(--crit-bg); color:var(--crit-text); }
+  .badge.warn{ background:var(--warn-bg); color:var(--warn-text); }
+  .badge.neutral{ background:var(--surface-3); color:var(--text-soft); }
+  .auto-flag{ display:inline-block; margin-top:4px; font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.02em; color:var(--accent-dark); background:var(--accent-tint); border-radius:6px; padding:2px 6px; }
+  .row-actions{ display:flex; gap:6px; }
+  .row-actions button{ border:none; background:transparent; color:var(--text-mute); cursor:pointer; padding:4px; }
+  .row-actions button:hover{ color:var(--accent); }
+
+  .renew-popover{
+    display:none; position:fixed; z-index:60; min-width:180px; background:var(--surface);
+    border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow-pop); padding:8px;
+  }
+  .renew-title{ font-size:10.5px; font-weight:700; color:var(--text-mute); text-transform:uppercase; letter-spacing:.03em; padding:4px 6px 6px; }
+  .renew-popover button{
+    display:block; width:100%; text-align:left; border:none; background:transparent; color:var(--text);
+    font-size:13px; font-family:inherit; padding:8px 8px; border-radius:8px; cursor:pointer;
+  }
+  .renew-popover button:hover{ background:var(--surface-3); }
+
+  .rule-box{ font-size:11.5px; line-height:1.7; color:var(--text-soft); background:var(--surface-2); border:1px dashed var(--border); border-radius:10px; padding:12px 14px; }
+  .rule-box b{ color:var(--navy); }
+
+  .sim-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+  .sim-row input{ flex:1 1 220px; }
+  /* Convention : le texte saisi par l'utilisateur est en bleu (--accent), distinct de la
+     couleur des libellés (--text-soft) — pour qu'on distingue au premier coup d'oeil la
+     donnée renseignée du nom du champ. */
+  .control{ width:100%; font-size:13.5px; font-weight:600; font-family:inherit; color:var(--accent); background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:9px 11px; }
+  .control::placeholder{ color:var(--text-mute); font-weight:400; }
+  .control:disabled{ color:var(--text-mute); font-weight:400; }
+  .control:focus{ outline:none; border-color:var(--focus); box-shadow:0 0 0 3px var(--accent-tint); }
+  select.control{
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'><path d='M5.5 7.5l4.5 4.5 4.5-4.5' stroke='%238790a3' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat; background-position:right 10px center; appearance:none; padding-right:30px;
+  }
+  .sim-result{ display:none; font-size:12px; line-height:1.6; border-radius:10px; padding:10px 12px; margin-top:4px; }
+  .sim-result.show{ display:block; }
+  .sim-result.created{ background:var(--info-bg); color:var(--info-text); border:1px solid var(--info-ring); }
+  .sim-result.granted{ background:var(--ok-bg); color:var(--ok-text); border:1px solid var(--ok-ring); }
+  .sim-result.denied{ background:var(--crit-bg); color:var(--crit-text); border:1px solid var(--crit-ring); }
+
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(10,14,24,.55); z-index:50; align-items:flex-start; justify-content:center; padding:32px 16px; overflow-y:auto; }
+  .modal-overlay.show{ display:flex; }
+  .modal-panel{ width:100%; max-width:520px; background:var(--surface); border-radius:16px; box-shadow:var(--shadow-pop); }
+  .modal-head{ display:flex; align-items:center; gap:10px; padding:16px 18px; border-bottom:1px solid var(--border-soft); }
+  .modal-head h3{ font-size:15px; font-weight:700; margin:0; color:var(--navy); flex:1; }
+  .modal-close{ border:none; background:var(--surface-3); color:var(--text-soft); width:28px; height:28px; border-radius:8px; cursor:pointer; }
+  .modal-body{ padding:16px 18px 18px; }
+  .field{ margin-bottom:12px; }
+  .field label{ display:block; font-size:11.5px; font-weight:600; color:var(--text-soft); margin-bottom:5px; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:460px){ .grid2{ grid-template-columns:1fr; } }
+  .modal-actions{ display:flex; gap:10px; margin-top:6px; }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap">
+
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
+    <div>
+      <h1>Médecins VIDAL</h1>
+      <p>Licences et facturation du module de sécurisation de prescription</p>
+    </div>
+  </div>
+
+  <div class="adminbanner">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <span>Table configurable <b>uniquement par l'administrateur</b> — les médecins n'y ont pas accès, y compris pour leur propre fiche. Base MongoDB Atlas <code>vidal</code>, collection <code>medecins</code> (les sécurisations de prescription elles-mêmes sont dans <code>vidal.securisation</code>).</span>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Règle d'accès au module VIDAL</h2>
+    </div>
+    <div class="card-body">
+      <div class="rule-box">
+        Les médecins se connectent à la plateforme par <b>email</b> (identifiant obligatoire et unique). À la <b>toute première connexion</b> d'un compte en rôle « médecin », cet email est recherché dans cette table.<br>
+        • <b>Absent</b> → une ligne est créée automatiquement : forfait <b>Mensuel</b>, <b>25 000 FCFA</b>, date d'enrôlement = aujourd'hui, <b>expiration à J+30</b>, état <b>ACTIF</b>.<br>
+        • <b>Présent</b> → accès autorisé seulement si <code>état = ACTIF</code> <b>ET</b> date d'expiration non dépassée.<br>
+        • Sinon (inactif, suspendu, ou expiré) → l'entrée de menu « Analyse de prescription » apparaît <b>grisée</b> dans le portail.<br>
+        • Si l'option <b>OTP par email</b> est activée pour ce médecin, un code de vérification lui est envoyé par email à chaque connexion, en plus de son mot de passe habituel.
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Simuler une connexion médecin</h2>
+    </div>
+    <div class="card-body">
+      <p style="font-size:11.5px;color:var(--text-mute);margin:0 0 10px">La connexion se fait par email — c'est ce qui est recherché dans la table. Le nom n'est utile ici que pour préremplir la fiche si aucun compte n'existe encore.</p>
+      <div class="sim-row">
+        <input class="control" id="simEmail" type="email" placeholder="Email de connexion (ex : paul.zongo@exemple.bf)">
+        <input class="control" id="simName" placeholder="Nom complet — si compte à créer (ex : Paul Zongo)">
+        <button class="btn btn-primary" onclick="simulateLogin()">Simuler la connexion</button>
+      </div>
+      <div class="sim-result" id="simResult"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Médecins enregistrés</h2>
+      <button class="btn btn-primary btn-sm" onclick="openMedModal()">+ Ajouter un médecin</button>
+    </div>
+    <div class="card-body">
+      <div class="table-wrap">
+        <table class="medtable">
+          <thead>
+            <tr>
+              <th>Médecin</th><th>N° Ordre</th><th>Enrôlement VIDAL</th><th>État</th>
+              <th>Forfait</th><th>Volume consommé</th><th>Expiration</th><th>Accès</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="medTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="renew-popover" id="renewPopover">
+  <div class="renew-title">Renouveler pour…</div>
+  <button onclick="doRenew('MENSUEL')">Mensuel — 25 000 FCFA</button>
+  <button onclick="doRenew('USAGE')">À l'usage</button>
+</div>
+
+<div class="modal-overlay" id="medModal">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h3 id="medModalTitle">Ajouter un médecin</h3>
+      <button class="modal-close" onclick="closeMedModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid2">
+        <div class="field"><label>Nom</label><input class="control" id="fNom" placeholder="KABORÉ" oninput="this.value = toUpperName(this.value)"></div>
+        <div class="field"><label>Prénoms</label><input class="control" id="fPrenoms" placeholder="Tiraogo" onblur="this.value = toTitleCase(this.value)"></div>
+      </div>
+      <div class="field">
+        <label>Email professionnel <span style="color:var(--crit-text)">*</span></label>
+        <input class="control" id="fEmail" type="email" required placeholder="prenom.nom@exemple.bf" onblur="this.value = toLowerEmail(this.value)">
+        <p style="font-size:10.5px;color:var(--text-mute);margin:5px 0 0">Identifiant de connexion du médecin — obligatoire, toujours en minuscules.</p>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-soft);margin:0 0 12px;cursor:pointer">
+        <input type="checkbox" id="fOtpEmail" style="width:16px;height:16px;accent-color:var(--accent)">
+        Recevoir un code OTP par email à la connexion
+      </label>
+      <div class="grid2">
+        <div class="field"><label>Téléphone</label><input class="control" id="fTelephone" type="tel" placeholder="+226 70 12 34 56"></div>
+        <div class="field">
+          <label>WhatsApp</label>
+          <input class="control" id="fWhatsapp" type="tel" placeholder="Laisser vide si identique au téléphone">
+        </div>
+      </div>
+      <div class="field"><label>Spécialités (séparées par des virgules)</label><input class="control" id="fSpecialites" placeholder="Médecine générale, Pédiatrie"></div>
+      <div class="field"><label>Cliniques où il/elle intervient (séparées par des virgules)</label><input class="control" id="fCliniques" placeholder="Clinique du Progrès, Polyclinique Sainte-Anne"></div>
+      <div class="grid2">
+        <div class="field"><label>N° Inscription à l'Ordre</label><input class="control" id="fOrdre" placeholder="BF-2019-00456"></div>
+        <div class="field"><label>Date enrôlement VIDAL</label><input class="control" id="fEnrollement" type="date"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>État</label>
+          <select class="control" id="fEtat">
+            <option value="ACTIF">Actif</option>
+            <option value="INACTIF">Inactif</option>
+            <option value="SUSPENDU">Suspendu</option>
+          </select>
+        </div>
+        <div class="field"><label>Type de forfait</label>
+          <select class="control" id="fForfaitType" onchange="onForfaitTypeChange()">
+            <option value="MENSUEL">Mensuel</option>
+            <option value="USAGE">À l'usage</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label id="fMontantLabel">Montant (FCFA / mois)</label><input class="control" id="fMontant" type="text" inputmode="numeric" oninput="formatThousandsInput(this)" value="25 000"></div>
+        <div class="field"><label>Volume consommé (requêtes)</label><input class="control" id="fVolume" type="text" inputmode="numeric" oninput="formatThousandsInput(this)" value="0"></div>
+      </div>
+      <div class="field"><label>Date d'expiration</label><input class="control" id="fExpiration" type="date"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeMedModal()">Annuler</button>
+        <button class="btn btn-primary" style="flex:1" onclick="saveMedecin()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const TODAY = new Date('2026-09-10');
+
+  let medecins = [
+    { nom:'KABORÉ', prenoms:'Tiraogo', email:'tiraogo.kabore@exemple.bf', otpEmail:true,
+      telephone:'+226 70 12 34 56', whatsapp:'',
+      specialites:['Médecine générale'], cliniques:['Clinique du Progrès','Polyclinique Sainte-Anne'], ordre:'BF-2019-00456',
+      enrollement:'2025-11-02', etat:'ACTIF', forfaitType:'MENSUEL', montant:25000, volume:187, expiration:'2026-11-02', auto:false },
+    { nom:'SAWADOGO', prenoms:'Aïcha', email:'aicha.sawadogo@exemple.bf', otpEmail:false,
+      telephone:'+226 76 98 76 54', whatsapp:'+226 70 11 22 33',
+      specialites:['Gynécologie','Médecine générale'], cliniques:['Polyclinique Sainte-Anne'], ordre:'BF-2021-01822',
+      enrollement:'2026-08-15', etat:'ACTIF', forfaitType:'MENSUEL', montant:25000, volume:34, expiration:'2026-09-15', auto:false },
+    { nom:'OUEDRAOGO', prenoms:'Boureima', email:'boureima.ouedraogo@exemple.bf', otpEmail:false,
+      telephone:'+226 78 45 12 90', whatsapp:'',
+      specialites:['Pédiatrie'], cliniques:['Centre Médical des Enfants'], ordre:'BF-2018-00219',
+      enrollement:'2026-05-01', etat:'INACTIF', forfaitType:'USAGE', montant:150, volume:412, expiration:'2026-06-01', auto:false },
+    { nom:'TRAORÉ', prenoms:'Fatoumata', email:'fatoumata.traore@exemple.bf', otpEmail:true,
+      telephone:'+226 75 33 22 11', whatsapp:'',
+      specialites:['Dermatologie'], cliniques:['Clinique du Progrès'], ordre:'BF-2022-00987',
+      enrollement:'2026-09-01', etat:'ACTIF', forfaitType:'MENSUEL', montant:25000, volume:3, expiration:'2026-10-01', auto:true },
+  ];
+  // Règle : un WhatsApp non renseigné signifie qu'il est identique au téléphone — on ne le
+  // fige jamais en base à la sauvegarde, on le résout à la lecture/l'usage à chaque fois.
+  function resolvedWhatsapp(m){ return m.whatsapp || m.telephone; }
+
+  function esc(s){ return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  // Séparateur des milliers (espace, convention fr-FR) — sur l'affichage ET sur les champs
+  // saisissables (montant, volume), pas seulement les valeurs en lecture seule.
+  function parseThousands(s){ return Number(String(s ?? '').replace(/[^\d]/g,'')) || 0; }
+  function formatThousands(n){ return Number(n || 0).toLocaleString('fr-FR'); }
+  function formatThousandsInput(el){ el.value = formatThousands(parseThousands(el.value)); }
+
+  // Conventions imposées : nom de famille en MAJUSCULES, prénom(s) avec seulement la 1ère
+  // lettre de chaque partie en majuscule, email toujours en minuscules.
+  function toUpperName(s){ return (s || '').trim().toUpperCase(); }
+  function toTitleCase(s){
+    return (s || '').trim().toLowerCase().replace(/(^|[\s-])([a-zà-ÿ])/g, (m, sep, ch) => sep + ch.toUpperCase());
+  }
+  function toLowerEmail(s){ return (s || '').trim().toLowerCase(); }
+  function fmtDate(iso){ return new Date(iso).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric'}); }
+  function daysUntil(iso){ return Math.round((new Date(iso) - TODAY) / 86400000); }
+
+  // La règle d'accès telle que définie : ACTIF ET date d'expiration non dépassée.
+  function computeAccess(m){
+    if (m.etat !== 'ACTIF') return { granted:false, reason:`compte ${m.etat.toLowerCase()}` };
+    if (daysUntil(m.expiration) < 0) return { granted:false, reason:'forfait expiré' };
+    return { granted:true, reason: daysUntil(m.expiration) <= 7 ? 'expire bientôt' : null };
+  }
+
+  function etatBadge(etat){
+    const cls = etat === 'ACTIF' ? 'ok' : (etat === 'SUSPENDU' ? 'crit' : 'neutral');
+    return `<span class="badge ${cls}">${etat}</span>`;
+  }
+  function accessBadge(access){
+    if (access.granted) {
+      return access.reason
+        ? `<span class="badge warn">Autorisé · ${esc(access.reason)}</span>`
+        : `<span class="badge ok">Autorisé</span>`;
+    }
+    return `<span class="badge crit">Refusé · ${esc(access.reason)}</span>`;
+  }
+
+  function renderTable(){
+    const body = document.getElementById('medTableBody');
+    body.innerHTML = medecins.map((m, i) => {
+      const access = computeAccess(m);
+      const montantLabel = m.forfaitType === 'MENSUEL' ? `${m.montant.toLocaleString('fr-FR')} FCFA/mois` : `${m.montant.toLocaleString('fr-FR')} FCFA/requête`;
+      return `
+        <tr>
+          <td>
+            <div class="doc-name">${esc(m.nom)} ${esc(m.prenoms)}</div>
+            <div class="doc-sub mono">${esc(m.email)}${m.otpEmail ? ' <span class="badge neutral" style="margin-left:4px">OTP email</span>' : ''}</div>
+            <div class="doc-sub mono">Tél. ${esc(m.telephone || '—')} · WA ${m.whatsapp ? esc(m.whatsapp) : '<i>identique</i>'}</div>
+            <div class="doc-sub" style="margin-top:4px">${m.specialites.map(s => `<span class="spec-tag">${esc(s)}</span>`).join('')}</div>
+            ${(m.cliniques && m.cliniques.length) ? `<div class="doc-sub" style="margin-top:2px">${m.cliniques.map(c => `<span class="spec-tag clinic-tag">${esc(c)}</span>`).join('')}</div>` : ''}
+            ${m.auto ? '<span class="auto-flag">Auto-provisionné (1ère connexion)</span>' : ''}
+          </td>
+          <td class="mono">${esc(m.ordre)}</td>
+          <td>${fmtDate(m.enrollement)}</td>
+          <td>${etatBadge(m.etat)}</td>
+          <td>${m.forfaitType === 'MENSUEL' ? 'Mensuel' : "À l'usage"}<br><span class="doc-sub">${montantLabel}</span></td>
+          <td>${m.volume.toLocaleString('fr-FR')} requêtes</td>
+          <td>${fmtDate(m.expiration)}</td>
+          <td>${accessBadge(access)}</td>
+          <td class="row-actions">
+            <button onclick="openRenewPopover(event, ${i})" title="Renouveler sans ouvrir la fiche">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
+            </button>
+            <button onclick="openMedModal(${i})" title="Modifier">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+            </button>
+          </td>
+        </tr>`;
+    }).join('');
+  }
+
+  // Renouvellement rapide : juste le choix du type de forfait, sans ouvrir la fiche complète.
+  // Réactive aussi le compte (utile pour un renouvellement après expiration) et repart pour 30 jours.
+  let renewIndex = null;
+  function openRenewPopover(ev, index){
+    ev.stopPropagation();
+    renewIndex = index;
+    const pop = document.getElementById('renewPopover');
+    const rect = ev.currentTarget.getBoundingClientRect();
+    pop.style.top = (rect.bottom + 6) + 'px';
+    pop.style.left = Math.max(8, rect.right - 190) + 'px';
+    pop.style.display = 'block';
+  }
+  function closeRenewPopover(){ document.getElementById('renewPopover').style.display = 'none'; }
+  function doRenew(type){
+    const m = medecins[renewIndex];
+    const wasUsage = m.forfaitType === 'USAGE';
+    m.forfaitType = type;
+    m.montant = type === 'MENSUEL' ? 25000 : (wasUsage ? m.montant : 150);
+    m.volume = 0;
+    m.etat = 'ACTIF';
+    m.expiration = new Date(TODAY.getTime() + 30 * 86400000).toISOString().slice(0,10);
+    closeRenewPopover();
+    renderTable();
+  }
+  document.addEventListener('click', closeRenewPopover);
+
+  let editingIndex = null;
+  function onForfaitTypeChange(){
+    document.getElementById('fMontantLabel').textContent =
+      document.getElementById('fForfaitType').value === 'MENSUEL' ? 'Montant (FCFA / mois)' : 'Montant (FCFA / requête)';
+  }
+  function openMedModal(index){
+    editingIndex = (typeof index === 'number') ? index : null;
+    document.getElementById('medModalTitle').textContent = editingIndex === null ? 'Ajouter un médecin' : 'Modifier le médecin';
+    const m = editingIndex === null
+      ? { nom:'', prenoms:'', email:'', otpEmail:false, telephone:'', whatsapp:'', specialites:[], cliniques:[], ordre:'', enrollement:new Date().toISOString().slice(0,10), etat:'ACTIF', forfaitType:'MENSUEL', montant:25000, volume:0, expiration:'' }
+      : medecins[editingIndex];
+    document.getElementById('fNom').value = m.nom;
+    document.getElementById('fPrenoms').value = m.prenoms;
+    document.getElementById('fEmail').value = m.email;
+    document.getElementById('fOtpEmail').checked = !!m.otpEmail;
+    document.getElementById('fTelephone').value = m.telephone || '';
+    document.getElementById('fWhatsapp').value = m.whatsapp || '';
+    document.getElementById('fSpecialites').value = m.specialites.join(', ');
+    document.getElementById('fCliniques').value = (m.cliniques || []).join(', ');
+    document.getElementById('fOrdre').value = m.ordre;
+    document.getElementById('fEnrollement').value = m.enrollement;
+    document.getElementById('fEtat').value = m.etat;
+    document.getElementById('fForfaitType').value = m.forfaitType;
+    document.getElementById('fMontant').value = formatThousands(m.montant);
+    document.getElementById('fVolume').value = formatThousands(m.volume);
+    document.getElementById('fExpiration').value = m.expiration;
+    onForfaitTypeChange();
+    document.getElementById('medModal').classList.add('show');
+  }
+  function closeMedModal(){ document.getElementById('medModal').classList.remove('show'); }
+  function saveMedecin(){
+    const email = toLowerEmail(document.getElementById('fEmail').value);
+    const m = {
+      nom: toUpperName(document.getElementById('fNom').value),
+      prenoms: toTitleCase(document.getElementById('fPrenoms').value),
+      email,
+      otpEmail: document.getElementById('fOtpEmail').checked,
+      telephone: document.getElementById('fTelephone').value.trim(),
+      whatsapp: document.getElementById('fWhatsapp').value.trim(),
+      specialites: document.getElementById('fSpecialites').value.split(',').map(s => s.trim()).filter(Boolean),
+      cliniques: document.getElementById('fCliniques').value.split(',').map(s => s.trim()).filter(Boolean),
+      ordre: document.getElementById('fOrdre').value.trim(),
+      enrollement: document.getElementById('fEnrollement').value,
+      etat: document.getElementById('fEtat').value,
+      forfaitType: document.getElementById('fForfaitType').value,
+      montant: parseThousands(document.getElementById('fMontant').value),
+      volume: parseThousands(document.getElementById('fVolume').value),
+      expiration: document.getElementById('fExpiration').value,
+      auto: editingIndex !== null ? medecins[editingIndex].auto : false,
+    };
+    if (!m.nom || !m.expiration) { alert('Nom et date d\'expiration sont requis.'); return; }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { alert('Un email professionnel valide est obligatoire (identifiant de connexion).'); return; }
+    const dup = medecins.some((x, i) => x.email === email && i !== editingIndex);
+    if (dup) { alert('Cet email est déjà utilisé par un autre médecin — il doit être unique (c\'est l\'identifiant de connexion).'); return; }
+    if (editingIndex === null) medecins.unshift(m); else medecins[editingIndex] = m;
+    renderTable();
+    closeMedModal();
+  }
+
+  // Recherche par nom (nom+prénoms, insensible à la casse) — reproduit la logique décrite :
+  // absent -> création avec forfait d'essai ; présent -> évaluation de l'accès existant.
+  // La connexion se fait par email (identifiant unique et fiable) — le nom ne sert plus qu'à
+  // préremplir la fiche auto-créée la toute première fois qu'un compte apparaît.
+  function simulateLogin(){
+    const email = toLowerEmail(document.getElementById('simEmail').value);
+    if (!email) { alert("L'email de connexion est obligatoire pour cette simulation."); return; }
+    const found = medecins.find(m => m.email === email);
+
+    const box = document.getElementById('simResult');
+    box.classList.add('show');
+
+    if (!found) {
+      const typedName = document.getElementById('simName').value.trim();
+      const parts = typedName.split(/\s+/).filter(Boolean);
+      const nom = toUpperName(parts.pop() || email.split('@')[0]);
+      const prenoms = toTitleCase(parts.join(' '));
+      const expiration = new Date(TODAY.getTime() + 30 * 86400000).toISOString().slice(0,10);
+      medecins.unshift({
+        nom, prenoms, email, otpEmail:false, telephone:'', whatsapp:'', specialites:[], cliniques:[], ordre:'',
+        enrollement: TODAY.toISOString().slice(0,10),
+        etat:'ACTIF', forfaitType:'MENSUEL', montant:25000, volume:0, expiration, auto:true,
+      });
+      renderTable();
+      box.className = 'sim-result show created';
+      box.innerHTML = `<b>Email non trouvé</b> — ligne créée automatiquement pour <b class="mono">${esc(email)}</b> : forfait Mensuel, 25 000 FCFA, expiration le <b>${fmtDate(expiration)}</b> (J+30). Accès autorisé immédiatement.`;
+    } else {
+      const access = computeAccess(found);
+      box.className = 'sim-result show ' + (access.granted ? 'granted' : 'denied');
+      box.innerHTML = access.granted
+        ? `<b>Trouvé</b> — ${esc(found.nom)} ${esc(found.prenoms)} (<span class="mono">${esc(found.email)}</span>) : état ${found.etat}, expire le ${fmtDate(found.expiration)}. <b>Accès autorisé.</b>${found.otpEmail ? ' Un code OTP lui est envoyé par email avant l\'accès.' : ''}`
+        : `<b>Trouvé</b> — ${esc(found.nom)} ${esc(found.prenoms)} (<span class="mono">${esc(found.email)}</span>) : ${esc(access.reason)}. <b>Accès refusé — menu grisé.</b>`;
+    }
+  }
+
+  renderTable();
+</script>
