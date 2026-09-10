@@ -13,7 +13,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 
 from config import get_settings
-from vidal_client import parse_products_search, vidal_get
+from vidal_client import parse_product_detail, parse_products_search, vidal_get
 
 router = APIRouter(prefix="/vidal", tags=["VIDAL Sécurisation"])
 
@@ -32,3 +32,13 @@ async def search_products(q: str = Query(..., min_length=2, max_length=100)):
     Posologie, Fiche produit) par de vrais résultats VIDAL."""
     xml_text = await vidal_get("/products", {"q": q})
     return {"query": q, "results": parse_products_search(xml_text)}
+
+
+@router.get("/products/{product_id}/detail", dependencies=[Depends(_require_proxy_secret)])
+async def product_detail(product_id: str):
+    """Voies d'administration et documents disponibles pour un produit — un
+    seul appel VIDAL agrégé (GET /product/{id}?aggregate=ROUTE&aggregate=DOCUMENTS),
+    confirmé par test réel. Alimente le card 2 de Fiche produit VIDAL et les
+    listes déroulantes de voie de Sécurisation."""
+    xml_text = await vidal_get(f"/product/{product_id}", {"aggregate": ["ROUTE", "DOCUMENTS"]})
+    return parse_product_detail(xml_text)
