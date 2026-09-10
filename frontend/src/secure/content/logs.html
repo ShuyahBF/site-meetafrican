@@ -107,6 +107,32 @@
     <span>Chaque appel au serveur VIDAL est tracé avec l'identité du médecin, la route appelée, l'horodatage, l'adresse IP et le terminal d'origine. <b>L'adresse MAC n'est pas capturable</b> depuis un navigateur web, quel que soit le site — aucune API JavaScript n'y donne accès (restriction imposée par les navigateurs eux-mêmes, pour la vie privée) ; seule une solution installée sur le poste (agent réseau, VPN d'entreprise) pourrait la fournir, hors périmètre d'une application web. Affichée ci-dessous à titre indicatif pour documenter cette limite plutôt que de l'omettre silencieusement.</span>
   </div>
 
+  <div class="card" id="syncLogCard">
+    <div class="card-head">
+      <h2>Synchronisations du référentiel produits</h2>
+      <button class="btn btn-ghost btn-sm" onclick="loadSyncLog()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
+        Actualiser
+      </button>
+    </div>
+    <div class="card-body">
+      <p style="font-size:11px;color:var(--text-mute);margin:0 0 10px">
+        Données réelles (pas simulées) — journal des exécutions du job de synchronisation du
+        cache produits VIDAL (planifiées ou manuelles, type fixe <code class="mono">sync_refer</code>).
+        Configurable dans Admin (médecins) → « Référentiel produits VIDAL — cache ».
+      </p>
+      <div class="table-wrap">
+        <table class="medtable">
+          <thead>
+            <tr><th>Date / Heure</th><th>Type</th><th>Déclenché par</th><th>Résultat</th><th>Statut</th></tr>
+          </thead>
+          <tbody id="syncLogBody"></tbody>
+        </table>
+      </div>
+      <p style="margin-top:8px;font-size:11px;color:var(--text-mute)" id="syncLogCount"></p>
+    </div>
+  </div>
+
   <div class="card" id="apiLogCard">
     <div class="card-head">
       <h2>Journal des appels API VIDAL</h2>
@@ -172,6 +198,41 @@
     { ts:'2026-09-02T09:20:11', medecin:'SAWADOGO Aïcha', email:'aicha.sawadogo@exemple.bf', route:'/rest/api/alerts/full', ref:'RX-2026-482887', ip:'154.66.9.214', terminal:'Safari 17 · iOS 17 · Mobile', status:'OK' },
     { ts:'2026-09-01T18:07:44', medecin:'KABORÉ Tiraogo', email:'tiraogo.kabore@exemple.bf', route:'/rest/api/alerts/full', ref:'RX-2026-482701', ip:'41.202.12.87', terminal:'Chrome 129 · Windows 11 · Bureau', status:'OK' },
   ];
+
+  // --- Synchronisations du référentiel produits — données RÉELLES (backend réel) ---
+  const VIDAL_API = window.__VIDAL_API__ || null;
+  async function vidalFetch(path){
+    if (!VIDAL_API || !VIDAL_API.baseUrl) throw new Error('Backend VIDAL non configuré dans cet environnement.');
+    const r = await fetch(`${VIDAL_API.baseUrl}${path}`, { headers: { 'X-Vidal-Proxy-Secret': VIDAL_API.proxySecret || '' } });
+    if (!r.ok){
+      let detail = '';
+      try { detail = (await r.json()).detail || ''; } catch(e){}
+      throw new Error(detail || `Erreur VIDAL (${r.status})`);
+    }
+    return r.json();
+  }
+  const SYNC_STATUS_BADGE = { success:'ok', partial:'crit', error:'crit', skipped_already_running:'crit' };
+  async function loadSyncLog(){
+    const body = document.getElementById('syncLogBody');
+    body.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-mute);padding:16px">Chargement…</td></tr>`;
+    try {
+      const data = await vidalFetch('/vidal/admin/sync-log?limit=20');
+      const entries = data.entries || [];
+      body.innerHTML = entries.length ? entries.map(e => `
+        <tr>
+          <td class="mono">${fmtDateTime(e.ts)}</td>
+          <td class="mono">${esc(e.type)}</td>
+          <td>${esc(e.triggered_by === 'cron' ? 'Planifiée' : 'Manuelle (admin)')}</td>
+          <td>${esc(e.result || '—')}</td>
+          <td><span class="badge ${SYNC_STATUS_BADGE[e.status] || 'crit'}">${esc(e.status)}</span></td>
+        </tr>
+      `).join('') : `<tr><td colspan="5" style="text-align:center;color:var(--text-mute);padding:20px">Aucune synchronisation enregistrée pour l'instant.</td></tr>`;
+      document.getElementById('syncLogCount').textContent = `${entries.length} exécution${entries.length > 1 ? 's' : ''} affichée${entries.length > 1 ? 's' : ''} (20 plus récentes).`;
+    } catch (err) {
+      body.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--crit-text);padding:20px">${esc(err.message)}</td></tr>`;
+    }
+  }
+  loadSyncLog();
 
   function renderApiLog(){
     const from = document.getElementById('logFrom').value;

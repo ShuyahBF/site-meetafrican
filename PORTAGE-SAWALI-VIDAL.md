@@ -331,3 +331,86 @@ Vite + Playwright, credentials réels) : saisie "doliprane" → champ affiche
 la recherche", document RCP externe (confirmé `X-Frame-Options: SAMEORIGIN`
 par `curl` direct) chargé en iframe via le proxy backend en ~4s (PDF de
 1,6 Mo) — pas de lien externe nécessaire, pas d'erreur JS.
+
+## Cache local du référentiel produits VIDAL (10/09/2026)
+
+**Problème adressé** : chaque frappe clavier dans la recherche produit
+déclenchait un aller-retour réseau réel vers `api.vidal.fr`. Nouveau
+mécanisme optionnel (activable par l'admin) qui synchronise localement
+tout le catalogue VIDAL, pour une recherche instantanée sans appel réseau
+à chaque frappe.
+
+**Chiffres réels confirmés par test** (pas une estimation) :
+- VIDAL a **15 680 produits** au total (`GET /rest/api/products?q=` avec
+  `q` vide liste tout le catalogue, paginé 25/page — confirmé par appel
+  réel, pas documenté explicitement comme tel dans le manuel).
+- Un sync complet = **628 appels API** (15 680 ÷ 25).
+- Décision utilisateur : ce job est une opération admin/développeur, **pas
+  soumise au quota journalier anti-abus** (`VIDAL_QUOTA_PER_DAY`, qui
+  protège contre des utilisateurs finaux, pas une synchronisation
+  explicitement déclenchée) — `vidal_get(..., bypass_quota=True)`.
+- Durée réelle mesurée : **975s (~16 min)** en ouvrant une connexion HTTP
+  par appel, réduite à **541s (~9 min)** en réutilisant une seule
+  connexion `httpx.AsyncClient` sur les 628 appels (-45%) — les deux
+  runs ont synchronisé exactement 15 680/15 680 produits, 0 erreur.
+
+**Architecture ajoutée** :
+- `backend/vidal_sync.py` (nouveau) — `run_referentiel_sync()` parcourt
+  tout le catalogue et upsert chaque produit dans la collection Mongo
+  `vidal_cache_referentiel_produits` (nom corrigé — l'orthographe demandée
+  "vidal_cacherefentiel_produits" semblait être une coquille pour
+  "référentiel"). `sync_scheduler_loop()`, démarrée au boot du serveur
+  (`server.py`), vérifie 1×/heure si la fréquence configurée par l'admin
+  est écoulée depuis la dernière synchronisation et relance si besoin —
+  pas de vrai service cron externe (pas nécessaire vu le volume, et ça
+  évite de dépendre d'un service Render supplémentaire pour une fréquence
+  reconfigurable dynamiquement, pas figée au déploiement).
+- Config admin (`vidal_sync_config`, doc singleton) : `mode`
+  (`temps_reel` par défaut | `cache`), `frequency_days` (0 = désactivée,
+  sinon nombre de jours entre synchronisations — présets jour/semaine/
+  mois/trimestre dans l'UI), `last_sync_at`, `sync_in_progress` (verrou
+  anti-double-exécution).
+- `GET/PUT /api/vidal/admin/sync-config`, `POST /api/vidal/admin/sync-now`
+  (déclenchement manuel, tâche de fond — répond immédiatement, résultat
+  visible ensuite dans le journal), `GET /api/vidal/admin/sync-log`.
+- `GET /api/vidal/products/search` lit désormais la config : en mode
+  `cache` **et** si une synchronisation a déjà eu lieu au moins une fois,
+  recherche dans `vidal_cache_referentiel_produits` (regex insensible à la
+  casse sur `name`, jamais d'appel VIDAL) ; sinon (mode `temps_reel`, ou
+  `cache` mais jamais synchronisé) — comportement actuel inchangé. **Une
+  fois un produit sélectionné, `/products/{id}/detail` reste toujours en
+  temps réel**, quel que soit le mode — seule l'étape de recherche est
+  concernée, comme demandé.
+- Chaque exécution (planifiée ou manuelle) journalisée dans
+  `vidal_sync_log` : `ts`, `type` (fixe `"sync_refer"`), `status`
+  (`success`/`partial`/`error`/`skipped_already_running`), `result`
+  (résumé texte), `products_synced`, `api_calls`, `duration_seconds`,
+  `triggered_by` (`cron`|`manuel`).
+
+**Frontend** :
+- `admin_medecins_vidal.html` — nouvelle carte « Référentiel produits
+  VIDAL — cache » : sélecteur de mode, sélecteur de fréquence (présets),
+  bouton « Synchroniser maintenant », affichage de la dernière
+  synchronisation, polling automatique (5s) pendant qu'une synchronisation
+  est en cours.
+- `journal_logs_vidal.html` — nouvelle carte « Synchronisations du
+  référentiel produits » : **données réelles** (pas simulées comme le
+  reste de cette page), tableau des exécutions `sync_refer` récentes
+  (Date/Heure, Type, Déclenché par, Résultat, Statut) via
+  `GET /vidal/admin/sync-log`.
+
+**Validé en conditions réelles de bout en bout** : sync complet réel
+(15 680/15 680 produits, 628 appels, journalisé avec succès), recherche
+"doli" en mode cache → réponse en 110ms (`source: "cache"` dans la
+réponse) avec de vrais produits (CODOLIPRANE, DOLIPRANE…), UI Admin
+testée en conditions réelles pendant qu'une synchronisation était
+effectivement en cours (statut "Synchronisation en cours…", bouton
+désactivé), changement de mode/fréquence depuis l'UI persisté côté
+backend, journal réel affiché correctement sur la page Suivi des logs.
+
+**Point d'attention pour le portage** : sur un premier déploiement (jamais
+synchronisé), le scheduler déclenche un sync complet dès le démarrage du
+serveur (fréquence par défaut 7 jours, `last_sync_at` null = "due"
+immédiatement) — comportement voulu pour peupler le cache sans action
+admin, mais à confirmer explicitement lors du portage vers Sawali si ce
+n'est pas le comportement désiré là-bas.

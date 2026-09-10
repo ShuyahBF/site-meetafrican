@@ -145,6 +145,44 @@
     <span>Table configurable <b>uniquement par l'administrateur</b> — les médecins n'y ont pas accès, y compris pour leur propre fiche. Base MongoDB Atlas <code>vidal</code>, collection <code>medecins</code> (les sécurisations de prescription elles-mêmes sont dans <code>vidal.securisation</code>).</span>
   </div>
 
+  <div class="card" id="refCacheCard">
+    <div class="card-head">
+      <h2>Référentiel produits VIDAL — cache</h2>
+    </div>
+    <div class="card-body">
+      <p style="font-size:11.5px;color:var(--text-mute);margin:0 0 12px">
+        Réduit les allers-retours réseau vers VIDAL à chaque frappe dans la recherche produit
+        (Fiche produit, Sécurisation) : une copie locale du référentiel complet (15 680 produits,
+        confirmé par appel réel) est synchronisée périodiquement dans <code>vidal_cache_referentiel_produits</code>.
+        Une fois un produit sélectionné, voies et documents restent <b>toujours en temps réel</b>,
+        quel que soit le mode choisi ici — seule l'étape de recherche est concernée.
+      </p>
+      <div class="grid2">
+        <div class="field">
+          <label>Mode de recherche</label>
+          <select class="control" id="refMode" onchange="saveRefConfig()">
+            <option value="temps_reel">Temps réel (comportement actuel)</option>
+            <option value="cache">Cache local</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Fréquence de synchronisation automatique</label>
+          <select class="control" id="refFrequency" onchange="saveRefConfig()">
+            <option value="0">Désactivée (synchronisation manuelle uniquement)</option>
+            <option value="1">Chaque jour</option>
+            <option value="7">Chaque semaine</option>
+            <option value="30">Chaque mois</option>
+            <option value="90">Chaque trimestre</option>
+          </select>
+        </div>
+      </div>
+      <div class="sim-row" style="align-items:center;margin-top:2px">
+        <button class="btn btn-primary" onclick="triggerSyncNow()" id="refSyncBtn">Synchroniser maintenant</button>
+        <span id="refStatus" style="font-size:11.5px;color:var(--text-mute)"></span>
+      </div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-head">
       <h2>Règle d'accès au module VIDAL</h2>
@@ -266,6 +304,79 @@
 
 <script>
   const TODAY = new Date('2026-09-10');
+
+  // --- Référentiel produits VIDAL — cache (données réelles, backend réel) ---
+  const VIDAL_API = window.__VIDAL_API__ || null;
+  async function vidalFetch(path, options){
+    if (!VIDAL_API || !VIDAL_API.baseUrl) throw new Error('Backend VIDAL non configuré dans cet environnement.');
+    const r = await fetch(`${VIDAL_API.baseUrl}${path}`, {
+      ...options,
+      headers: { 'X-Vidal-Proxy-Secret': VIDAL_API.proxySecret || '', 'Content-Type': 'application/json', ...(options?.headers || {}) },
+    });
+    if (!r.ok){
+      let detail = '';
+      try { detail = (await r.json()).detail || ''; } catch(e){}
+      throw new Error(detail || `Erreur VIDAL (${r.status})`);
+    }
+    return r.json();
+  }
+  function fmtDateTimeRef(iso){
+    return iso ? new Date(iso).toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'jamais';
+  }
+
+  let refPollTimer = null;
+  async function loadRefConfig(){
+    try {
+      const config = await vidalFetch('/vidal/admin/sync-config');
+      document.getElementById('refMode').value = config.mode;
+      document.getElementById('refFrequency').value = String(config.frequency_days ?? 0);
+      renderRefStatus(config);
+      if (config.sync_in_progress && !refPollTimer){
+        refPollTimer = setInterval(loadRefConfig, 5000);
+      } else if (!config.sync_in_progress && refPollTimer){
+        clearInterval(refPollTimer);
+        refPollTimer = null;
+      }
+    } catch (err) {
+      document.getElementById('refStatus').textContent = `Erreur : ${err.message}`;
+    }
+  }
+  function renderRefStatus(config){
+    const el = document.getElementById('refStatus');
+    const btn = document.getElementById('refSyncBtn');
+    if (config.sync_in_progress){
+      el.textContent = 'Synchronisation en cours…';
+      btn.disabled = true;
+    } else {
+      el.textContent = `Dernière synchronisation : ${fmtDateTimeRef(config.last_sync_at)}`;
+      btn.disabled = false;
+    }
+  }
+  async function saveRefConfig(){
+    try {
+      const config = await vidalFetch('/vidal/admin/sync-config', {
+        method: 'PUT',
+        body: JSON.stringify({
+          mode: document.getElementById('refMode').value,
+          frequency_days: parseInt(document.getElementById('refFrequency').value, 10),
+        }),
+      });
+      renderRefStatus(config);
+    } catch (err) {
+      document.getElementById('refStatus').textContent = `Erreur : ${err.message}`;
+    }
+  }
+  async function triggerSyncNow(){
+    try {
+      await vidalFetch('/vidal/admin/sync-now', { method: 'POST' });
+      document.getElementById('refStatus').textContent = 'Synchronisation lancée (quelques minutes, ~628 appels VIDAL)…';
+      document.getElementById('refSyncBtn').disabled = true;
+      if (!refPollTimer) refPollTimer = setInterval(loadRefConfig, 5000);
+    } catch (err) {
+      document.getElementById('refStatus').textContent = `Erreur : ${err.message}`;
+    }
+  }
+  loadRefConfig();
 
   let medecins = [
     { nom:'KABORÉ', prenoms:'Tiraogo', email:'tiraogo.kabore@exemple.bf', otpEmail:true,

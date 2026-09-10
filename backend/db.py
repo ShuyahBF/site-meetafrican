@@ -61,3 +61,8 @@ async def ensure_indexes() -> None:
     await db.vidal_api_cache.create_index("key", unique=True)
     await db.vidal_api_cache.create_index("expires_at", expireAfterSeconds=0)
     await db.vidal_api_quota.create_index("day", unique=True)
+    await db.vidal_cache_referentiel_produits.create_index("product_id", unique=True)
+    await db.vidal_cache_referentiel_produits.create_index("name")
+    await db.vidal_sync_config.create_index("id", unique=True)
+    await db.vidal_sync_log.create_index([("ts", -1)])
+    await db.vidal_sync_log.create_index("type")
