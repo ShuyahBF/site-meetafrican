@@ -228,18 +228,22 @@
       <div class="grid2" style="margin-bottom:10px">
         <div class="field"><label>Date de naissance</label><input class="control" data-k="dob" type="date" value="1986-09-10"></div>
         <div class="field"><label>Genre</label>
+          <!-- Libellés en français pour le médecin ; value="" reste l'énumération VIDAL
+               exacte (MALE/FEMALE/UNKNOWN), transmise telle quelle dans la requête. -->
           <select class="control" data-k="gender">
-            <option value="MALE">MALE</option>
-            <option value="FEMALE">FEMALE</option>
-            <option value="UNKNOWN">UNKNOWN</option>
+            <option value="MALE">Homme</option>
+            <option value="FEMALE">Femme</option>
+            <option value="UNKNOWN">Indéterminé</option>
           </select>
         </div>
       </div>
       <div class="field" style="margin-bottom:10px"><label>Insuffisance hépatique</label>
+        <!-- Idem : libellés en français, value="" reste l'énumération VIDAL exacte
+             (NONE/MODERATE/SEVERE — pas de valeur MILD, voir manuel d'intégration). -->
         <select class="control" data-k="hepatic">
-          <option value="NONE">NONE</option>
-          <option value="MODERATE">MODERATE</option>
-          <option value="SEVERE">SEVERE</option>
+          <option value="NONE">Aucune</option>
+          <option value="MODERATE">Modérée</option>
+          <option value="SEVERE">Sévère</option>
         </select>
       </div>
       <div class="grid2" style="margin-bottom:10px">
