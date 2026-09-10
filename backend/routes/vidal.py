@@ -10,12 +10,19 @@ quota VIDAL réel.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from urllib.parse import urlparse
+
+import httpx
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 
 from config import get_settings
 from vidal_client import parse_product_detail, parse_products_search, vidal_get
 
 router = APIRouter(prefix="/vidal", tags=["VIDAL Sécurisation"])
+
+# Hôtes VIDAL publics autorisés pour /documents/proxy — jamais un proxy ouvert :
+# seuls ces domaines connus, vus dans les URLs renvoyées par /product/{id}/detail.
+_ALLOWED_DOCUMENT_HOSTS = {"api.vidal.fr", "document-rcp.vidal.fr"}
 
 
 def _require_proxy_secret(x_vidal_proxy_secret: str | None = Header(default=None)) -> None:
@@ -42,3 +49,32 @@ async def product_detail(product_id: str):
     listes déroulantes de voie de Sécurisation."""
     xml_text = await vidal_get(f"/product/{product_id}", {"aggregate": ["ROUTE", "DOCUMENTS"]})
     return parse_product_detail(xml_text)
+
+
+@router.get("/documents/proxy", dependencies=[Depends(_require_proxy_secret)])
+async def proxy_document(url: str = Query(..., min_length=1)):
+    """Relaye un document VIDAL public (PDF notamment) depuis notre propre origine.
+
+    Certains documents (RCP sur document-rcp.vidal.fr) renvoient un en-tête
+    X-Frame-Options: SAMEORIGIN — confirmé par test réel — qui empêche de les
+    charger en iframe directement depuis leur URL VIDAL. Ce sont des URLs
+    publiques (aucun app_id/app_key requis, donc aucun quota consommé ici) ;
+    on les relaie simplement pour qu'elles s'affichent dans la page plutôt
+    que de forcer un lien externe. Liste d'hôtes limitée pour ne jamais
+    devenir un proxy ouvert vers un domaine arbitraire."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or parsed.hostname not in _ALLOWED_DOCUMENT_HOSTS:
+        raise HTTPException(status_code=400, detail="URL de document non autorisée")
+
+    try:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+            r = await client.get(url)
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Délai dépassé en récupérant le document VIDAL")
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail=f"Erreur en récupérant le document : {str(exc)[:200]}") from exc
+
+    if r.status_code >= 400:
+        raise HTTPException(status_code=502, detail=f"Document VIDAL introuvable ({r.status_code})")
+
+    return Response(content=r.content, media_type=r.headers.get("content-type", "application/octet-stream"))
