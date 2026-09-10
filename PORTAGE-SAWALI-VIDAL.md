@@ -52,3 +52,25 @@ tout est simulé côté client.
   `posology-request` — les noms de champs et types d'énumération utilisés
   dans ce prototype sont vérifiés ligne à ligne contre le manuel, pas
   inventés.
+- **Ordonnances PDF — deux versions distinctes, pas une seule** :
+  - Celle imprimée/téléchargée par le médecin porte le **nom du patient en
+    clair** (nécessaire à la pharmacie) et n'est jamais envoyée où que ce
+    soit depuis le navigateur du médecin.
+  - Celle archivée côté serveur (`ordonnance_pdf_ref`, stockée dans
+    **Cloudflare R2**, bucket **dédié VIDAL** — séparé du bucket
+    `meetafrican-documents` déjà utilisé sur cette infra) doit être une
+    régénération avec **identité anonymisée** (ID patient ou nom masqué,
+    même convention que l'historique) : c'est cette version que verrait un
+    tiers scannant le QR de vérification, jamais le nom complet.
+
+## État réel de l'infrastructure MongoDB Atlas (vérifié le 10/09/2026)
+
+Le cluster `Cluster0` (celui déjà utilisé par `site_meetafrican`, `albarka`,
+`bfmobility`) est **le cluster réel de production/dev partagé** — pas une
+maquette. La base `vidal` y existe déjà et a été complétée à cette date :
+les 6 collections documentées ci-dessus (`medecins`, `api_calls`,
+`patients`, `patient_access_requests`, `patient_treatments`,
+`securisation`) sont toutes créées (vides, sans données factices — seule
+`securisation` préexistait, déjà vide). Le bucket Cloudflare R2 dédié
+VIDAL, lui, **reste à créer** — aucun accès Cloudflare disponible depuis
+cette session pour le faire.
