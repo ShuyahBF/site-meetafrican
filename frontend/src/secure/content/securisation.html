@@ -1,0 +1,2069 @@
+<title>Sécurisation Prescription</title>
+<style>
+  :root{
+    --bg:#eef1f6;
+    --surface:#ffffff;
+    --surface-2:#f6f8fb;
+    --surface-3:#eef0f5;
+    --border:#e1e6ef;
+    --border-soft:#eaedf3;
+    --text:#101827;
+    --text-soft:#48526b;
+    --text-mute:#8790a3;
+    --navy:#0e1f3d;
+    --accent:#dc2626;
+    --accent-dark:#b91c1c;
+    --accent-tint:#fdecec;
+    --accent-tint-2:#fbdede;
+    --focus:#dc2626;
+    --input-text:#0a58ca;
+    --accent-deep:#9c1616;
+    --crit-bg:#fdecec; --crit-text:#a01818; --crit-ring:#f4c6c6;
+    --warn-bg:#fff6e6; --warn-text:#8a5a06; --warn-ring:#f2ddab;
+    --info-bg:#eaf4fb; --info-text:#0a5a8c; --info-ring:#bfe0f2;
+    --ok-bg:#e9f7f0;   --ok-text:#0d6b47;  --ok-ring:#bfe6d2;
+    --code-bg:#0e1626; --code-text:#d7e0f5; --code-tag:#7fb3f5; --code-str:#a8e0b0; --code-mute:#7686a3;
+    --shadow-card:0 1px 2px rgba(16,24,39,.05);
+    --shadow-pop:0 16px 40px -14px rgba(16,24,39,.28);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0c1220; --surface:#141b2c; --surface-2:#182036; --surface-3:#1d2740;
+      --border:#26314c; --border-soft:#212a42; --text:#e8ecf6; --text-soft:#aab2c8;
+      --text-mute:#77809a; --navy:#c9d6f2; --accent:#f0554f; --accent-dark:#ff6b64;
+      --accent-tint:#2a1518; --accent-tint-2:#331a1c;
+      --input-text:#4a8ee0;
+      --accent-deep:#c94a44;
+      --crit-bg:#2a1517; --crit-text:#ff9b93; --crit-ring:#4d2226;
+      --warn-bg:#2b230f; --warn-text:#f0c46a; --warn-ring:#4a3a15;
+      --info-bg:#0f2233; --info-text:#7fc4ea; --info-ring:#204a67;
+      --ok-bg:#0f2a20;   --ok-text:#6fd6a8;  --ok-ring:#1d4a37;
+      --code-bg:#0a0f1c; --code-text:#d7e0f5; --code-tag:#7fb3f5; --code-str:#a8e0b0; --code-mute:#5c6b8a;
+      --shadow-card:0 1px 2px rgba(0,0,0,.4); --shadow-pop:0 16px 40px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0c1220; --surface:#141b2c; --surface-2:#182036; --surface-3:#1d2740;
+    --border:#26314c; --border-soft:#212a42; --text:#e8ecf6; --text-soft:#aab2c8;
+    --text-mute:#77809a; --navy:#c9d6f2; --accent:#f0554f; --accent-dark:#ff6b64;
+    --accent-tint:#2a1518; --accent-tint-2:#331a1c;
+    --input-text:#4a8ee0;
+    --accent-deep:#c94a44;
+    --crit-bg:#2a1517; --crit-text:#ff9b93; --crit-ring:#4d2226;
+    --warn-bg:#2b230f; --warn-text:#f0c46a; --warn-ring:#4a3a15;
+    --info-bg:#0f2233; --info-text:#7fc4ea; --info-ring:#204a67;
+    --ok-bg:#0f2a20;   --ok-text:#6fd6a8;  --ok-ring:#1d4a37;
+    --code-bg:#0a0f1c; --code-text:#d7e0f5; --code-tag:#7fb3f5; --code-str:#a8e0b0; --code-mute:#5c6b8a;
+    --shadow-card:0 1px 2px rgba(0,0,0,.4); --shadow-pop:0 16px 40px -14px rgba(0,0,0,.6);
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:96px;
+  }
+  h1,h2,h3,.display{ font-family:"Space Grotesk","Inter",sans-serif; text-wrap:balance; }
+  ::selection{ background:var(--accent-tint-2); }
+  .mono{ font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-variant-numeric:tabular-nums; }
+
+  .wrap{ max-width:640px; margin:0 auto; padding:20px 16px 24px; }
+  .two-col{ display:block; }
+  /* Tablette/desktop : la page exploite la largeur en plus, et les cartes-tuiles compactes
+     (Statistiques, Résultat) passent côte à côte plutôt que de rester empilées inutilement. */
+  @media (min-width:900px){
+    .wrap{ max-width:1000px; }
+    .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
+    .two-col > .card{ margin-bottom:0; }
+    .ctabar{ padding:10px max(16px, calc((100% - 1000px)/2)); }
+  }
+
+  /* La fiche est longue : on garde le titre, l'accès à l'historique et l'identité du
+     patient visibles en permanence pendant le défilement, jusqu'à la fin de cette zone. */
+  .sticky-header{
+    position:sticky; top:0; z-index:25; background:var(--bg);
+    padding-bottom:10px; margin-bottom:4px; border-bottom:1px solid var(--border-soft);
+  }
+  .historique-wrap{ display:flex; flex-direction:column; align-items:flex-end; gap:4px; margin-left:auto; }
+  .analysis-badge-top{
+    font-size:10px; font-weight:800; letter-spacing:.02em; color:var(--navy);
+    background:var(--surface-3); border-radius:999px; padding:2px 8px; white-space:nowrap;
+  }
+
+  .topbar{ display:flex; align-items:center; gap:12px; padding:14px 4px 8px; }
+  .topbar .icon{
+    width:40px; height:40px; border-radius:12px; flex:none;
+    background:var(--accent-tint); color:var(--accent-dark);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .topbar h1{ font-size:18px; font-weight:700; margin:0; color:var(--navy); }
+  .topbar p{ margin:2px 0 0; font-size:12.5px; color:var(--text-mute); }
+
+  .identity-bar{ display:flex; flex-wrap:wrap; align-items:stretch; gap:8px; margin:0 0 6px; }
+  .identity-bar .control{ flex:1 1 160px; }
+  .reg-btn{
+    display:inline-flex; align-items:center; gap:6px; border-radius:10px; font-size:12.5px; font-weight:700;
+    padding:0 14px; border:1px solid var(--border); background:var(--surface); color:var(--text-soft);
+    cursor:pointer; flex:none; white-space:nowrap; font-family:inherit;
+  }
+  .reg-btn.on{ background:var(--ok-bg); border-color:var(--ok-ring); color:var(--ok-text); }
+  .reg-status{ font-size:11px; margin:0 0 14px; line-height:1.5; }
+  .reg-status.off{ color:var(--text-mute); }
+  .reg-status.on{ color:var(--ok-text); }
+  .reg-status .mono{ font-weight:700; }
+
+  .roledemo{ display:flex; align-items:center; gap:8px; margin:0 0 10px; }
+  .roledemo span{ font-size:10.5px; font-weight:700; color:var(--text-mute); text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; }
+  .roledemo .pillgroup{ flex:1; }
+  .roledemo .pill-opt{ padding:7px 8px; font-size:12px; }
+
+  .share-toggle{ display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-soft); margin:0 0 14px; cursor:pointer; }
+  .share-toggle input{ width:16px; height:16px; accent-color:var(--ok-text); flex:none; }
+
+  .masked-box{
+    display:flex; align-items:center; gap:10px; border:1px dashed var(--border); border-radius:10px;
+    padding:10px 12px; margin:0 0 8px; background:var(--surface-2);
+  }
+  .masked-box .mname{ flex:1; font-weight:700; color:var(--text-mute); letter-spacing:.04em; }
+  .masked-box svg{ flex:none; color:var(--text-mute); }
+  .otp-row{ display:flex; gap:8px; margin:0 0 8px; }
+  .otp-row input{ flex:1; text-align:center; letter-spacing:.3em; font-family:"JetBrains Mono",monospace; font-size:16px; }
+  .otp-row .btn-ghost{ padding:0 16px; }
+  .unlocked-box{
+    display:flex; align-items:center; gap:8px; border:1px solid var(--ok-ring); background:var(--ok-bg);
+    border-radius:10px; padding:10px 12px; margin:0 0 14px; font-size:12.5px; color:var(--ok-text); font-weight:600;
+  }
+  .shared-box{
+    display:flex; align-items:center; gap:8px; border:1px solid var(--info-ring); background:var(--info-bg);
+    border-radius:10px; padding:10px 12px; margin:0 0 14px; font-size:12.5px; color:var(--info-text); font-weight:600;
+  }
+
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(10,14,24,.55); z-index:50;
+    align-items:flex-start; justify-content:center; padding:40px 16px;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal-panel{
+    width:100%; max-width:520px; background:var(--surface); border-radius:16px; box-shadow:var(--shadow-pop);
+    max-height:calc(100vh - 80px); display:flex; flex-direction:column; overflow:hidden;
+  }
+  .modal-head{ display:flex; align-items:center; gap:10px; padding:16px 18px; border-bottom:1px solid var(--border-soft); }
+  .modal-head h3{ font-size:15px; font-weight:700; margin:0; color:var(--navy); flex:1; }
+  .modal-close{ border:none; background:var(--surface-3); color:var(--text-soft); width:28px; height:28px; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .modal-body{ padding:8px 18px 18px; overflow-y:auto; }
+  .hist-row{
+    display:flex; align-items:flex-start; gap:12px; padding:12px 4px; border-bottom:1px solid var(--border-soft);
+  }
+  .hist-load{ margin-top:2px; }
+  .hist-row:last-child{ border-bottom:none; }
+  .hist-num{
+    width:auto; min-width:82px; border-radius:10px; background:var(--surface-3); color:var(--navy);
+    flex:none; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:2px; padding:7px 8px; text-align:center; line-height:1.25;
+  }
+  .hist-num .pid{ font-family:"JetBrains Mono",monospace; font-weight:700; font-size:10.5px; }
+  .hist-num .pid.anon{ font-family:"Inter",sans-serif; font-style:italic; color:var(--text-mute); font-weight:600; }
+  .hist-num .pseq{ font-family:"Space Grotesk",sans-serif; font-size:9px; font-weight:700; color:var(--text-mute); text-transform:uppercase; letter-spacing:.03em; }
+  .hist-main{ flex:1; min-width:0; }
+  .hist-title{ font-size:13px; font-weight:700; color:var(--text); }
+  .hist-meta{ font-size:11px; color:var(--text-mute); margin-top:2px; }
+  .hist-load{
+    flex:none; border:1px solid var(--border); background:var(--surface); color:var(--text-soft);
+    border-radius:8px; padding:7px 12px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;
+  }
+  .hist-load:hover{ border-color:var(--accent); color:var(--accent-dark); }
+
+  .status-dot{ width:10px; height:10px; border-radius:50%; flex:none; display:inline-block; margin-right:6px; vertical-align:middle; }
+  .status-dot.alerted{ background:var(--accent); box-shadow:0 0 0 3px var(--accent-tint); }
+  .status-dot.corrected{ background:#2563eb; box-shadow:0 0 0 3px rgba(37,99,235,.16); }
+  .status-dot.clean{ background:var(--text-mute); box-shadow:0 0 0 3px var(--surface-3); }
+  .status-label{ font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; margin-left:6px; padding:2px 6px; border-radius:6px; vertical-align:middle; }
+  .status-label.alerted{ background:var(--crit-bg); color:var(--crit-text); }
+  .status-label.corrected{ background:rgba(37,99,235,.12); color:#2563eb; }
+  .status-label.clean{ background:var(--surface-3); color:var(--text-mute); }
+  .trace-toggle{ border:none; background:transparent; color:var(--text-mute); font-size:10.5px; font-weight:700; cursor:pointer; padding:4px 0; text-decoration:underline; font-family:inherit; }
+  .trace-panel{ margin-top:4px; }
+  .trace-panel .readout{ font-size:10.5px; line-height:1.7; }
+
+  .srcbanner{
+    display:flex; align-items:flex-start; gap:8px; font-size:11.5px; line-height:1.5;
+    color:var(--ok-text); background:var(--ok-bg); border:1px solid var(--ok-ring);
+    border-radius:10px; padding:9px 12px; margin:0 0 14px;
+  }
+  .srcbanner svg{ flex:none; margin-top:1px; }
+
+  .admin-toggle{ display:flex; align-items:center; gap:7px; margin-left:auto; flex:none; }
+  .admin-toggle span{ font-size:10.5px; font-weight:700; color:var(--text-mute); text-transform:uppercase; letter-spacing:.03em; }
+  .switch{ position:relative; width:34px; height:20px; border-radius:999px; background:var(--surface-3); border:1px solid var(--border); cursor:pointer; flex:none; }
+  .switch .knob{ position:absolute; top:1px; left:1px; width:16px; height:16px; border-radius:50%; background:var(--text-mute); transition:transform .15s ease, background .15s ease; }
+  .switch.on{ background:var(--navy); border-color:var(--navy); }
+  .switch.on .knob{ transform:translateX(14px); background:#fff; }
+  .admin-only{ display:none; }
+  .admin-only.show{ display:block; }
+
+  .license-row{ display:flex; align-items:center; flex-wrap:wrap; gap:8px; padding:0 0 10px; }
+  .license-pill{
+    font-size:10.5px; font-weight:700; padding:4px 10px; border-radius:999px; border:1px solid;
+  }
+  .license-pill.ok{ background:var(--ok-bg); color:var(--ok-text); border-color:var(--ok-ring); }
+  .license-pill.blocked{ background:var(--crit-bg); color:var(--crit-text); border-color:var(--crit-ring); }
+
+  /* "Le menu est grisé" transposé à l'échelle de cette page (pas de vraie barre latérale ici) :
+     tout le contenu exploitable disparaît, seule la carte de blocage reste visible. */
+  #licenseGateCard{ display:none; }
+  body.vidal-locked .srcbanner,
+  body.vidal-locked .form-alert,
+  body.vidal-locked > .wrap > .card:not(#licenseGateCard),
+  body.vidal-locked .two-col,
+  body.vidal-locked .ctabar{ display:none !important; }
+  body.vidal-locked #licenseGateCard{ display:block; }
+  .admin-flag{
+    font-size:9.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
+    color:var(--navy); background:var(--surface-3); border:1px solid var(--border);
+    border-radius:6px; padding:2px 6px; margin-left:6px; vertical-align:middle;
+  }
+
+  .card{
+    background:var(--surface); border:1px solid var(--border-soft); border-radius:16px;
+    box-shadow:var(--shadow-card); margin-bottom:14px; overflow:hidden;
+  }
+  .card-head{ display:flex; align-items:center; gap:9px; padding:14px 16px 10px; }
+  .card-head .step{
+    width:22px; height:22px; border-radius:999px; background:var(--navy); color:#fff;
+    font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex:none;
+  }
+  .card-head h2{ font-size:14.5px; font-weight:700; margin:0; color:var(--navy); flex:1; }
+  .card-body{ padding:2px 16px 16px; }
+  .example-flag{
+    font-size:10px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--text-mute); background:var(--surface-2); border:1px solid var(--border-soft);
+    border-radius:999px; padding:4px 9px; white-space:nowrap;
+  }
+  .prevflag{
+    font-size:9.5px; font-weight:800; letter-spacing:.03em; text-transform:uppercase;
+    color:var(--info-text); background:var(--info-bg); border:1px solid var(--info-ring);
+    border-radius:6px; padding:2px 6px; margin-left:6px; vertical-align:middle;
+  }
+
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  @media (max-width:460px){ .grid3{ grid-template-columns:1fr 1fr; } }
+
+  .field label{ display:block; font-size:11.5px; font-weight:600; color:var(--text-soft); margin-bottom:5px; }
+  .field .req{ color:var(--accent); }
+  /* Convention : texte saisi en bleu (--input-text), toujours distinct de la couleur des
+     libellés (--text-soft ci-dessus) — pour repérer d'un coup d'oeil la donnée du nom du champ. */
+  .control{
+    width:100%; font-size:14px; font-weight:600; font-family:inherit; color:var(--input-text);
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    padding:10px 12px; min-height:42px; appearance:none;
+  }
+  .control:focus{ outline:none; border-color:var(--focus); box-shadow:0 0 0 3px var(--accent-tint); }
+  .control::placeholder{ color:var(--text-mute); font-weight:400; }
+  .control:disabled{ color:var(--text-mute); font-weight:400; }
+  select.control{
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'><path d='M5.5 7.5l4.5 4.5 4.5-4.5' stroke='%238790a3' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat; background-position:right 12px center; padding-right:32px;
+  }
+  .pillgroup{ display:flex; gap:6px; }
+  .pill-opt{
+    flex:1; text-align:center; padding:10px 8px; border-radius:10px; border:1px solid var(--border);
+    background:var(--surface); font-size:13px; font-weight:600; color:var(--text-soft); cursor:pointer;
+  }
+  .pill-opt.active{ background:var(--navy); border-color:var(--navy); color:#fff; }
+
+  .tagbox{
+    display:flex; flex-wrap:wrap; gap:6px; padding:8px; border:1px solid var(--border); border-radius:10px;
+    background:var(--surface);
+  }
+  .tag{ display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600; padding:4px 8px 4px 10px; border-radius:999px; }
+  .tag.allergy{ background:var(--crit-bg); color:var(--crit-text); }
+  .tag.patho{ background:var(--info-bg); color:var(--info-text); }
+  .tag.mol{ background:var(--warn-bg); color:var(--warn-text); }
+  .tag button{ border:none; background:transparent; color:inherit; cursor:pointer; padding:1px; line-height:0; opacity:.7; }
+  .tag-ref{ font-family:"JetBrains Mono",ui-monospace,monospace; font-size:9.5px; opacity:.65; margin-left:2px; }
+  .tag-input{ border:none; outline:none; flex:1; min-width:110px; font-size:13px; font-weight:600; padding:4px 2px; background:transparent; color:var(--input-text); }
+  .refhint{ font-size:10.5px; color:var(--text-mute); margin-top:5px; line-height:1.4; }
+
+  .typeahead-wrap{ position:relative; }
+  .typeahead-list{
+    position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:35;
+    background:var(--surface); border:1px solid var(--border); border-radius:10px;
+    box-shadow:var(--shadow-pop); max-height:230px; overflow-y:auto; display:none;
+  }
+  .typeahead-list.show{ display:block; }
+  .typeahead-item{
+    padding:9px 12px; font-size:13px; cursor:pointer; display:flex; align-items:center;
+    justify-content:space-between; gap:8px; border-bottom:1px solid var(--border-soft);
+  }
+  .typeahead-item:last-child{ border-bottom:none; }
+  .typeahead-item:hover{ background:var(--surface-2); }
+  .typeahead-item mark{ background:transparent; color:var(--accent); font-weight:800; }
+  .typeahead-badge{ font-size:8.5px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; padding:2px 6px; border-radius:6px; flex:none; white-space:nowrap; }
+  .typeahead-badge.ok{ background:var(--ok-bg); color:var(--ok-text); }
+  .typeahead-badge.ex{ background:var(--surface-3); color:var(--text-mute); }
+  .typeahead-empty{ padding:10px 12px; font-size:12px; color:var(--text-mute); }
+  .rev-note{
+    display:flex; align-items:center; gap:6px; font-size:10.5px; color:var(--info-text);
+    background:var(--info-bg); border:1px solid var(--info-ring); border-radius:8px;
+    padding:6px 10px; margin:0 0 8px; line-height:1.4;
+  }
+  .rev-note svg{ flex:none; }
+
+  .disclose{ display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--text-soft); cursor:pointer; padding:9px 0 3px; user-select:none; }
+  .disclose svg{ width:13px; height:13px; transition:transform .15s ease; color:var(--text-mute); }
+  .disclose.open svg{ transform:rotate(90deg); }
+  .disclose-body{ display:none; padding-top:8px; }
+  .disclose-body.open{ display:block; }
+
+  .hint{ font-size:11px; color:var(--text-mute); margin-top:5px; }
+
+  .computed-box{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px;
+    padding:10px 12px; margin-top:8px;
+  }
+  .computed-box .cval{ font-family:"Space Grotesk",sans-serif; font-size:16px; font-weight:700; color:var(--navy); }
+  .computed-box .clabel{ font-size:11px; color:var(--text-mute); }
+  .clairance-band{ font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:999px; }
+  .clairance-band.ok{ background:var(--ok-bg); color:var(--ok-text); }
+  .clairance-band.mild{ background:var(--warn-bg); color:var(--warn-text); }
+  .clairance-band.mod{ background:var(--warn-bg); color:var(--warn-text); }
+  .clairance-band.sev{ background:var(--crit-bg); color:var(--crit-text); }
+  .clairance-band.na{ background:var(--surface-3); color:var(--text-mute); }
+
+  .sectionsub{ font-size:11.5px; color:var(--text-mute); margin:-2px 0 10px; line-height:1.5; }
+
+  .rx-line{ border:1px solid var(--border-soft); border-radius:14px; background:var(--surface-2); padding:12px; margin-bottom:10px; }
+  .rx-line.prev{ background:var(--surface-3); }
+  .rx-line-head{ display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .rx-badge{ width:24px; height:24px; border-radius:999px; background:var(--accent); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex:none; }
+  .rx-badge.prev{ background:var(--text-mute); }
+  .rx-drug-input{ flex:1; }
+  .rx-remove{ border:none; background:transparent; color:var(--text-mute); cursor:pointer; padding:4px; }
+  .rx-remove:hover{ color:var(--accent); }
+
+  .subgrid{ background:var(--surface); border:1px solid var(--border-soft); border-radius:10px; padding:10px; margin-bottom:8px; }
+  .subgrid-title{ font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-mute); margin-bottom:8px; }
+  .interval-row{ display:grid; grid-template-columns:1fr 1fr 1fr 1fr auto; gap:8px; align-items:end; margin-bottom:6px; }
+  .interval-row .control{ padding:8px 9px; font-size:12.5px; min-height:36px; }
+  .interval-row label{ font-size:10px; }
+  .mini-x{ border:none; background:transparent; color:var(--text-mute); cursor:pointer; padding:6px 2px; }
+
+  .add-line-btn{
+    width:100%; border:1.5px dashed var(--border); background:transparent; border-radius:12px;
+    padding:12px; font-size:13.5px; font-weight:600; color:var(--text-soft); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .add-line-btn:hover{ border-color:var(--accent); color:var(--accent-dark); }
+
+  .ald-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .checkbox{ width:17px; height:17px; accent-color:var(--accent); flex:none; }
+
+  .readout{
+    font-family:"JetBrains Mono",ui-monospace,monospace; font-size:11px; color:var(--text-soft);
+    background:var(--surface); border:1px dashed var(--border); border-radius:8px; padding:8px 10px; line-height:1.6;
+  }
+
+  .chipwrap{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{ font-size:11.5px; font-weight:600; padding:6px 11px; border-radius:999px; border:1px solid var(--border); background:var(--surface); color:var(--text-soft); cursor:pointer; }
+  .chip.on{ background:var(--navy); border-color:var(--navy); color:#fff; }
+  .chip-toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:9px; }
+  .chip-toolbar .count{ font-size:11.5px; color:var(--text-mute); }
+  .chip-toolbar button{ border:none; background:transparent; color:var(--text-mute); font-size:11.5px; cursor:pointer; text-decoration:underline; }
+
+  .ctabar{
+    position:fixed; left:0; right:0; bottom:0; z-index:20;
+    background:var(--surface); border-top:1px solid var(--border-soft);
+    box-shadow:0 -8px 24px -16px rgba(16,24,39,.25);
+    padding:10px max(16px, calc((100% - 640px)/2));
+    display:flex; flex-wrap:wrap; gap:8px;
+  }
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:7px; border-radius:11px; font-size:14px; font-weight:700; padding:12px 16px; border:none; cursor:pointer; font-family:inherit; }
+  .btn-ghost{ background:var(--surface-3); color:var(--text-soft); flex:1 1 100px; }
+  .btn-outline{ background:transparent; color:var(--navy); border:1.5px solid var(--navy); flex:1 1 150px; }
+  .btn-outline:hover{ background:var(--surface-3); }
+  .btn-outline:disabled{ opacity:.4; cursor:not-allowed; }
+  .btn-whatsapp{ background:#25D366; color:#053120; flex:1 1 110px; }
+  .btn-whatsapp:hover{ background:#1ebe5b; }
+  .btn-whatsapp:disabled{ opacity:.4; cursor:not-allowed; }
+  .analysis-badge{
+    display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700;
+    background:var(--surface-3); color:var(--navy); border-radius:999px; padding:4px 10px; margin-left:8px;
+  }
+  .analysis-badge .mono{ font-family:"JetBrains Mono",monospace; }
+  .pdf-memo{
+    display:none; align-items:center; gap:8px; font-size:11.5px; font-weight:600; color:var(--ok-text);
+    background:var(--ok-bg); border:1px solid var(--ok-ring); border-radius:10px; padding:8px 12px; margin-top:10px;
+  }
+  .pdf-memo.show{ display:flex; }
+  .wa-send-status{
+    display:none; align-items:center; gap:8px; font-size:11.5px; font-weight:600; color:var(--ok-text);
+    background:var(--ok-bg); border:1px solid var(--ok-ring); border-radius:10px; padding:8px 12px; margin-top:10px;
+  }
+  .wa-send-status.show{ display:flex; }
+  .wa-tick{ font-weight:800; color:var(--text-mute); }
+  .wa-tick.read{ color:#2563eb; }
+  .btn-primary{ background:var(--accent-deep); color:#fff; flex:0 1 120px; padding:12px 18px; }
+  .btn-primary:hover{ filter:brightness(0.88); }
+  .btn-primary:disabled{ opacity:.45; cursor:not-allowed; }
+
+  .form-alert{
+    display:none; align-items:center; gap:8px; background:var(--crit-bg); color:var(--crit-text);
+    border:1px solid var(--crit-ring); border-radius:10px; padding:9px 12px; font-size:12px; font-weight:600;
+    margin:0 0 12px;
+  }
+  .form-alert.show{ display:flex; }
+  .control.invalid{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-tint); }
+  .num-err{ display:none; font-size:10.5px; color:var(--accent-dark); font-weight:600; margin-top:4px; }
+  .num-err.show{ display:block; }
+
+  .result-summary{ display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 4px; }
+  .stat{ flex:1; min-width:84px; border-radius:12px; padding:10px 12px; text-align:center; }
+  .stat b{ display:block; font-size:20px; font-family:"Space Grotesk",sans-serif; }
+  .stat span{ font-size:10px; text-transform:uppercase; letter-spacing:.04em; font-weight:700; }
+  .stat.crit{ background:var(--crit-bg); color:var(--crit-text); }
+  .stat.warn{ background:var(--warn-bg); color:var(--warn-text); }
+  .stat.info{ background:var(--info-bg); color:var(--info-text); }
+  .stat.neutral{ background:var(--surface-3); color:var(--navy); }
+
+  .alert-card{ border-radius:12px; padding:11px 13px; margin-top:9px; border:1px solid; display:flex; gap:10px; }
+  .alert-card.crit{ background:var(--crit-bg); border-color:var(--crit-ring); }
+  .alert-card.warn{ background:var(--warn-bg); border-color:var(--warn-ring); }
+  .alert-card.info{ background:var(--info-bg); border-color:var(--info-ring); }
+  .alert-card .aicon{ flex:none; margin-top:1px; }
+  .alert-card .atype{ font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; opacity:.85; }
+  .alert-card .atitle{ font-size:13px; font-weight:700; margin:2px 0 3px; }
+  .alert-card .adesc{ font-size:12px; line-height:1.45; color:var(--text-soft); }
+  .alert-card.crit .atype,.alert-card.crit .atitle{ color:var(--crit-text); }
+  .alert-card.warn .atype,.alert-card.warn .atitle{ color:var(--warn-text); }
+  .alert-card.info .atype,.alert-card.info .atitle{ color:var(--info-text); }
+
+  .footnote{ font-size:11px; color:var(--text-mute); line-height:1.5; margin-top:14px; padding:0 2px; }
+
+  .codecard .card-head{ padding-bottom:0; }
+  .tabbar{ display:flex; gap:4px; padding:0 16px; margin-top:6px; }
+  .tabbtn{
+    font-size:12px; font-weight:700; padding:8px 14px; border:none; background:transparent;
+    color:var(--text-mute); cursor:pointer; border-bottom:2px solid transparent; font-family:inherit;
+  }
+  .tabbtn.active{ color:var(--accent-dark); border-color:var(--accent); }
+  .codebox{
+    background:var(--code-bg); border-radius:0 0 16px 16px; padding:14px 16px 16px; position:relative;
+  }
+  .copybtn{
+    position:absolute; top:10px; right:12px; font-size:10.5px; font-weight:700; letter-spacing:.03em;
+    text-transform:uppercase; color:var(--code-mute); background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+    border-radius:7px; padding:5px 9px; cursor:pointer; font-family:inherit;
+  }
+  .copybtn:hover{ color:var(--code-text); }
+  pre.code{
+    margin:0; font-family:"JetBrains Mono",ui-monospace,Menlo,monospace; font-size:11.5px; line-height:1.6;
+    color:var(--code-text); white-space:pre-wrap; word-break:break-word; max-height:360px; overflow:auto;
+  }
+  .code .tag-tok{ color:var(--code-tag); }
+  .code .str-tok{ color:var(--code-str); }
+  .code .mute-tok{ color:var(--code-mute); }
+  .codenote{ font-size:10.5px; color:var(--code-mute); margin:8px 0 0; line-height:1.5; }
+  .pane{ display:none; }
+  .pane.active{ display:block; }
+
+  .print-overlay{
+    display:none; position:fixed; inset:0; background:rgba(10,14,24,.55); z-index:60;
+    align-items:flex-start; justify-content:center; padding:32px 16px; overflow-y:auto;
+  }
+  .print-overlay.show{ display:flex; }
+  .print-sheet{
+    width:100%; max-width:560px; background:#fff; color:#141822; border-radius:14px;
+    padding:26px 26px 22px; box-shadow:var(--shadow-pop); font-family:"Inter",sans-serif;
+  }
+  .print-head{ display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #0e1f3d; padding-bottom:12px; margin-bottom:14px; }
+  .print-head h2{ font-size:16px; margin:0 0 2px; color:#0e1f3d; font-family:"Space Grotesk",sans-serif; }
+  .print-head .sub{ font-size:11px; color:#667; }
+  .print-meta{ text-align:right; font-size:11.5px; color:#333; line-height:1.6; }
+  .print-row{ display:flex; justify-content:space-between; gap:10px; font-size:12.5px; color:#333; margin-bottom:5px; }
+  .print-row span:first-child{ color:#888; }
+  .print-rx-table{ width:100%; border-collapse:collapse; margin:14px 0 6px; font-size:11.5px; }
+  .print-rx-table th, .print-rx-table td{ border:1px solid #dde; padding:6px 8px; text-align:left; }
+  .print-rx-table th{ background:#f3f4f6; font-size:10px; text-transform:uppercase; letter-spacing:.03em; color:#556; }
+  .print-qr-block{ display:flex; align-items:center; gap:14px; margin-top:16px; padding-top:14px; border-top:1px dashed #ccc; }
+  .print-qr-note{ font-size:10px; color:#778; line-height:1.5; }
+  .print-actions{ display:flex; gap:10px; margin-top:20px; }
+  @media print{
+    body > *:not(.print-overlay){ display:none !important; }
+    .print-overlay{ position:static; background:none; padding:0; display:block !important; }
+    .print-sheet{ box-shadow:none; border-radius:0; max-width:100%; margin:0; }
+    .print-actions{ display:none; }
+  }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<div class="wrap">
+
+  <div class="sticky-header">
+  <div class="topbar">
+    <div class="icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>
+    </div>
+    <div>
+      <h1>Sécuriser une prescription</h1>
+      <p>Analyse VIDAL — interactions, contre-indications, posologie</p>
+    </div>
+    <div class="historique-wrap">
+      <span class="analysis-badge-top" id="analysisBadgeTop" style="display:none">Analyse <span class="mono" id="analysisIdLabelTop"></span></span>
+      <button class="reg-btn" onclick="openHistory()" title="Consulter les analyses de prescriptions précédentes">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+        Historique
+      </button>
+    </div>
+    <div class="admin-toggle" title="Réservé au support technique : affiche les champs de suivi interne (groupe, statut) normalement masqués">
+      <span>Mode admin</span>
+      <div class="switch" id="adminSwitch" onclick="toggleAdminMode(this)"><div class="knob"></div></div>
+    </div>
+  </div>
+
+  <div class="license-row">
+    <span class="license-pill ok" id="licensePill">Licence VIDAL active — expire le 15/10/2026</span>
+    <div class="admin-toggle" title="Démo : simule un forfait VIDAL expiré ou un compte désactivé par l'admin">
+      <span>Simuler licence expirée</span>
+      <div class="switch" id="licenseSwitch" onclick="toggleLicenseSim(this)"><div class="knob"></div></div>
+    </div>
+  </div>
+
+  <div class="roledemo" id="roleDemo" style="display:none">
+    <span>Aperçu : je suis</span>
+    <div class="pillgroup" id="roleGroup">
+      <div class="pill-opt active" data-role="creator" onclick="setViewRole(this)">Médecin créateur</div>
+      <div class="pill-opt" data-role="colleague" onclick="setViewRole(this)">Confrère (autre médecin)</div>
+    </div>
+  </div>
+
+  <!-- Indépendant de l'enregistrement : sert uniquement à activer l'envoi WhatsApp de l'ordonnance -->
+  <div class="identity-bar">
+    <input class="control" id="patientPhone" type="tel" placeholder="N° WhatsApp du patient (optionnel — pour l'envoi de l'ordonnance)">
+  </div>
+
+  <!-- Etat non enregistré -->
+  <div id="identityUnregistered">
+    <div class="identity-bar">
+      <input class="control" id="patientName" placeholder="Nom du patient (usage interne uniquement — jamais transmis à VIDAL)">
+      <button class="reg-btn" id="regBtn" onclick="toggleRegister()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+        Enregistrer
+      </button>
+    </div>
+    <div class="reg-status off" id="regStatus">Consultation non mémorisée par défaut : aucune donnée patient ne sera conservée après l'analyse. Cliquez sur « Enregistrer » pour suivre ce patient dans le temps.</div>
+  </div>
+
+  <!-- Etat enregistré : vue créateur -->
+  <div id="creatorView" style="display:none">
+    <div class="identity-bar">
+      <input class="control" id="patientNameLocked" disabled>
+      <button class="reg-btn on" onclick="toggleRegister()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        Enregistré
+      </button>
+    </div>
+    <div class="reg-status on" id="regStatusCreator"></div>
+    <label class="share-toggle">
+      <input type="checkbox" id="shareToggle" onchange="onShareToggle(this)">
+      Partager ce patient avec mes confrères du cabinet (ils verront son nom directement, sans code)
+    </label>
+  </div>
+
+  <!-- Etat enregistré : vue confrère -->
+  <div id="colleagueView" style="display:none">
+    <div class="masked-box" id="maskedBox">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span class="mname">Nom masqué · <span id="maskedId" class="mono"></span></span>
+      <button class="btn btn-ghost" style="font-size:12px;padding:8px 12px" onclick="requestOtp()">Demander le code (WhatsApp)</button>
+    </div>
+    <div class="shared-box" id="sharedBox" style="display:none">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Patient partagé par le créateur : nom visible sans code pour tous les confrères du cabinet.
+    </div>
+    <div id="otpPending" style="display:none">
+      <p class="hint" style="margin:0 0 8px">Demande envoyée par WhatsApp au médecin créateur. Une fois qu'il vous a renvoyé le code à 4 chiffres, saisissez-le ici :</p>
+      <div class="otp-row">
+        <input class="control" id="otpInput" maxlength="4" inputmode="numeric" placeholder="••••">
+        <button class="btn btn-ghost" onclick="verifyOtp()">Valider</button>
+      </div>
+      <p class="hint" id="otpHint"></p>
+    </div>
+    <div class="unlocked-box" id="unlockedBox" style="display:none">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      <span id="unlockedName"></span> — accès accordé par code OTP, valable pour ce patient.
+    </div>
+  </div>
+  </div>
+
+  <div class="card" id="licenseGateCard">
+    <div class="card-head"><span class="step">🔒</span><h2>Accès VIDAL non actif</h2></div>
+    <div class="card-body">
+      <p class="sectionsub" style="margin-bottom:10px">Ce module de sécurisation de prescription est facturé par VIDAL par médecin. Votre compte n'est actuellement pas autorisé à l'utiliser :</p>
+      <div class="readout" id="licenseGateDetail" style="margin-bottom:10px"></div>
+      <p class="hint">Dans le portail réel, l'entrée de menu « Analyse de prescription » apparaît grisée et non cliquable tant que ceci n'est pas régularisé — reproduit ici en bloquant le contenu de la page, faute d'avoir la barre latérale dans cet aperçu. Contactez votre administrateur pour réactiver ou renouveler votre forfait.</p>
+    </div>
+  </div>
+
+  <div class="srcbanner">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+    <span>Schéma XML conforme au Manuel d'intégration API REST VIDAL Sécurisation France (MI_APIREST, REV_03) : balises <code>&lt;patient&gt;</code>, <code>&lt;prescription-line&gt;</code>, <code>&lt;alert-types&gt;</code> vérifiées ligne à ligne dans le document. Les champs de recherche médicament / allergie / pathologie sont simulés ici avec des exemples ; en production ils interrogeront en direct le référentiel VIDAL (<code>/rest/api/...</code>).</span>
+  </div>
+
+  <div class="form-alert" id="formAlert">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+    Une ou plusieurs valeurs sont invalides (nombre négatif). Corrigez-les avant de sécuriser la prescription.
+  </div>
+
+  <!-- PATIENT -->
+  <div class="card">
+    <div class="card-head"><span class="step">1</span><h2>Profil du patient</h2></div>
+    <div class="card-body">
+      <div class="grid2" style="margin-bottom:10px">
+        <div class="field">
+          <label>Date de naissance <span class="req">*</span></label>
+          <input class="control" data-k="dob" type="date" value="1996-09-09">
+        </div>
+        <div class="field">
+          <label>Sexe <span class="req">*</span></label>
+          <div class="pillgroup" data-k="sexGroup">
+            <div class="pill-opt" data-val="MALE" onclick="selectPill(this)">Homme</div>
+            <div class="pill-opt active" data-val="FEMALE" onclick="selectPill(this)">Femme</div>
+            <div class="pill-opt" data-val="UNKNOWN" onclick="selectPill(this)">Indéterminé</div>
+          </div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Poids (kg)</label><input class="control" data-k="weight" type="number" min="0" step="0.1" value="60"></div>
+        <div class="field"><label>Taille (cm)</label><input class="control" data-k="height" type="number" min="0" value="165"></div>
+      </div>
+      <div class="computed-box">
+        <div>
+          <div class="clabel">IMC (indice de masse corporelle) — indicatif, non transmis à VIDAL</div>
+          <div class="cval" id="imcVal">—</div>
+        </div>
+        <span class="clairance-band na" id="imcBand">Non calculable</span>
+      </div>
+
+      <div id="femaleFields" class="grid2" style="margin-top:10px">
+        <div class="field"><label>Début d'allaitement (si applicable)</label><input class="control" data-k="breastFeedingStart" type="date"></div>
+        <div class="field"><label>Semaines d'aménorrhée (grossesse)</label><input class="control" data-k="weeksAmenorrhea" type="number" min="0" max="41" placeholder="—"></div>
+      </div>
+
+      <div class="disclose" onclick="toggleDisclose(this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+        Critères cliniques supplémentaires
+      </div>
+      <div class="disclose-body">
+        <div class="field" style="margin-bottom:10px">
+          <label>Créatininémie (µmol/L) <span class="prevflag">Calcul auto</span></label>
+          <input class="control" data-k="serumCreatinine" type="number" min="0" placeholder="ex : 70">
+          <div class="computed-box">
+            <div>
+              <div class="clabel">Clairance estimée (Cockroft &amp; Gault) — envoyée à VIDAL comme &lt;creatin&gt;</div>
+              <div class="cval" id="clairanceVal">—</div>
+            </div>
+            <span class="clairance-band na" id="clairanceBand">Non calculable</span>
+          </div>
+          <p class="hint">VIDAL n'accepte pas la créatininémie brute : il attend la clairance en mL/min. Elle est calculée ici automatiquement (âge + poids + sexe + créatininémie), comme le fait l'API officielle <code>/rest/api/calculators/ccreat/cockroft-gault</code>.</p>
+        </div>
+        <div class="field" style="margin-bottom:10px">
+          <label>Insuffisance hépatique</label>
+          <select class="control" data-k="hepatic">
+            <option value="NONE">Aucune</option>
+            <option value="MODERATE">Modérée</option>
+            <option value="SEVERE">Sévère</option>
+          </select>
+        </div>
+
+        <div class="field" style="margin-bottom:10px">
+          <label>Allergies connues <span class="prevflag">Référentiel</span></label>
+          <div class="tagbox" data-taglist="allergies">
+            <span class="tag allergy">Pénicilline <span class="tag-ref">vidal://allergy/12</span> <button onclick="removeTag(this)">✕</button></span>
+            <input class="tag-input" placeholder="Rechercher dans le référentiel VIDAL… (Entrée)" onkeydown="onTagKey(event,'allergy')">
+          </div>
+          <p class="refhint">Recherche simulée ici — en production : <code>/rest/api/allergies?q=…</code>, stockage en <code>vidal://allergy/{id}</code>.</p>
+        </div>
+        <div class="field" style="margin-bottom:10px">
+          <label>Pathologies connues (CIM-10) <span class="prevflag">Référentiel</span></label>
+          <div class="tagbox" data-taglist="pathologies">
+            <span class="tag patho">Insuffisance rénale <span class="tag-ref">vidal://cim10/4703</span> <button onclick="removeTag(this)">✕</button></span>
+            <input class="tag-input" placeholder="Rechercher un code CIM-10… (Entrée)" onkeydown="onTagKey(event,'patho')">
+          </div>
+          <p class="refhint">En production : <code>/rest/api/pathologies?q=…</code>, stockage en <code>vidal://cim10/{id}</code>.</p>
+        </div>
+        <div class="field">
+          <label>Molécules à éviter <span class="prevflag">Référentiel</span></label>
+          <div class="tagbox" data-taglist="molecules">
+            <input class="tag-input" placeholder="Rechercher une substance… (Entrée)" onkeydown="onTagKey(event,'mol')">
+          </div>
+          <p class="refhint">Même référentiel que les allergies (terme "MOLECULE") — stockage en <code>vidal://molecule/{id}</code>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRAITEMENTS EN COURS -->
+  <div class="card">
+    <div class="card-head"><span class="step">2</span><h2>Traitements en cours</h2><span class="example-flag">PREVIOUS_ORDER</span></div>
+    <div class="card-body">
+      <p class="sectionsub">Le manuel VIDAL impose de transmettre, en plus de la nouvelle prescription, les traitements en cours du patient (administration non terminée). Si le patient est <b>enregistré</b> (bouton en haut de page), cette liste sera préremplie automatiquement à sa prochaine consultation une fois l'historique en place (voir note technique en bas de page) — pour une consultation non enregistrée, elle reste toujours à saisir manuellement, à chaque fois.</p>
+      <div id="prevLines"></div>
+      <button class="add-line-btn" onclick="addLine(true)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Ajouter un traitement en cours
+      </button>
+    </div>
+  </div>
+
+  <!-- NOUVELLE PRESCRIPTION -->
+  <div class="card">
+    <div class="card-head"><span class="step">3</span><h2>Nouvelle prescription</h2><span class="example-flag">SAME_ORDER</span></div>
+    <div class="card-body" id="rxLines"></div>
+    <div class="card-body" style="padding-top:0">
+      <button class="add-line-btn" onclick="addLine(false)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Ajouter un médicament
+      </button>
+    </div>
+  </div>
+
+  <!-- ALERTES -->
+  <div class="card">
+    <div class="card-head"><span class="step">4</span><h2>Alertes à vérifier</h2></div>
+    <div class="card-body">
+      <div class="chip-toolbar">
+        <span class="count" id="chipCount">4 sélectionnée(s) sur 18</span>
+        <button onclick="selectAllChips(true)">Tout cocher</button>
+      </div>
+      <div class="chipwrap" id="chipWrap">
+        <span class="chip on" data-val="CONTRA_INDICATION" onclick="toggleChip(this)">Contre-indication</span>
+        <span class="chip on" data-val="ALLERGY" onclick="toggleChip(this)">Allergie</span>
+        <span class="chip on" data-val="DRUG_INTERACTION" onclick="toggleChip(this)">Interaction médicamenteuse</span>
+        <span class="chip on" data-val="POSOLOGY" onclick="toggleChip(this)">Posologie</span>
+        <span class="chip" data-val="PRECAUTION" onclick="toggleChip(this)">Précaution</span>
+        <span class="chip" data-val="WARNING" onclick="toggleChip(this)">Mise en garde</span>
+        <span class="chip" data-val="SIDE_EFFECT" onclick="toggleChip(this)">Effet indésirable</span>
+        <span class="chip" data-val="PHYSICO_CHEMICAL_INTERACTION" onclick="toggleChip(this)">Interaction physico-chimique</span>
+        <span class="chip" data-val="SURVEILLANCE" onclick="toggleChip(this)">Surveillance</span>
+        <span class="chip" data-val="REDUNDANT_ACTIVE_INGREDIENT" onclick="toggleChip(this)">Principe actif redondant</span>
+        <span class="chip" data-val="SAME_DRUG" onclick="toggleChip(this)">Même médicament</span>
+        <span class="chip" data-val="FOOD_INTERACTION" onclick="toggleChip(this)">Interaction alimentaire</span>
+        <span class="chip" data-val="DISPENSING_RISK" onclick="toggleChip(this)">Risque de dispensation</span>
+        <span class="chip" data-val="PRESCRIPTION_CONTEXT" onclick="toggleChip(this)">Contexte patient</span>
+        <span class="chip" data-val="EXONERATION" onclick="toggleChip(this)">Exonération</span>
+        <span class="chip" data-val="INDICATOR" onclick="toggleChip(this)">Indicateur</span>
+        <span class="chip" data-val="FOCUS" onclick="toggleChip(this)">Point de vigilance</span>
+        <span class="chip" data-val="HAS" onclick="toggleChip(this)">Alerte HAS (SAM)</span>
+      </div>
+      <p class="hint">Les 4 catégories cliniques essentielles sont cochées par défaut. Liste des 18 types réels d'après le manuel VIDAL.</p>
+    </div>
+  </div>
+
+  <!-- STRUCTURE TECHNIQUE LIVE -->
+  <div class="card codecard">
+    <div class="card-head">
+      <span class="step">⚙</span>
+      <h2>Structure technique générée</h2>
+      <span class="example-flag">En direct</span>
+    </div>
+    <div class="tabbar">
+      <button class="tabbtn active" onclick="switchTab('xml')">XML → VIDAL</button>
+      <button class="tabbtn" onclick="switchTab('json')">JSON → notre API</button>
+    </div>
+    <div class="codebox">
+      <button class="copybtn" onclick="copyActive()">Copier</button>
+      <div class="pane active" id="pane-xml"><pre class="code" id="outXml"></pre></div>
+      <div class="pane" id="pane-json"><pre class="code" id="outJson"></pre></div>
+      <p class="codenote">Structure vérifiée dans le Manuel d'intégration API REST VIDAL Sécurisation France (MI_APIREST REV_03, chapitre 3 : "Implémentation des API VIDAL Sécurisation"). Les identifiants <code>vidal://...</code> affichés dans les exemples sont ceux du manuel ou des valeurs d'illustration — chaque référence réelle sera résolue par recherche live dans le référentiel VIDAL au moment de l'implémentation.</p>
+    </div>
+  </div>
+
+  <!-- NOTE TECHNIQUE MONGODB -->
+  <div class="card">
+    <div class="card-head"><span class="step">🗄</span><h2>Persistance à créer (MongoDB Atlas)</h2><span class="example-flag">Base « vidal »</span></div>
+    <div class="card-body">
+      <p class="sectionsub" style="margin-bottom:10px">Base de données MongoDB Atlas dédiée : <code>vidal</code>. Aucune table à créer manuellement : les collections apparaissent automatiquement dès le premier document inséré par le backend. Le patient est une entité à part entière, distincte des contacts existants — mémorisé <b>uniquement si le médecin clique sur « Enregistrer »</b> ; sinon la consultation reste ponctuelle. Six collections dans <code>vidal</code> :</p>
+      <div class="readout" style="margin-bottom:8px"><b>medecins</b> — un document par médecin autorisé à utiliser VIDAL (facturation par médecin) : <code>nom</code> (MAJUSCULES), <code>prenoms</code> (1ère lettre en majuscule), <code>email</code> (minuscules, <b>obligatoire et unique</b> — identifiant de connexion du médecin), <code>otp_email_actif</code> (bool — envoi d'un code OTP par email à la connexion si activé), <code>telephone</code>, <code>whatsapp</code> (nullable — vide = identique au téléphone, résolu à la lecture, jamais figé en base), <code>specialites[]</code>, <code>cliniques[]</code> (tous les établissements où il/elle intervient), <code>numero_ordre</code>, <code>date_enrollement_vidal</code>, <code>etat</code> (ACTIF|INACTIF|SUSPENDU), <code>forfait_type</code> (MENSUEL|USAGE), <code>montant</code>, <code>volume_consomme</code>, <code>date_expiration</code>, <code>medecin_user_id</code>. <b>Configurable uniquement par l'admin</b> — voir la fiche dédiée « Admin — Médecins VIDAL ». À la 1ère connexion en rôle médecin : recherche par <b>email</b> (identifiant fiable, plus le nom qui peut être ambigu), création auto si absent (forfait mensuel 25 000 FCFA, expiration à 30 jours) ; accès autorisé seulement si <code>etat = ACTIF</code> ET <code>date_expiration</code> non dépassée, sinon le menu « Analyse de prescription » est grisé (simulé ci-dessus via « Simuler licence expirée »).</div>
+      <div class="readout" style="margin-bottom:8px"><b>api_calls</b> — un document par appel réel au serveur VIDAL depuis cette fenêtre (recherche référentiel, calcul de clairance, sécurisation), qu'il y ait eu enregistrement du patient ou non : <code>endpoint</code>, <code>medecin_id</code>, <code>client_id</code>, <code>patient_id</code> (nullable), <code>called_at</code>, <code>success</code>, <code>duration_ms</code>. Alimente la carte « Statistiques d'utilisation VIDAL » (total, par médecin, par période) — utile aussi pour suivre la consommation par rapport au quota du contrat VIDAL.</div>
+      <div class="readout" style="margin-bottom:8px"><b>patients</b> — créée uniquement à l'enregistrement. Un document par patient : <code>id</code> (identifiant unique généré, seule référence utilisée partout ailleurs — ex. <code>PAT-2026-00042</code>), <code>name</code>, <code>client_id</code>, profil clinique de référence (date de naissance, sexe...), <code>created_by</code> (médecin créateur, seul à voir le nom par défaut), <code>shared_with_colleagues</code> (bool), <code>created_at</code>. C'est la SEULE collection où le nom du patient est stocké.</div>
+      <div class="readout" style="margin-bottom:8px"><b>patient_access_requests</b> — une demande de code par confrère non-créateur : <code>patient_id</code>, <code>requested_by</code>, <code>creator_id</code>, <code>otp_code</code> (4 chiffres, généré par le système), <code>status</code> (PENDING|VERIFIED|EXPIRED), <code>created_at</code>, <code>expires_at</code>. Le bouton « Demander le code » envoie un WhatsApp au créateur (réutilise le relais WA existant) ; le créateur transmet le code reçu au confrère de vive voix/WhatsApp ; la saisie correcte marque la demande VERIFIED et débloque le nom pour ce confrère sur ce patient.</div>
+      <div class="readout" style="margin-bottom:8px"><b>patient_treatments</b> — un traitement en cours par document, rattaché à <code>patient_id</code> uniquement (jamais au nom). Alimentée à chaque sécurisation d'un patient enregistré ; permet de préremplir automatiquement l'étape 2 à sa prochaine consultation.</div>
+      <div class="readout"><b>securisation</b> — un document à <b>CHAQUE clic sur « Sécuriser »</b>, patient enregistré ou non (c'est ce qui donne son <code>id</code> unique à chaque analyse, ex. <code>RX-2026-483920</code>, affiché en badge sur le résultat) : lignes soumises, XML envoyé, réponse VIDAL brute (XML <code>/alerts/full</code> ET HTML <code>/alerts/full/html</code> — <code>vidal_html_snapshot</code>, le document affiché tel quel dans l'onglet « HTML VIDAL » ; on fige cette copie à l'instant T plutôt que de rappeler VIDAL plus tard, car son contenu peut évoluer avec les mises à jour du référentiel — important pour l'audit médico-légal), résumé des alertes, medecin_id, client_id, created_at, et <code>patient_id</code> si enregistré / <code>null</code> sinon. C'est exactement cette collection qu'affiche le bouton « Historique », et « Charger » recharge tout le formulaire depuis le document sélectionné.
+      Champs de traçabilité pour le pictogramme rouge/bleu : <code>status</code> (ALERTED|CORRECTED|VALIDATED|CLEAN), <code>origin_id</code> (sécurisation initiale corrigée, <code>null</code> sinon), <code>alerts_summary</code>, <code>status_history</code> (jamais écrasé).
+      Champs ajoutés pour « Imprimer Ordonnance » : <code>ordonnance_pdf_ref</code> (référence vers le PDF généré, stocké en GridFS ou object storage — jamais le binaire directement dans le document), <code>ordonnance_generated_at</code>, <code>verification_expires_at</code> (validité du QR, 90 jours par défaut). Le QR encode une URL <code>/rx-verify/{id}?exp=...&amp;sig=...</code> dont la signature est un HMAC calculé UNIQUEMENT côté serveur avec une clé secrète — jamais stockée en base ni générée côté client (contrairement à la démo de cet aperçu).</div>
+      <p class="hint" style="margin-top:8px">Pour une consultation non enregistrée : <code>patients</code> et <code>patient_treatments</code> restent vides (aucun dossier durable créé), mais <code>securisation</code> enregistre quand même l'analyse (<code>patient_id</code> à <code>null</code>) — sans quoi l'URL de vérification imprimée sur l'ordonnance n'aurait rien à vérifier. <code>api_calls</code> comptabilise l'appel dans tous les cas, pour les statistiques.</p>
+      <div class="readout" style="margin-top:8px"><b>Envoi WhatsApp de l'ordonnance</b> — pas de nouvelle collection : réutilise <code>whatsapp_messages</code>, qui reste dans la base <b>principale de Sawali</b> (pas dans <code>vidal</code>, puisque c'est une infrastructure déjà partagée par tout le site), avec un document par envoi : <code>related_analysis_id</code>, <code>to</code> (numéro patient), <code>message_type: "document"</code>, <code>template_name</code>, <code>wa_status</code> (SENT|DELIVERED|READ|FAILED), <code>sent_at</code>/<code>delivered_at</code>/<code>read_at</code>, <code>wa_message_id</code> (mis à jour au fil des webhooks Meta, comme pour les autres messages).
+      <br><br>Un modèle WhatsApp Business pré-approuvé est obligatoire pour ce type d'envoi (document hors fenêtre de conversation de 24h) — à configurer dans <b>Réglages admin &gt; Modèles WhatsApp</b>. Nom proposé : <code>ordonnance_pdf_fr</code> (catégorie UTILITY, en-tête type Document, corps en français : « Bonjour {{1}}, voici votre ordonnance du {{2}} établie par le Dr {{3}}. Merci de la présenter à votre pharmacie. », pied de page « Sawali Smart Systems — message automatique »).</div>
+    </div>
+  </div>
+
+  <!-- À partir de la largeur tablette, ces deux cartes (compactes, à base de tuiles) se
+       placent côte à côte — les cartes à formulaire multi-colonnes (Profil, Traitements,
+       Nouvelle prescription) restent pleine largeur : leurs grilles internes à 3 colonnes
+       ont besoin de l'espace, les compresser sur une demi-largeur les aurait rendues illisibles. -->
+  <div class="two-col">
+  <!-- STATISTIQUES D'USAGE VIDAL -->
+  <div class="card">
+    <div class="card-head"><span class="step">📊</span><h2>Statistiques d'utilisation VIDAL</h2><span class="example-flag">Ce module</span></div>
+    <div class="card-body">
+      <p class="sectionsub" style="margin-bottom:10px">Chaque appel à l'API VIDAL déclenché depuis cette fenêtre — recherche référentiel, calcul de clairance, sécurisation — est comptabilisé, horodaté et rattaché au médecin qui l'a lancé. Exemple de restitution possible :</p>
+      <div class="result-summary">
+        <div class="stat neutral"><b>1 284</b><span>Requêtes ce mois (total)</span></div>
+        <div class="stat neutral"><b>96</b><span>Dont par vous</span></div>
+        <div class="stat neutral"><b>3,2</b><span>Requêtes / sécurisation</span></div>
+      </div>
+      <p class="hint" style="margin-top:8px">Utile aussi pour suivre le volume d'appels par rapport au quota de votre contrat VIDAL, et identifier les médecins les plus actifs sur la sécurisation de prescription.</p>
+    </div>
+  </div>
+
+  <!-- RESULTAT -->
+  <div class="card" id="resultCard">
+    <div class="card-head">
+      <span class="step">✓</span><h2>Résultat de l'analyse</h2><span class="example-flag">Aperçu</span>
+      <span class="analysis-badge" id="analysisBadge" style="display:none">Analyse <span class="mono" id="analysisIdLabel"></span></span>
+    </div>
+    <div class="card-body">
+      <div class="form-alert" id="formIncomplete">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+        Profil patient (naissance, sexe, poids, taille) et au moins un médicament complet (dose, unité, fréquence, durée, voie) sont requis avant de sécuriser.
+      </div>
+      <div class="pdf-memo" id="pdfMemo">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        <span id="pdfMemoText"></span>
+      </div>
+      <div class="wa-send-status" id="waSendStatus"></div>
+
+      <div class="tabbar" style="padding:0; margin:0 0 12px">
+        <button class="tabbtn active" onclick="switchResultTab('structured')">Vue structurée</button>
+        <button class="tabbtn" onclick="switchResultTab('html')">HTML VIDAL (brut)</button>
+        <button class="tabbtn" onclick="switchResultTab('garde')">Pharmacies de garde</button>
+      </div>
+
+      <div class="pane active" id="pane-result-structured">
+        <div class="result-summary">
+          <div class="stat crit"><b>1</b><span>Critique</span></div>
+          <div class="stat warn"><b>2</b><span>Précaution</span></div>
+          <div class="stat info"><b>1</b><span>Info</span></div>
+        </div>
+        <div class="alert-card crit">
+          <svg class="aicon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+          <div><div class="atype">Contre-indication</div><div class="atitle">Insuffisance rénale connue — dose à réévaluer</div>
+          <div class="adesc">DOLIPRANE 1000 mg : la posologie standard n'est pas adaptée au contexte rénal renseigné.</div></div>
+        </div>
+        <div class="alert-card warn">
+          <svg class="aicon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+          <div><div class="atype">Précaution</div><div class="atitle">Allergie déclarée à surveiller</div>
+          <div class="adesc">Allergie à la pénicilline enregistrée — aucun antibiotique de cette famille ici, restez vigilant pour tout ajout ultérieur.</div></div>
+        </div>
+        <div class="alert-card info">
+          <svg class="aicon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          <div><div class="atype">Info</div><div class="atitle">Durée de traitement conforme</div>
+          <div class="adesc">7 jours à raison d'une prise/jour reste dans les bornes usuelles pour cette indication.</div></div>
+        </div>
+        <p class="footnote">Aperçu illustratif — reconstruit à partir de la réponse structurée VIDAL (<code>/rest/api/alerts/full</code>) au XML ci-dessus, pour l'intégrer au design Sawali.</p>
+      </div>
+
+      <div class="pane" id="pane-result-html">
+        <iframe id="vidalHtmlFrame" sandbox="" title="Synthèse des alertes VIDAL" style="width:100%;height:440px;border:1px solid var(--border-soft);border-radius:10px;background:#fff;"></iframe>
+        <p class="footnote">Document renvoyé tel quel par <code>/rest/api/alerts/full/html</code> (« Synthèse des alertes VIDAL »), affiché sans reconstruction dans un <code>&lt;iframe sandbox&gt;</code> isolé — pratique standard pour du HTML d'un tiers, même une source fiable. <b>Reconstitution illustrative</b> pour cet aperçu (structure/ancres conformes au manuel : menu_synthesis, menu_posology, menu_allergy...) — le vrai contenu viendra directement de VIDAL en production.</p>
+      </div>
+
+      <div class="pane" id="pane-result-garde">
+        <iframe id="gardeFrame" title="Pharmacies de garde" src="https://sawalismartsystems.com/garde" style="width:100%;height:440px;border:1px solid var(--border-soft);border-radius:10px;background:#fff;"></iframe>
+        <p class="footnote">Chargé dès l'ouverture de cette fiche (pas seulement au clic sur l'onglet), pour être déjà disponible si le médecin doit orienter le patient vers une pharmacie de garde. <b>Dans cet aperçu Claude</b>, l'iframe peut rester vide : le bac à sable de l'artifact bloque l'intégration de sites externes hors liste blanche. Une fois cette page déployée sur <code>sawalismartsystems.com</code>, <code>/garde</code> sera sur le même domaine et se chargera normalement.</p>
+      </div>
+    </div>
+  </div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="historyModal">
+  <div class="modal-panel">
+    <div class="modal-head">
+      <h3>Historique des analyses de prescriptions</h3>
+      <button class="modal-close" onclick="closeHistory()">✕</button>
+    </div>
+    <div class="modal-body" id="historyList"></div>
+  </div>
+</div>
+
+<div class="print-overlay" id="printOverlay">
+  <div class="print-sheet" id="printSheet">
+    <div class="print-head">
+      <div>
+        <h2>Ordonnance médicale</h2>
+        <div class="sub">Sawali Smart Systems — Cabinet médical</div>
+      </div>
+      <div class="print-meta">
+        <div id="printDate"></div>
+        <div id="printRxId"></div>
+      </div>
+    </div>
+    <div class="print-row"><span>Patient</span><b id="printPatientName"></b></div>
+    <div class="print-row"><span>Référence dossier</span><span id="printPatientRef"></span></div>
+    <div class="print-row"><span>Médecin</span><span>Dr. [Nom du médecin]</span></div>
+    <table class="print-rx-table">
+      <thead><tr><th>Médicament</th><th>Dose</th><th>Fréquence</th><th>Durée</th><th>Voie</th></tr></thead>
+      <tbody id="printRxBody"></tbody>
+    </table>
+    <div class="print-qr-block">
+      <div id="printQr"></div>
+      <div class="print-qr-note">QR code à scanner en pharmacie pour lire le contenu de l'ordonnance (médicaments, doses, posologie).<span id="printQrTechNote"></span></div>
+    </div>
+    <div class="print-actions">
+      <button class="btn btn-ghost" onclick="closePrintOrdonnance()">Fermer</button>
+      <button class="btn btn-primary" style="flex:1" onclick="window.print()">Imprimer / Enregistrer en PDF</button>
+    </div>
+  </div>
+</div>
+
+<div class="ctabar">
+  <button class="btn btn-ghost" onclick="alert('Aperçu uniquement')">Réinitialiser</button>
+  <button class="btn btn-primary" id="secureBtn" onclick="runSecure()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>
+    Sécuriser
+  </button>
+  <button class="btn btn-outline" id="printBtn" onclick="openPrintOrdonnance()" disabled title="Sécurisez d'abord la prescription">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    Imprimer Ordonnance
+  </button>
+  <button class="btn btn-whatsapp" id="waSendBtn" onclick="sendOrdonnanceWhatsApp()" disabled title="Générez d'abord le PDF, puis renseignez le numéro WhatsApp du patient">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>
+    Envoi WA
+  </button>
+</div>
+
+<script>
+  // Le patient est une entité à part : par défaut la consultation n'est pas mémorisée.
+  // Le médecin choisit explicitement d'« Enregistrer » pour obtenir un identifiant unique
+  // qui devient ensuite la SEULE référence utilisée partout ailleurs (le nom n'est jamais
+  // renvoyé à VIDAL et n'apparaît dans aucune autre collection que "patients"). Un confrère
+  // qui n'a pas créé la fiche voit le nom masqué, sauf partage explicite du créateur ou
+  // vérification par code OTP à 4 chiffres relayé manuellement via WhatsApp.
+  let patientId = null;
+  let patientShared = false;
+  let viewRole = 'creator';
+  let otpCode = null;
+  let otpUnlocked = false;
+  // Chaque clic sur "Sécuriser" produit une analyse distincte avec son propre identifiant
+  // unique (document securisation) ; modifier le formulaire après coup
+  // invalide cette analyse et il faut la relancer avant de pouvoir imprimer.
+  let currentAnalysisId = null;
+  let analysisPdfGenerated = false;
+  const DEMO_OTP = '4821'; // code de démonstration affiché pour cet aperçu uniquement
+
+  function toggleRegister(){
+    if (!patientId) {
+      const y = new Date().getFullYear();
+      patientId = 'PAT-' + y + '-' + String(Math.floor(10000 + Math.random() * 90000));
+    } else {
+      patientId = null;
+      patientShared = false;
+      otpUnlocked = false;
+      document.getElementById('otpPending').style.display = 'none';
+      document.getElementById('shareToggle').checked = false;
+    }
+    renderIdentityState();
+    renderPreview();
+  }
+
+  function setViewRole(el){
+    document.querySelectorAll('#roleGroup .pill-opt').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    viewRole = el.dataset.role;
+    renderIdentityState();
+  }
+
+  function onShareToggle(el){
+    patientShared = el.checked;
+    renderIdentityState();
+    renderPreview();
+  }
+
+  function requestOtp(){
+    otpCode = DEMO_OTP;
+    document.getElementById('otpPending').style.display = 'block';
+    document.getElementById('otpHint').textContent = `(Aperçu : code de démonstration ${DEMO_OTP} — en production il est généré par le système et transmis au créateur, jamais affiché ici)`;
+  }
+  function verifyOtp(){
+    const entered = document.getElementById('otpInput').value.trim();
+    if (entered === otpCode) {
+      otpUnlocked = true;
+      renderIdentityState();
+    } else {
+      document.getElementById('otpHint').textContent = 'Code incorrect — redemandez-le au créateur si besoin.';
+    }
+  }
+
+  function renderIdentityState(){
+    const name = document.getElementById('patientName').value.trim() || '(sans nom)';
+    document.getElementById('identityUnregistered').style.display = patientId ? 'none' : 'block';
+    document.getElementById('roleDemo').style.display = patientId ? 'flex' : 'none';
+    document.getElementById('creatorView').style.display = (patientId && viewRole === 'creator') ? 'block' : 'none';
+    document.getElementById('colleagueView').style.display = (patientId && viewRole === 'colleague') ? 'block' : 'none';
+
+    if (patientId && viewRole === 'creator') {
+      document.getElementById('patientNameLocked').value = name;
+      document.getElementById('regStatusCreator').innerHTML = `Patient enregistré · identifiant unique <span class="mono">${patientId}</span> — c'est cette référence, jamais le nom, qui apparaîtra dans les traitements et l'historique. Cliquez sur « Enregistré » pour annuler et ne rien conserver.`;
+    }
+    if (patientId && viewRole === 'colleague') {
+      document.getElementById('maskedId').textContent = patientId;
+      const shared = patientShared;
+      document.getElementById('sharedBox').style.display = shared ? 'flex' : 'none';
+      document.getElementById('maskedBox').style.display = shared ? 'none' : 'flex';
+      document.getElementById('otpPending').style.display = (!shared && otpCode && !otpUnlocked) ? 'block' : 'none';
+      document.getElementById('unlockedBox').style.display = (!shared && otpUnlocked) ? 'flex' : 'none';
+      if (otpUnlocked) document.getElementById('unlockedName').textContent = name;
+    }
+  }
+
+  function selectPill(el){
+    el.parentElement.querySelectorAll('.pill-opt').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    updateFemaleFieldsVisibility();
+    renderPreview();
+  }
+  function updateFemaleFieldsVisibility(){
+    const sex = document.querySelector('[data-k="sexGroup"] .pill-opt.active')?.dataset.val;
+    document.getElementById('femaleFields').style.display = (sex === 'FEMALE') ? 'grid' : 'none';
+  }
+  function toggleDisclose(el){
+    el.classList.toggle('open');
+    el.nextElementSibling.classList.toggle('open');
+  }
+  function toggleAdminMode(el){
+    el.classList.toggle('on');
+    const on = el.classList.contains('on');
+    document.querySelectorAll('.admin-only').forEach(b => b.classList.toggle('show', on));
+  }
+
+  // VIDAL facture par médecin : à la 1ère connexion en rôle "médecin", son nom est recherché
+  // dans la table medecins (voir fiche Admin dédiée). Absent -> création automatique
+  // d'un forfait mensuel d'essai (25 000 FCFA, expiration à 30 jours). Présent -> accès
+  // autorisé seulement si état = ACTIF ET date d'expiration non dépassée ; sinon le menu
+  // "Analyse de prescription" est grisé dans le vrai portail (simulé ici en bloquant la page).
+  function toggleLicenseSim(el){
+    el.classList.toggle('on');
+    const blocked = el.classList.contains('on');
+    document.body.classList.toggle('vidal-locked', blocked);
+    const pill = document.getElementById('licensePill');
+    if (blocked) {
+      pill.className = 'license-pill blocked';
+      pill.textContent = 'Licence VIDAL — accès refusé (compte inactif ou forfait expiré)';
+      document.getElementById('licenseGateDetail').innerHTML =
+        'État du compte : <b>INACTIF</b><br>' +
+        'Forfait : Mensuel — 25 000 FCFA<br>' +
+        'Date d\'expiration : <b>02/08/2026</b> (dépassée)';
+    } else {
+      pill.className = 'license-pill ok';
+      pill.textContent = 'Licence VIDAL active — expire le 15/10/2026';
+    }
+  }
+  function tagClassFor(kind){
+    return { allergy:'allergy', patho:'patho', mol:'mol' }[kind] || '';
+  }
+  const demoRefs = { allergy: 200, patho: 5000, mol: 900 };
+  function onTagKey(ev, kind){
+    if (ev.key !== 'Enter') return;
+    ev.preventDefault();
+    const input = ev.target;
+    const val = input.value.trim();
+    if (!val) return;
+    const ns = { allergy:'allergy', patho:'cim10', mol:'molecule' }[kind];
+    const id = ++demoRefs[kind];
+    const span = document.createElement('span');
+    span.className = 'tag ' + tagClassFor(kind);
+    span.innerHTML = val.replace(/</g,'&lt;') + ` <span class="tag-ref">vidal://${ns}/${id}</span> <button onclick="removeTag(this)">✕</button>`;
+    input.parentElement.insertBefore(span, input);
+    input.value = '';
+    renderPreview();
+  }
+  function removeTag(btn){ btn.parentElement.remove(); renderPreview(); }
+
+  const rxTemplate = (n, isPrev) => `
+      <div class="rx-line ${isPrev ? 'prev' : ''}" data-prev="${isPrev ? '1' : '0'}">
+        <div class="rx-line-head">
+          <span class="rx-badge ${isPrev ? 'prev' : ''}">${n}</span>
+          <input class="control rx-drug-input" data-k="drug" data-typeahead="drug" autocomplete="off" placeholder="Rechercher un médicament (référentiel VIDAL)…">
+          <button class="rx-remove" onclick="this.closest('.rx-line').remove(); renderPreview();" title="Retirer cette ligne">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <p class="refhint" style="margin:-6px 0 8px">Tapez pour voir les correspondances (surlignées) dans un jeu d'exemple — en production : recherche live <code>/rest/api/product?q=…</code>, valeur envoyée en <code>&lt;drug&gt;vidal://product/{id}&lt;/drug&gt;</code>. « Manuel ✓ » = référence citée telle quelle dans le Manuel VIDAL ; « Exemple » = nom plausible inventé pour l'aperçu.</p>
+        <div class="rev-note" data-rev-note style="display:none"></div>
+        <div class="grid3" style="margin-bottom:8px">
+          <div class="field"><label>Dose</label><input class="control" data-k="dose" type="number" min="0" step="0.25" value="1"></div>
+          <div class="field"><label>Unité</label>
+            <select class="control" data-k="unitId">
+              <option value="">— Sélectionnez un médicament —</option>
+            </select>
+          </div>
+          <div class="field"><label>Fréquence</label>
+            <select class="control" data-k="frequencyType">
+              <option value="PER_DAY">par jour</option>
+              <option value="THIS_DAY">ce jour uniquement</option>
+              <option value="PER_24_HOURS">par 24 heures</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid2" style="margin-bottom:8px">
+          <div class="field"><label>Durée</label><input class="control" data-k="duration" type="number" min="0" step="1" value="7"></div>
+          <div class="field"><label>Unité durée</label>
+            <select class="control" data-k="durationType">
+              <option value="DAY">jours</option>
+              <option value="WEEK">semaines</option>
+              <option value="MONTH">mois</option>
+              <option value="HOUR">heures</option>
+              <option value="MINUTE">minutes</option>
+              <option value="YEAR">années</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:8px">
+          <label>Voie d'administration</label>
+          <select class="control" data-k="route">
+            <option value="">— Sélectionnez un médicament —</option>
+          </select>
+          <p class="refhint">Liste déroulante (finie) reconstruite selon le médicament sélectionné ci-dessus, comme <code>/rest/api/product/{id}/routes</code> et <code>/units</code> — ex. TERPONE (sirop) ne proposera jamais de voie/unité suppositoire, car sa fiche VIDAL ne les contient pas.</p>
+        </div>
+
+        <div class="disclose" onclick="toggleDisclose(this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+          Détails (indication, dates, ALD, posologie avancée)
+        </div>
+        <div class="disclose-body">
+          <div class="field" style="margin-bottom:8px"><label>Indication</label><input class="control" data-k="indication" placeholder="Rechercher une indication… (référentiel VIDAL)"></div>
+          <div class="grid2" style="margin-bottom:8px">
+            <div class="field"><label>Début</label><input class="control" data-k="startDate" type="date"></div>
+            <div class="field"><label>Fin</label><input class="control" data-k="endDate" type="date"></div>
+          </div>
+          <div class="ald-row">
+            <input type="checkbox" class="checkbox" data-k="ald" onchange="this.closest('.rx-line').querySelector('[data-ald-code-wrap]').style.display = this.checked ? 'block' : 'none'; renderPreview();">
+            <label style="margin:0;font-size:12.5px;color:var(--text-soft)">Affection longue durée (ALD) pour cette ligne</label>
+          </div>
+          <div data-ald-code-wrap style="display:none;margin-bottom:8px">
+            <div class="field"><label>Code ALD</label><input class="control" data-k="aldCode" placeholder="ex : 30"></div>
+          </div>
+
+          <div class="subgrid" data-posologies>
+            <div class="subgrid-title">Posologie avancée (intervalles entre prises)</div>
+            <div class="interval-row">
+              <div><label>Dose</label><input class="control" data-pk="dose" type="number" min="0"></div>
+              <div><label>Unité</label>
+                <select class="control" data-pk="unitId"><option value="129">comprimé</option><option value="137">mL</option></select>
+              </div>
+              <div><label>Interv. min</label><input class="control" data-pk="min" type="number" min="0"></div>
+              <div><label>Interv. max</label><input class="control" data-pk="max" type="number" min="0"></div>
+              <button class="mini-x" onclick="this.closest('.interval-row').remove(); renderPreview();">✕</button>
+            </div>
+            <button class="add-line-btn" style="padding:8px;font-size:12px" onclick="addInterval(this)">+ Ajouter un intervalle</button>
+            <p class="hint">Unité d'intervalle (heure/jour...) fixée à "heure" dans cet aperçu — posologie complexe détaillée dans un manuel VIDAL séparé (à demander à editeurs@vidal.fr).</p>
+          </div>
+
+          <div class="admin-only" id="admin-${n}-${isPrev ? 'p' : 'n'}">
+            <div class="readout">
+              Groupe (auto, non modifiable) : <b>groupType = ${isPrev ? 'PREVIOUS_ORDER' : 'SAME_ORDER'}</b>, groupId = ${isPrev ? '2' : '1'}<br>
+              Statut : <b>status = ACTIVE</b>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+  // Recherche interactive (typeahead) : simule /rest/api/product|route|unit?q=... avec
+  // surlignage en rouge (accent) du texte saisi dans chaque suggestion. "Manuel ✓" = valeur
+  // citée telle quelle dans le Manuel d'intégration VIDAL ; "Exemple" = nom plausible inventé
+  // pour l'aperçu, à ne jamais prendre pour une donnée VIDAL confirmée.
+  // Chaque produit ne propose QUE ses voies/unités compatibles (comme /rest/api/product/{id}/routes
+  // et /units en réalité) — pas de liste générique partagée entre tous les médicaments. Ex : TERPONE
+  // (sirop) n'offre ni voie rectale ni unité "suppositoire", parce que sa documentation VIDAL ne les
+  // contient pas. "revision" = note/date de dernière mise à jour de la fiche produit (exemple —
+  // champ exact non confirmé dans les extraits du manuel consultés, à vérifier via /rest/api/product/{id}).
+  const typeaheadData = {
+    drug: [
+      { label:'DOLIPRANE 100 mg cp', ref:'19649', confirmed:true,
+        routes:[{label:'Voie orale', ref:'38', confirmed:true}],
+        units:[{label:'comprimé', ref:'129', confirmed:true}],
+        revision:{ date:'2026-06-12', note:'Mise à jour de la posologie adulte' } },
+      { label:'NOCTAMIDE 1 mg cp séc', ref:'11897', confirmed:true,
+        routes:[{label:'Voie orale', ref:'38', confirmed:true}],
+        units:[{label:'comprimé', ref:'129', confirmed:false}],
+        revision:{ date:'2025-11-03', note:"Ajout d'une précaution d'emploi" } },
+      { label:'BOSULIF 100 mg cp pellic', ref:'128351', confirmed:true,
+        routes:[{label:'Voie orale', ref:'38', confirmed:false}],
+        units:[{label:'comprimé', ref:'129', confirmed:true}],
+        revision:{ date:'2026-01-20', note:'Actualisation des effets indésirables' } },
+      { label:'IBUPROFENE ARROW 400 mg cp pellic', ref:'67825', confirmed:true,
+        routes:[{label:'Voie orale', ref:'38', confirmed:true}],
+        units:[{label:'comprimé', ref:'129', confirmed:true}],
+        revision:{ date:'2025-09-08', note:'Mise à jour des interactions médicamenteuses' } },
+      { label:'TERPONE sirop', ref:'90007', confirmed:false,
+        routes:[{label:'Voie orale', ref:'38', confirmed:false}],
+        units:[{label:'mL', ref:'90201', confirmed:false}, {label:'cuillère à café', ref:'90204', confirmed:false}],
+        revision:{ date:'2025-04-15', note:'Aucune modification depuis la dernière révision' } },
+      { label:'DOLIPRANE 1000 mg cp', ref:'90001', confirmed:false,
+        routes:[{label:'Voie orale', ref:'38', confirmed:true}],
+        units:[{label:'comprimé', ref:'129', confirmed:true}],
+        revision:{ date:'2026-06-12', note:'Mise à jour de la posologie adulte' } },
+      { label:'EFFERALGAN 500 mg cp', ref:'90002', confirmed:false,
+        routes:[{label:'Voie orale', ref:'38', confirmed:true}],
+        units:[{label:'comprimé', ref:'129', confirmed:true}],
+        revision:{ date:'2025-12-02', note:'Actualisation du RCP' } },
+      { label:'AMOXICILLINE BIOGARAN 1 g cp', ref:'90003', confirmed:false,
+        routes:[{label:'Voie orale', ref:'38', confirmed:true}],
+        units:[{label:'comprimé', ref:'129', confirmed:true}, {label:'gélule', ref:'90203', confirmed:false}],
+        revision:{ date:'2026-02-28', note:'Ajout de contre-indications' } },
+      { label:'TRAMADOL BIOGARAN 50 mg gélule', ref:'90004', confirmed:false,
+        routes:[{label:'Voie orale', ref:'38', confirmed:true}],
+        units:[{label:'gélule', ref:'90203', confirmed:false}],
+        revision:{ date:'2025-08-19', note:'Mise à jour des précautions liées aux opioïdes' } },
+      { label:'METFORMINE ARROW 1000 mg cp', ref:'90005', confirmed:false,
+        routes:[{label:'Voie orale', ref:'38', confirmed:true}],
+        units:[{label:'comprimé', ref:'129', confirmed:true}],
+        revision:{ date:'2026-03-30', note:'Actualisation posologie insuffisance rénale' } },
+      { label:'ASPIRINE DU RHONE 500 mg cp', ref:'90006', confirmed:false,
+        routes:[{label:'Voie orale', ref:'38', confirmed:true}],
+        units:[{label:'comprimé', ref:'129', confirmed:true}],
+        revision:{ date:'2025-10-11', note:'Actualisation des interactions' } },
+    ],
+  };
+
+  function highlightMatch(label, query){
+    const idx = label.toLowerCase().indexOf(query.toLowerCase());
+    if (idx === -1) return esc(label);
+    return esc(label.slice(0, idx)) + '<mark>' + esc(label.slice(idx, idx + query.length)) + '</mark>' + esc(label.slice(idx + query.length));
+  }
+  function fmtShortDate(iso){
+    return new Date(iso).toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric'});
+  }
+
+  // Le médicament reste en recherche libre (référentiel VIDAL, potentiellement des milliers
+  // d'entrées). Voies/unités, en revanche, sont des listes FINIES et déjà filtrées par produit
+  // (cf. onDrugSelected) : une liste déroulante classique suffit et évite la saisie inutile.
+  function initTypeaheads(scopeEl){
+    scopeEl.querySelectorAll('[data-typeahead]').forEach(input => {
+      const dataset = typeaheadData.drug;
+      if (input.dataset.taInit) return;
+      input.dataset.taInit = '1';
+      const wrap = document.createElement('div');
+      wrap.className = 'typeahead-wrap';
+      input.parentNode.insertBefore(wrap, input);
+      wrap.appendChild(input);
+      const list = document.createElement('div');
+      list.className = 'typeahead-list';
+      wrap.appendChild(list);
+
+      function render(){
+        const q = input.value.trim();
+        if (!q) { list.classList.remove('show'); return; }
+        const matches = dataset.filter(d => d.label.toLowerCase().includes(q.toLowerCase())).slice(0, 8);
+        list.innerHTML = matches.length
+          ? matches.map(m => `
+              <div class="typeahead-item" data-ref="${esc(m.ref)}" data-label="${esc(m.label)}">
+                <span>${highlightMatch(m.label, q)}</span>
+                <span class="typeahead-badge ${m.confirmed ? 'ok' : 'ex'}">${m.confirmed ? 'Manuel ✓' : 'Exemple'}</span>
+              </div>`).join('')
+          : `<div class="typeahead-empty">Aucun résultat pour « ${esc(q)} »</div>`;
+        list.classList.add('show');
+      }
+      input.addEventListener('input', render);
+      input.addEventListener('focus', render);
+      list.addEventListener('mousedown', (ev) => {
+        const item = ev.target.closest('.typeahead-item');
+        if (!item) return;
+        ev.preventDefault();
+        input.value = item.dataset.label;
+        input.dataset.ref = item.dataset.ref;
+        list.classList.remove('show');
+        onDrugSelected(input, item.dataset.ref);
+        renderPreview();
+      });
+      document.addEventListener('click', (ev) => {
+        if (!wrap.contains(ev.target)) list.classList.remove('show');
+      });
+    });
+  }
+
+  // À la sélection d'un médicament : (1) les listes déroulantes Voie/Unité sont reconstruites
+  // avec UNIQUEMENT ses options compatibles (listes finies -> select plutôt que recherche) ;
+  // (2) la note + date de révision de sa fiche VIDAL s'affichent juste sous le champ médicament.
+  function populateCompatSelect(selectEl, options){
+    selectEl.innerHTML = '';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = (options && options.length) ? '— Choisir —' : '— Aucune option pour ce médicament —';
+    selectEl.appendChild(placeholder);
+    (options || []).forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o.ref;
+      opt.textContent = `${o.label} — ${o.confirmed ? 'Manuel VIDAL' : 'exemple'}`;
+      selectEl.appendChild(opt);
+    });
+  }
+  function onDrugSelected(drugInput, ref){
+    const lineEl = drugInput.closest('.rx-line');
+    const entry = typeaheadData.drug.find(d => d.ref === ref);
+
+    populateCompatSelect(lineEl.querySelector('[data-k="route"]'), entry?.routes);
+    populateCompatSelect(lineEl.querySelector('[data-k="unitId"]'), entry?.units);
+
+    const revBox = lineEl.querySelector('[data-rev-note]');
+    if (revBox) {
+      if (entry?.revision) {
+        revBox.style.display = 'flex';
+        revBox.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          <span>Fiche VIDAL — dernière révision le <b>${esc(fmtShortDate(entry.revision.date))}</b> : ${esc(entry.revision.note)}</span>`;
+      } else {
+        revBox.style.display = 'none';
+      }
+    }
+  }
+
+  let lineCounter = 0;
+  function addLine(isPrev){
+    lineCounter++;
+    const target = document.getElementById(isPrev ? 'prevLines' : 'rxLines');
+    const div = document.createElement('div');
+    div.innerHTML = rxTemplate(lineCounter, isPrev);
+    const lineEl = div.firstElementChild;
+    target.appendChild(lineEl);
+    initTypeaheads(lineEl);
+    if (document.getElementById('adminSwitch').classList.contains('on')) {
+      target.querySelectorAll('.admin-only').forEach(b => b.classList.add('show'));
+    }
+    renderPreview();
+  }
+  function addInterval(btn){
+    const wrap = btn.closest('[data-posologies]');
+    const row = document.createElement('div');
+    row.className = 'interval-row';
+    row.innerHTML = `
+      <div><label>Dose</label><input class="control" data-pk="dose" type="number" min="0"></div>
+      <div><label>Unité</label><select class="control" data-pk="unitId"><option value="129">comprimé</option><option value="137">mL</option></select></div>
+      <div><label>Interv. min</label><input class="control" data-pk="min" type="number" min="0"></div>
+      <div><label>Interv. max</label><input class="control" data-pk="max" type="number" min="0"></div>
+      <button class="mini-x" onclick="this.closest('.interval-row').remove(); renderPreview();">✕</button>`;
+    wrap.insertBefore(row, btn);
+    renderPreview();
+  }
+
+  function toggleChip(el){ el.classList.toggle('on'); updateChipCount(); renderPreview(); }
+  function selectAllChips(on){
+    document.querySelectorAll('#chipWrap .chip').forEach(c => c.classList.toggle('on', on));
+    updateChipCount(); renderPreview();
+  }
+  function updateChipCount(){
+    const total = document.querySelectorAll('#chipWrap .chip').length;
+    const active = document.querySelectorAll('#chipWrap .chip.on').length;
+    document.getElementById('chipCount').textContent = `${active} sélectionnée(s) sur ${total}`;
+  }
+  function generateAnalysisId(){
+    const y = new Date().getFullYear();
+    return 'RX-' + y + '-' + String(Math.floor(100000 + Math.random() * 900000));
+  }
+  // Reflète l'ID d'analyse à deux endroits : au-dessus du bouton Historique (visible en
+  // permanence, en-tête figé) et sur la carte Résultat (contexte au moment de la lecture).
+  function setAnalysisBadge(show, id){
+    document.getElementById('analysisBadge').style.display = show ? 'inline-flex' : 'none';
+    document.getElementById('analysisIdLabel').textContent = id || '';
+    document.getElementById('analysisBadgeTop').style.display = show ? 'inline-block' : 'none';
+    document.getElementById('analysisIdLabelTop').textContent = id || '';
+  }
+  function runSecure(){
+    if (!formReadyForAnalysis()) { validateAllNumbers(); return; }
+    currentAnalysisId = generateAnalysisId();
+    analysisPdfGenerated = false;
+    setAnalysisBadge(true, currentAnalysisId);
+    document.getElementById('pdfMemo').classList.remove('show');
+    document.getElementById('printBtn').disabled = false;
+    updateWaButtonState();
+    document.getElementById('resultCard').scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+
+  // Imprimer Ordonnance : génère un document imprimable (via l'aperçu d'impression du
+  // navigateur -> "Enregistrer en PDF") listant la NOUVELLE prescription, avec un QR code
+  // qu'une pharmacie peut scanner. Ici le QR encode directement le contenu (démo, quelques
+  // lignes) ; en production, pour rester lisible avec beaucoup de lignes et éviter toute
+  // falsification, préférer une URL de vérification signée pointant vers le document
+  // securisation plutôt que les données brutes.
+  // Hash court, non cryptographique — simule visuellement une signature pour cet aperçu.
+  // En production la signature doit être un HMAC calculé UNIQUEMENT côté serveur avec une
+  // clé secrète jamais exposée au navigateur (ex. HMAC-SHA256(secret, analysisId + expiry)) ;
+  // jamais en JavaScript client comme ici.
+  function fakeClientSideDigest(str){
+    let h = 0;
+    for (let i = 0; i < str.length; i++) { h = (Math.imul(31, h) + str.charCodeAt(i)) | 0; }
+    return (h >>> 0).toString(16).padStart(8, '0');
+  }
+
+  // Le QR encode une URL de vérification signée — pas les données brutes de l'ordonnance.
+  // Une pharmacie qui scanne interroge le serveur Sawali en direct : celui-ci valide la
+  // signature + l'expiration, puis renvoie le contenu À JOUR de securisation
+  // (id = currentAnalysisId). Avantages sur l'encodage direct : capacité illimitée quel
+  // que soit le nombre de lignes, et impossible de falsifier le contenu après impression
+  // (modifier le papier ne change rien côté serveur).
+  function buildVerificationUrl(analysisId){
+    const expiresAt = Date.now() + 90 * 24 * 3600 * 1000; // validité 90 jours, ajustable
+    const sig = fakeClientSideDigest(`${analysisId}.${expiresAt}.DEMO-SECRET-NEVER-CLIENT-SIDE`);
+    return `https://app.sawalismartsystems.com/rx-verify/${analysisId}?exp=${expiresAt}&sig=${sig}`;
+  }
+
+  function openPrintOrdonnance(){
+    if (!currentAnalysisId) { alert("Sécurisez d'abord la prescription."); return; }
+    const lines = collectLinesFrom(document.getElementById('rxLines'), false);
+    const name = document.getElementById('patientName').value.trim() || '(nom non renseigné)';
+
+    document.getElementById('printPatientName').textContent = name;
+    document.getElementById('printPatientRef').textContent = patientId || 'Consultation non enregistrée';
+    document.getElementById('printDate').textContent = new Date().toLocaleDateString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric'});
+    document.getElementById('printRxId').textContent = 'Analyse ' + currentAnalysisId;
+
+    document.getElementById('printRxBody').innerHTML = lines.length
+      ? lines.map(l => `<tr><td>${esc(l.drug || '—')}</td><td>${esc(l.dose || '—')}</td><td>${esc(l.frequencyType || '—')}</td><td>${esc((l.duration || '—') + ' ' + (l.durationType || ''))}</td><td>${esc(l.route || '—')}</td></tr>`).join('')
+      : `<tr><td colspan="5" style="text-align:center;color:#888">Aucun médicament dans la nouvelle prescription</td></tr>`;
+
+    const qrBox = document.getElementById('printQr');
+    qrBox.innerHTML = '';
+    const verifyUrl = buildVerificationUrl(currentAnalysisId);
+    if (window.QRCode) {
+      new QRCode(qrBox, { text: verifyUrl, width: 96, height: 96, correctLevel: QRCode.CorrectLevel.M });
+    } else {
+      qrBox.textContent = 'QR indisponible';
+    }
+    document.getElementById('printQrTechNote').innerHTML =
+      ` URL de vérification signée (valable 90 jours), pas le contenu brut : <span class="mono" style="font-size:9px">${esc(verifyUrl)}</span>. Signature simulée côté client pour cet aperçu — en production, calculée uniquement côté serveur.`;
+
+    analysisPdfGenerated = true;
+    const memoText = `PDF de l'ordonnance mémorisé pour l'analyse ${currentAnalysisId} le ${new Date().toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}.`;
+    document.getElementById('pdfMemoText').textContent = memoText;
+    document.getElementById('pdfMemo').classList.add('show');
+    updateWaButtonState();
+
+    document.getElementById('printOverlay').classList.add('show');
+  }
+
+  // Envoi WhatsApp de l'ordonnance : réutilise le relais WA déjà en place sur Sawali
+  // (collection whatsapp_messages) plutôt qu'un nouveau canal. Un modèle WhatsApp Business
+  // pré-approuvé est obligatoire pour ce type d'envoi (document hors fenêtre de conversation
+  // de 24h) — configurable dans Réglages admin > Modèles WhatsApp. Nom proposé : "ordonnance_pdf_fr".
+  const WA_TEMPLATE_NAME = 'ordonnance_pdf_fr';
+  function sendOrdonnanceWhatsApp(){
+    if (document.getElementById('waSendBtn').disabled) return;
+    const phone = document.getElementById('patientPhone').value.trim();
+    const box = document.getElementById('waSendStatus');
+    box.classList.add('show');
+    box.innerHTML = `<span class="wa-tick">…</span> Envoi vers ${esc(phone)} via le modèle « ${WA_TEMPLATE_NAME} »…`;
+    document.getElementById('waSendBtn').disabled = true;
+
+    // Simule les statuts de webhook WhatsApp Business (sent -> delivered -> read),
+    // exactement comme pour les autres messages déjà journalisés dans whatsapp_messages.
+    setTimeout(() => {
+      box.innerHTML = `<span class="wa-tick">✓</span> Envoyé — analyse ${currentAnalysisId} vers ${esc(phone)}`;
+    }, 700);
+    setTimeout(() => {
+      box.innerHTML = `<span class="wa-tick">✓✓</span> Distribué — analyse ${currentAnalysisId} vers ${esc(phone)}`;
+    }, 1800);
+    setTimeout(() => {
+      box.innerHTML = `<span class="wa-tick read">✓✓</span> Lu par le patient — analyse ${currentAnalysisId} vers ${esc(phone)}`;
+      document.getElementById('waSendBtn').disabled = false;
+    }, 3200);
+  }
+  function closePrintOrdonnance(){
+    document.getElementById('printOverlay').classList.remove('show');
+  }
+
+  // Scopés à leur carte respective : le code-preview (XML/JSON) et le Résultat (structuré/HTML
+  // VIDAL) partagent les mêmes classes .tabbtn/.pane mais ne doivent pas s'affecter l'un l'autre.
+  function switchTab(name){
+    const scope = document.querySelector('.codecard');
+    scope.querySelectorAll('.tabbtn').forEach(b => b.classList.remove('active'));
+    scope.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+    scope.querySelector(`.tabbtn[onclick="switchTab('${name}')"]`).classList.add('active');
+    document.getElementById('pane-' + name).classList.add('active');
+  }
+  function switchResultTab(name){
+    const scope = document.getElementById('resultCard');
+    scope.querySelectorAll('.tabbtn').forEach(b => b.classList.remove('active'));
+    scope.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+    scope.querySelector(`.tabbtn[onclick="switchResultTab('${name}')"]`).classList.add('active');
+    document.getElementById('pane-result-' + name).classList.add('active');
+  }
+  function copyActive(){
+    const active = document.querySelector('.pane.active pre');
+    navigator.clipboard?.writeText(active.textContent).then(() => {
+      const btn = document.querySelector('.copybtn');
+      const old = btn.textContent; btn.textContent = 'Copié !';
+      setTimeout(() => btn.textContent = old, 1200);
+    }).catch(() => {});
+  }
+
+  function esc(s){ return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function collectTags(name){
+    const box = document.querySelector(`[data-taglist="${name}"]`);
+    return Array.from(box.querySelectorAll('.tag')).map(t => {
+      const ref = t.querySelector('.tag-ref')?.textContent.trim() || '';
+      const label = t.firstChild.textContent.trim();
+      return { label, ref };
+    });
+  }
+
+  // Cockroft & Gault, formule officielle du manuel VIDAL (calculateur /rest/api/calculators/ccreat/cockroft-gault)
+  function computeAge(dobStr){
+    if (!dobStr) return null;
+    const dob = new Date(dobStr);
+    const now = new Date();
+    let age = now.getFullYear() - dob.getFullYear();
+    const m = now.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
+    return age;
+  }
+  function computeClairance(dob, gender, weight, creat){
+    const age = computeAge(dob);
+    if (age == null || !weight || !creat || (gender !== 'MALE' && gender !== 'FEMALE')) return null;
+    const w = Number(weight), c = Number(creat);
+    if (!w || !c) return null;
+    const factor = gender === 'MALE' ? 1.23 : 1.04;
+    return factor * w * (140 - age) / c;
+  }
+  function clairanceBand(val){
+    if (val == null) return { cls:'na', label:'Non calculable' };
+    if (val > 90) return { cls:'ok', label:'Normale' };
+    if (val > 60) return { cls:'mild', label:'Légère' };
+    if (val > 30) return { cls:'mod', label:'Modérée' };
+    return { cls:'sev', label:'Sévère' };
+  }
+
+  // IMC = poids (kg) / taille (m)². Purement indicatif pour le médecin : VIDAL ne connaît
+  // pas cette balise, elle n'apparaît donc jamais dans le XML — seulement dans notre JSON.
+  function computeBmi(weight, height){
+    const w = Number(weight), h = Number(height);
+    if (!w || !h) return null;
+    const m = h / 100;
+    return w / (m * m);
+  }
+  function bmiBand(val){
+    if (val == null) return { cls:'na', label:'Non calculable' };
+    if (val < 18.5) return { cls:'mild', label:'Insuffisance pondérale' };
+    if (val < 25) return { cls:'ok', label:'Normal' };
+    if (val < 30) return { cls:'mod', label:'Surpoids' };
+    return { cls:'sev', label:'Obésité' };
+  }
+
+  function collectPatient(){
+    const sex = document.querySelector('[data-k="sexGroup"] .pill-opt.active')?.dataset.val || null;
+    const dob = document.querySelector('[data-k="dob"]').value || null;
+    const weight = document.querySelector('[data-k="weight"]').value || null;
+    const height = document.querySelector('[data-k="height"]').value || null;
+    const creat = document.querySelector('[data-k="serumCreatinine"]').value || null;
+    const clairance = computeClairance(dob, sex, weight, creat);
+    const band = clairanceBand(clairance);
+    document.getElementById('clairanceVal').textContent = clairance != null ? clairance.toFixed(1) + ' mL/min' : '—';
+    const bandEl = document.getElementById('clairanceBand');
+    bandEl.className = 'clairance-band ' + band.cls;
+    bandEl.textContent = band.label;
+
+    const bmi = computeBmi(weight, height);
+    const bmiB = bmiBand(bmi);
+    document.getElementById('imcVal').textContent = bmi != null ? bmi.toFixed(1) + ' kg/m²' : '—';
+    const imcBandEl = document.getElementById('imcBand');
+    imcBandEl.className = 'clairance-band ' + bmiB.cls;
+    imcBandEl.textContent = bmiB.label;
+
+    return {
+      dateOfBirth: dob, gender: sex, weight, height, bmi,
+      breastFeedingStart: document.querySelector('[data-k="breastFeedingStart"]').value || null,
+      weeksAmenorrhea: document.querySelector('[data-k="weeksAmenorrhea"]').value || null,
+      serumCreatinine: creat, clairance,
+      hepatic: document.querySelector('[data-k="hepatic"]').value,
+      allergies: collectTags('allergies'),
+      pathologies: collectTags('pathologies'),
+      molecules: collectTags('molecules'),
+    };
+  }
+
+  function collectLinesFrom(container, isPrev){
+    return Array.from(container.querySelectorAll('.rx-line')).map(line => {
+      const g = (k) => line.querySelector(`[data-k="${k}"]`);
+      const val = (k) => g(k) ? g(k).value : null;
+      const posologies = Array.from(line.querySelectorAll('.interval-row')).map(r => ({
+        dose: r.querySelector('[data-pk="dose"]')?.value || null,
+        unitId: r.querySelector('[data-pk="unitId"]')?.value || null,
+        intervalMin: r.querySelector('[data-pk="min"]')?.value || null,
+        intervalMax: r.querySelector('[data-pk="max"]')?.value || null,
+      })).filter(p => p.dose || p.intervalMin || p.intervalMax);
+      return {
+        drug: val('drug') || null,
+        drugRef: g('drug')?.dataset.ref || null,
+        dose: val('dose') || null,
+        unitId: val('unitId') || null,
+        frequencyType: val('frequencyType') || null,
+        duration: val('duration') || null,
+        durationType: val('durationType') || null,
+        route: val('route') || null,
+        indication: val('indication') || null,
+        startDate: val('startDate') || null,
+        endDate: val('endDate') || null,
+        ald: !!g('ald')?.checked,
+        aldCode: val('aldCode') || null,
+        posologies,
+        groupType: isPrev ? 'PREVIOUS_ORDER' : 'SAME_ORDER',
+        groupId: isPrev ? 2 : 1,
+        status: 'ACTIVE',
+      };
+    }).filter(l => l.drug);
+  }
+  function collectLines(){
+    return [
+      ...collectLinesFrom(document.getElementById('prevLines'), true),
+      ...collectLinesFrom(document.getElementById('rxLines'), false),
+    ];
+  }
+
+  function collectAlertFilters(){
+    return Array.from(document.querySelectorAll('#chipWrap .chip.on')).map(c => c.dataset.val);
+  }
+
+  function xmlTag(name, value, depth){
+    const pad = '  '.repeat(depth);
+    if (value === null || value === undefined || value === '') return `${pad}<span class="tag-tok">&lt;${name}/&gt;</span>\n`;
+    return `${pad}<span class="tag-tok">&lt;${name}&gt;</span><span class="str-tok">${esc(value)}</span><span class="tag-tok">&lt;/${name}&gt;</span>\n`;
+  }
+  function xmlBlock(name, innerHtml, depth){
+    const pad = '  '.repeat(depth);
+    if (!innerHtml) return `${pad}<span class="tag-tok">&lt;${name}/&gt;</span>\n`;
+    return `${pad}<span class="tag-tok">&lt;${name}&gt;</span>\n${innerHtml}${pad}<span class="tag-tok">&lt;/${name}&gt;</span>\n`;
+  }
+
+  function buildXml(patient, lines, filters){
+    let out = '<span class="mute-tok">&lt;?xml version="1.0" encoding="UTF-8"?&gt;</span>\n';
+    let patientInner = '';
+    patientInner += xmlTag('dateOfBirth', patient.dateOfBirth ? patient.dateOfBirth + 'T00:00:00' : null, 2);
+    patientInner += xmlTag('gender', patient.gender, 2);
+    patientInner += xmlTag('weight', patient.weight, 2);
+    patientInner += xmlTag('height', patient.height, 2);
+    if (patient.gender === 'FEMALE') {
+      patientInner += xmlTag('breastFeedingStartDate', patient.breastFeedingStart ? patient.breastFeedingStart + 'T00:00:00' : null, 2);
+      patientInner += xmlTag('weeksOfAmenorrhea', patient.weeksAmenorrhea, 2);
+    }
+    patientInner += xmlTag('creatin', patient.clairance != null ? patient.clairance.toFixed(1) : null, 2);
+    patientInner += xmlTag('hepaticInsufficiency', patient.hepatic, 2);
+    patientInner += xmlBlock('allergies', patient.allergies.map(a => xmlTag('allergy', a.ref, 3)).join(''), 2);
+    patientInner += xmlBlock('molecules', patient.molecules.map(m => xmlTag('molecule', m.ref, 3)).join(''), 2);
+    patientInner += xmlBlock('pathologies', patient.pathologies.map(p => xmlTag('pathology', p.ref, 3)).join(''), 2);
+
+    let linesInner = '';
+    lines.forEach(l => {
+      let li = '';
+      li += xmlTag('drug', l.drugRef ? `vidal://product/${l.drugRef}` : (l.drug ? `vidal://product/NON-RESOLU` : null), 3);
+      li += xmlTag('dose', l.dose, 3);
+      li += xmlTag('unitId', l.unitId, 3);
+      li += xmlTag('duration', l.duration, 3);
+      li += xmlTag('durationType', l.durationType, 3);
+      li += xmlTag('frequencyType', l.frequencyType, 3);
+      li += xmlBlock('routes', xmlTag('route', l.route ? `vidal://route/${l.route}` : null, 4), 3);
+      if (l.indication) li += xmlBlock('indications', xmlTag('indication', `vidal://indication/EXEMPLE`, 4), 3);
+      if (l.posologies.length){
+        li += xmlBlock('dosages', l.posologies.map(p =>
+          xmlBlock('dosage',
+            xmlTag('dose', p.dose, 5) + xmlTag('unitId', p.unitId, 5) +
+            xmlBlock('interval', xmlTag('min', p.intervalMin, 6) + xmlTag('max', p.intervalMax, 6) + xmlTag('unitId', '41', 6), 5),
+          4)
+        ).join(''), 3);
+      }
+      if (l.startDate || l.endDate) {
+        li += xmlBlock('period', xmlTag('startDate', l.startDate ? l.startDate + 'T00:00:00' : null, 4) + xmlTag('endDate', l.endDate ? l.endDate + 'T00:00:00' : null, 4), 3);
+      }
+      li += xmlTag('status', l.status, 3);
+      li += xmlBlock('group', xmlTag('groupId', l.groupId, 4) + xmlTag('groupType', l.groupType, 4), 3);
+      if (l.ald) {
+        li += xmlBlock('aldStatus', xmlTag('ald', 'true', 4) + xmlTag('aldCode', l.aldCode, 4), 3);
+      }
+      linesInner += xmlBlock('prescription-line', li, 2);
+    });
+
+    const alertTypesInner = filters.map(f => xmlTag('alert-type', f, 2)).join('');
+
+    out += xmlBlock('prescription',
+      xmlBlock('patient', patientInner, 1) +
+      xmlBlock('prescription-lines', linesInner, 1) +
+      xmlBlock('alert-types', alertTypesInner, 1),
+    0);
+    return out;
+  }
+
+  function buildJson(patient, lines, filters){
+    const payload = {
+      patient_id: patientId,
+      register_patient: !!patientId,
+      patient_identity: patientId ? { name: (document.getElementById('patientName').value || null), shared_with_colleagues: patientShared } : null,
+      patient: {
+        birth_date: patient.dateOfBirth,
+        gender: patient.gender,
+        weight_kg: patient.weight ? Number(patient.weight) : null,
+        height_cm: patient.height ? Number(patient.height) : null,
+        bmi: patient.bmi != null ? Number(patient.bmi.toFixed(1)) : null,
+        breastfeeding_start_date: patient.gender === 'FEMALE' ? patient.breastFeedingStart : null,
+        weeks_of_amenorrhea: patient.gender === 'FEMALE' ? patient.weeksAmenorrhea : null,
+        serum_creatinine_umol_l: patient.serumCreatinine ? Number(patient.serumCreatinine) : null,
+        creatinine_clearance_ml_min: patient.clairance != null ? Number(patient.clairance.toFixed(1)) : null,
+        hepatic_insufficiency: patient.hepatic,
+        allergies: patient.allergies,
+        molecules_to_avoid: patient.molecules,
+        pathologies: patient.pathologies,
+      },
+      current_treatments: lines.filter(l => l.groupType === 'PREVIOUS_ORDER'),
+      new_prescription_lines: lines.filter(l => l.groupType === 'SAME_ORDER'),
+      alert_types_filter: filters,
+    };
+    const json = JSON.stringify(payload, null, 2);
+    return esc(json)
+      .replace(/"([a-zA-Z_]+)":/g, '<span class="tag-tok">"$1"</span>:')
+      .replace(/: "([^"]*)"/g, ': <span class="str-tok">"$1"</span>');
+  }
+
+  function renderPreview(){
+    renderIdentityState();
+    const patient = collectPatient();
+    const lines = collectLines();
+    const filters = collectAlertFilters();
+    document.getElementById('outXml').innerHTML = buildXml(patient, lines, filters);
+    document.getElementById('outJson').innerHTML = buildJson(patient, lines, filters);
+  }
+
+  function ensureErrHint(input){
+    let hint = input.nextElementSibling;
+    if (!hint || !hint.classList || !hint.classList.contains('num-err')) {
+      hint = document.createElement('div');
+      hint.className = 'num-err';
+      hint.textContent = 'Valeur invalide : un nombre négatif n\'est pas autorisé ici.';
+      input.insertAdjacentElement('afterend', hint);
+    }
+    return hint;
+  }
+  function validateNumberField(input){
+    const hint = ensureErrHint(input);
+    const bad = input.value !== '' && Number(input.value) < 0;
+    input.classList.toggle('invalid', bad);
+    hint.classList.toggle('show', bad);
+    return bad;
+  }
+  // "Sécuriser" exige un profil patient minimal + au moins une ligne de nouvelle prescription
+  // complète — pas question de lancer une analyse (donc d'imprimer une ordonnance) sur un
+  // formulaire à moitié rempli.
+  function formReadyForAnalysis(){
+    const hasSex = !!document.querySelector('[data-k="sexGroup"] .pill-opt.active');
+    const dob = document.querySelector('[data-k="dob"]').value;
+    const weight = document.querySelector('[data-k="weight"]').value;
+    const height = document.querySelector('[data-k="height"]').value;
+    if (!hasSex || !dob || !weight || !height) return false;
+
+    const lines = Array.from(document.querySelectorAll('#rxLines .rx-line'));
+    return lines.some(line => {
+      const v = (k) => line.querySelector(`[data-k="${k}"]`)?.value;
+      return v('drug') && v('dose') && v('unitId') && v('frequencyType') && v('duration') && v('durationType') && v('route');
+    });
+  }
+
+  // Champs purement identitaires (nom, téléphone WA) : les modifier ne change rien au contenu
+  // clinique déjà sécurisé, donc ça n'invalide pas l'analyse en cours — contrairement à un
+  // changement de dose, de médicament, etc.
+  const IDENTITY_ONLY_FIELDS = ['patientName', 'patientPhone'];
+  function validateAllNumbers(ev){
+    let anyInvalid = false;
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+      if (validateNumberField(input)) anyInvalid = true;
+    });
+    const ready = formReadyForAnalysis();
+    document.getElementById('secureBtn').disabled = anyInvalid || !ready;
+    document.getElementById('formAlert').classList.toggle('show', anyInvalid);
+    document.getElementById('formIncomplete').classList.toggle('show', !anyInvalid && !ready);
+
+    const isIdentityField = ev && ev.target && IDENTITY_ONLY_FIELDS.includes(ev.target.id);
+    // Toute modification clinique après une sécurisation invalide l'analyse en cours :
+    // il faut re-sécuriser (donc obtenir un nouvel identifiant) avant de pouvoir réimprimer.
+    if (currentAnalysisId && !isIdentityField) {
+      currentAnalysisId = null;
+      analysisPdfGenerated = false;
+      setAnalysisBadge(false, null);
+      document.getElementById('pdfMemo').classList.remove('show');
+      document.getElementById('printBtn').disabled = true;
+    }
+    updateWaButtonState();
+  }
+
+  // Bouton "Envoi WA" : actif seulement si un PDF existe pour l'analyse courante ET qu'un
+  // numéro WhatsApp du patient a été renseigné.
+  function updateWaButtonState(){
+    const phone = document.getElementById('patientPhone').value.trim();
+    document.getElementById('waSendBtn').disabled = !(analysisPdfGenerated && phone);
+  }
+
+  // Historique des analyses de prescriptions : numérotées, datées, rechargement intégral
+  // du formulaire (identité patient, profil clinique, traitements en cours, nouvelle
+  // prescription, filtres d'alertes) à partir d'un enregistrement choisi. Données de
+  // démonstration ici — en production, alimenté par la collection securisation.
+  const historyDemo = [
+    {
+      num: 4, date: '2026-09-09T14:00', registered: true, patientId: 'PAT-2026-31287', patientName: 'Mme Sawadogo A.',
+      summary: 'Correction — TRAMADOL 50 mg (dose ajustée)',
+      status: 'corrected', origin: 2,
+      alertsSummary: { crit: 0, warn: 1, info: 1 },
+      statusLog: [
+        { status: 'Signalée (alertes détectées)', at: '2026-08-22T09:40' },
+        { status: 'Corrigée', at: '2026-09-09T14:00' },
+        { status: 'Validée', at: '2026-09-09T14:05' },
+      ],
+      patient: {
+        dob:'1990-11-02', sex:'FEMALE', weight:'58', height:'162', serumCreatinine:'', hepatic:'NONE',
+        allergies:[], pathologies:[], molecules:[{label:'Codéine', ref:'vidal://molecule/455'}],
+      },
+      current: [],
+      lines: [{ drug:'TRAMADOL 50 mg', dose:'0.5', unitId:'129', frequencyType:'PER_DAY', duration:'5', durationType:'DAY', route:'38' }],
+      filters: ['CONTRA_INDICATION','ALLERGY','DRUG_INTERACTION','POSOLOGY','SIDE_EFFECT'],
+    },
+    {
+      num: 3, date: '2026-09-08T10:15', registered: true, patientId: 'PAT-2026-77410', patientName: 'M. Kaboré T.',
+      summary: 'Renouvellement — AMOXICILLINE 1 g',
+      status: 'clean', origin: null,
+      alertsSummary: { crit: 0, warn: 0, info: 1 },
+      statusLog: [{ status: 'Sans alerte', at: '2026-09-08T10:15' }],
+      patient: {
+        dob:'1958-03-12', sex:'MALE', weight:'82', height:'175', serumCreatinine:'95', hepatic:'NONE',
+        allergies:[{label:'Pénicilline', ref:'vidal://allergy/12'}],
+        pathologies:[{label:'Diabète type 2', ref:'vidal://cim10/1122'}],
+        molecules:[],
+      },
+      current: [{ drug:'METFORMINE 1000 mg', dose:'1', unitId:'129', frequencyType:'PER_DAY', duration:'30', durationType:'DAY', route:'38' }],
+      lines: [{ drug:'AMOXICILLINE 1 g', dose:'1', unitId:'129', frequencyType:'PER_DAY', duration:'7', durationType:'DAY', route:'38' }],
+      filters: ['CONTRA_INDICATION','ALLERGY','DRUG_INTERACTION','POSOLOGY'],
+    },
+    {
+      num: 2, date: '2026-08-22T09:40', registered: true, patientId: 'PAT-2026-31287', patientName: 'Mme Sawadogo A.',
+      summary: 'Douleur post-opératoire — TRAMADOL',
+      status: 'alerted', origin: null,
+      alertsSummary: { crit: 1, warn: 1, info: 0 },
+      statusLog: [{ status: 'Signalée (alertes détectées)', at: '2026-08-22T09:40' }],
+      patient: {
+        dob:'1990-11-02', sex:'FEMALE', weight:'58', height:'162', serumCreatinine:'', hepatic:'NONE',
+        allergies:[], pathologies:[], molecules:[{label:'Codéine', ref:'vidal://molecule/455'}],
+      },
+      current: [],
+      lines: [{ drug:'TRAMADOL 50 mg', dose:'1', unitId:'129', frequencyType:'PER_DAY', duration:'5', durationType:'DAY', route:'38' }],
+      filters: ['CONTRA_INDICATION','ALLERGY','DRUG_INTERACTION','POSOLOGY','SIDE_EFFECT'],
+    },
+    {
+      num: 1, date: '2026-08-03T16:05', registered: false, patientId: null, patientName: '',
+      summary: 'Consultation ponctuelle (non enregistrée) — DOLIPRANE',
+      status: 'clean', origin: null,
+      alertsSummary: { crit: 0, warn: 0, info: 0 },
+      statusLog: [{ status: 'Sans alerte', at: '2026-08-03T16:05' }],
+      patient: {
+        dob:'1996-09-09', sex:'FEMALE', weight:'60', height:'165', serumCreatinine:'70', hepatic:'NONE',
+        allergies:[{label:'Pénicilline', ref:'vidal://allergy/12'}],
+        pathologies:[{label:'Insuffisance rénale', ref:'vidal://cim10/4703'}],
+        molecules:[],
+      },
+      current: [],
+      lines: [{ drug:'DOLIPRANE 1000 mg', dose:'1', unitId:'129', frequencyType:'PER_DAY', duration:'7', durationType:'DAY', route:'38' }],
+      filters: ['CONTRA_INDICATION','ALLERGY','DRUG_INTERACTION','POSOLOGY'],
+    },
+  ];
+  const statusLabel = { alerted: 'Alertes actives', corrected: 'Corrigée & validée', clean: 'Sans alerte' };
+  function findByNum(n){ return historyDemo.find(h => h.num === n); }
+  // 1ère colonne = enrôlement du patient, pas un numéro global de sécurisation : on calcule
+  // pour chaque analyse son rang chronologique au sein des analyses de CE patient.
+  function computePatientSeqs(){
+    const seqMap = {}, counts = {};
+    [...historyDemo].sort((a, b) => new Date(a.date) - new Date(b.date)).forEach(h => {
+      if (!h.registered) return;
+      counts[h.patientId] = (counts[h.patientId] || 0) + 1;
+      seqMap[h.num] = counts[h.patientId];
+    });
+    return seqMap;
+  }
+
+  function openHistory(){
+    renderHistoryList();
+    document.getElementById('historyModal').classList.add('show');
+  }
+  function closeHistory(){
+    document.getElementById('historyModal').classList.remove('show');
+  }
+  function fmtDate(iso){
+    return new Date(iso).toLocaleString('fr-FR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  }
+  function renderHistoryList(){
+    const box = document.getElementById('historyList');
+    const seqMap = computePatientSeqs();
+    box.innerHTML = historyDemo.map((h, i) => {
+      const origin = h.origin ? findByNum(h.origin) : null;
+      const traceLines = [
+        origin ? `Origine : sécurisation #${origin.num} (${fmtDate(origin.date)})` : `Origine : sécurisation initiale`,
+        `Alertes VIDAL : ${h.alertsSummary.crit} critique(s), ${h.alertsSummary.warn} précaution(s), ${h.alertsSummary.info} info`,
+        ...h.statusLog.map(s => `${fmtDate(s.at)} — ${s.status}`),
+      ];
+      const numCol = h.registered
+        ? `<span class="pid">${esc(h.patientId)}</span><span class="pseq">Analyse n°${seqMap[h.num]}</span>`
+        : `<span class="pid anon">Non enregistré</span><span class="pseq">Ponctuel</span>`;
+      return `
+      <div class="hist-row">
+        <div class="hist-num">${numCol}</div>
+        <div class="hist-main">
+          <div class="hist-title"><span class="status-dot ${h.status}"></span>${esc(h.summary)}</div>
+          <div class="hist-meta">
+            ${fmtDate(h.date)}
+            <span class="status-label ${h.status}">${statusLabel[h.status]}</span>
+          </div>
+          <button class="trace-toggle" onclick="toggleTrace(this)">Traçabilité ▾</button>
+          <div class="trace-panel" style="display:none">
+            <div class="readout">${traceLines.map(esc).join('<br>')}</div>
+          </div>
+        </div>
+        <button class="hist-load" onclick="loadHistoryEntry(${i})">Charger</button>
+      </div>
+    `;
+    }).join('');
+  }
+  function toggleTrace(btn){
+    const panel = btn.nextElementSibling;
+    const open = panel.style.display === 'block';
+    panel.style.display = open ? 'none' : 'block';
+    btn.textContent = open ? 'Traçabilité ▾' : 'Traçabilité ▴';
+  }
+
+  function setTagsFromData(name, items){
+    const box = document.querySelector(`[data-taglist="${name}"]`);
+    box.querySelectorAll('.tag').forEach(t => t.remove());
+    const input = box.querySelector('.tag-input');
+    const cls = { allergies:'allergy', pathologies:'patho', molecules:'mol' }[name];
+    items.forEach(it => {
+      const span = document.createElement('span');
+      span.className = 'tag ' + cls;
+      span.innerHTML = `${esc(it.label)} <span class="tag-ref">${esc(it.ref)}</span> <button onclick="removeTag(this)">✕</button>`;
+      box.insertBefore(span, input);
+    });
+  }
+
+  function fillLineFields(lineEl, data){
+    // Le médicament d'abord : ça reconstruit les listes Voie/Unité compatibles avant qu'on
+    // essaie d'y sélectionner une valeur, sinon le <select> n'aurait que son placeholder.
+    if (data.drug) {
+      const drugInput = lineEl.querySelector('[data-k="drug"]');
+      const match = typeaheadData.drug.find(d => d.label.toLowerCase() === data.drug.toLowerCase());
+      if (drugInput) {
+        drugInput.value = data.drug;
+        if (match) { drugInput.dataset.ref = match.ref; onDrugSelected(drugInput, match.ref); }
+      }
+    }
+    Object.keys(data).forEach(k => {
+      if (k === 'drug') return;
+      const el = lineEl.querySelector(`[data-k="${k}"]`);
+      if (!el) return;
+      if (el.type === 'checkbox') el.checked = !!data[k];
+      else el.value = data[k];
+    });
+  }
+
+  function loadHistoryEntry(idx){
+    const h = historyDemo[idx];
+
+    if (h.registered) {
+      patientId = h.patientId;
+      document.getElementById('patientName').value = h.patientName;
+    } else {
+      patientId = null;
+      document.getElementById('patientName').value = '';
+    }
+    patientShared = false;
+    otpCode = null;
+    otpUnlocked = false;
+    document.getElementById('shareToggle').checked = false;
+    viewRole = 'creator';
+    document.querySelectorAll('#roleGroup .pill-opt').forEach(p => p.classList.toggle('active', p.dataset.role === 'creator'));
+
+    document.querySelector('[data-k="dob"]').value = h.patient.dob || '';
+    document.querySelectorAll('[data-k="sexGroup"] .pill-opt').forEach(p => p.classList.toggle('active', p.dataset.val === h.patient.sex));
+    document.querySelector('[data-k="weight"]').value = h.patient.weight || '';
+    document.querySelector('[data-k="height"]').value = h.patient.height || '';
+    document.querySelector('[data-k="serumCreatinine"]').value = h.patient.serumCreatinine || '';
+    document.querySelector('[data-k="hepatic"]').value = h.patient.hepatic || 'NONE';
+    setTagsFromData('allergies', h.patient.allergies);
+    setTagsFromData('pathologies', h.patient.pathologies);
+    setTagsFromData('molecules', h.patient.molecules);
+    updateFemaleFieldsVisibility();
+
+    document.getElementById('prevLines').innerHTML = '';
+    document.getElementById('rxLines').innerHTML = '';
+    lineCounter = 0;
+    h.current.forEach(l => { addLine(true); fillLineFields(document.getElementById('prevLines').lastElementChild, l); });
+    h.lines.forEach(l => { addLine(false); fillLineFields(document.getElementById('rxLines').lastElementChild, l); });
+
+    document.querySelectorAll('#chipWrap .chip').forEach(c => c.classList.toggle('on', h.filters.includes(c.dataset.val)));
+    updateChipCount();
+
+    closeHistory();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    renderPreview();
+    validateAllNumbers();
+  }
+
+  document.addEventListener('input', renderPreview);
+  document.addEventListener('change', renderPreview);
+  document.addEventListener('input', (ev) => validateAllNumbers(ev));
+  document.addEventListener('change', (ev) => validateAllNumbers(ev));
+
+  // Reconstitution illustrative de la "Synthèse des alertes VIDAL" (/rest/api/alerts/full/html) :
+  // mêmes ancres que celles listées dans le manuel (menu_synthesis, menu_posology, menu_allergy,
+  // menu_contraindications_precautions...). En production ce HTML vient tel quel de VIDAL — on
+  // l'injecte directement en <iframe sandbox> srcdoc, sans jamais le reconstruire à la main.
+  const vidalHtmlSample = `<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<style>
+  body{ font-family:Arial,Helvetica,sans-serif; font-size:13px; color:#222; margin:0; padding:16px; }
+  h2{ font-size:15px; color:#0e1f3d; border-bottom:2px solid #0e1f3d; padding-bottom:6px; }
+  nav{ display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 16px; }
+  nav a{ font-size:10.5px; color:#0e1f3d; background:#eef0f5; border-radius:6px; padding:4px 8px; text-decoration:none; }
+  section{ margin-bottom:16px; padding-top:6px; border-top:1px solid #e1e6ef; }
+  section h3{ font-size:12.5px; margin:0 0 6px; }
+  .lvl4{ color:#a01818; } .lvl2{ color:#8a5a06; } .lvl0{ color:#0a5a8c; }
+  .src{ font-size:10.5px; color:#889; }
+</style></head>
+<body>
+  <h2 id="menu_synthesis">Synthèse des alertes VIDAL</h2>
+  <nav>
+    <a href="#menu_posology">Posologies</a><a href="#menu_allergy">Allergies</a>
+    <a href="#menu_contraindications_precautions">Contre-indications/Précautions</a>
+    <a href="#menu_drugs_interaction">Interactions médicamenteuses</a>
+    <a href="#menu_pregnancy">Grossesse/Allaitement</a><a href="#menu_profile">Dossier patient</a>
+  </nav>
+  <section id="menu_contraindications_precautions">
+    <h3 class="lvl4">Contre-indication — Insuffisance rénale connue</h3>
+    <p>DOLIPRANE 1000 mg : la posologie standard n'est pas adaptée au contexte rénal renseigné.</p>
+    <p class="src">Source : RCP — <span class="src">Sévérité LEVEL_4</span></p>
+  </section>
+  <section id="menu_allergy">
+    <h3 class="lvl2">Précaution — Allergie déclarée</h3>
+    <p>Allergie à la pénicilline enregistrée dans le dossier patient — aucun antibiotique de cette famille dans l'ordonnance actuelle, rester vigilant pour tout ajout ultérieur.</p>
+  </section>
+  <section id="menu_posology">
+    <h3 class="lvl0">Info — Durée de traitement conforme</h3>
+    <p>7 jours à raison d'une prise par jour reste dans les bornes usuelles pour cette indication.</p>
+  </section>
+  <section id="menu_profile">
+    <h3>Rappel du dossier patient</h3>
+    <p>Profil clinique et prescription tels que transmis dans le corps de la requête <code>/rest/api/alerts/full</code>.</p>
+  </section>
+</body></html>`;
+  document.getElementById('vidalHtmlFrame').srcdoc = vidalHtmlSample;
+
+  addLine(true);
+  addLine(false);
+  updateFemaleFieldsVisibility();
+  updateChipCount();
+  renderPreview();
+  validateAllNumbers();
+</script>
