@@ -206,6 +206,7 @@ def parse_product_detail(xml_text: str) -> Dict[str, Any]:
     root = ElementTree.fromstring(xml_text)
     categories_attr = f"{{{VIDAL_NS}}}categories"
     name: Optional[str] = None
+    vmp_id: Optional[str] = None
     routes: List[Dict[str, Any]] = []
     documents: Dict[str, Dict[str, Any]] = {}  # dédupliqué par item_type (garde la 1ère occurrence = la plus récente)
 
@@ -215,6 +216,12 @@ def parse_product_detail(xml_text: str) -> Dict[str, Any]:
         if category == "PRODUCT":
             name_el = entry.find("vidal:name", _NS)
             name = name_el.text if name_el is not None else None
+            # VMP ("Virtual Medicinal Product") : regroupement officiel VIDAL par DCI +
+            # dosage + voie + forme galénique — confirmé par test réel, c'est exactement
+            # la définition métier d'"équivalence" (même(s) principe(s) actif(s), même
+            # dosage). /rest/api/vmp/{vmp_id}/products liste tous les produits du groupe.
+            vmp_el = entry.find("vidal:vmp", _NS)
+            vmp_id = vmp_el.get("vidalId") if vmp_el is not None else None
 
         elif category == "ROUTE":
             id_el = entry.find("vidal:id", _NS)
@@ -247,4 +254,4 @@ def parse_product_detail(xml_text: str) -> Dict[str, Any]:
                 "is_html": bool(doc_url and doc_url.lower().endswith((".html", ".htm"))),
             }
 
-    return {"name": name, "routes": routes, "documents": list(documents.values())}
+    return {"name": name, "vmp_id": vmp_id, "routes": routes, "documents": list(documents.values())}

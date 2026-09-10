@@ -414,3 +414,63 @@ serveur (fréquence par défaut 7 jours, `last_sync_at` null = "due"
 immédiatement) — comportement voulu pour peupler le cache sans action
 admin, mais à confirmer explicitement lors du portage vers Sawali si ce
 n'est pas le comportement désiré là-bas.
+
+## Liluvine — commande `!doc`/`!rech` et recherche par DCI + équivalences (10/09/2026)
+
+**Correction de convention** : le préfixe `!Aizenta` initialement retenu pour
+les requêtes produit Liluvine est **abandonné** — déjà utilisé ailleurs dans
+Liluvine (hors périmètre VIDAL, sur la plateforme réelle Sawali/albarka-portal
+qui a ses propres routes `liluvine_*_wa.py`). Remplacé par **`!doc` et
+`!rech`**, synonymes stricts, casse libre sur les deux — ex. `!doc doliprane
+1000` ou `!RECH Doliprane 1000`.
+
+**Recherche par DCI (prescription DCI généralisée au Burkina Faso)** : la
+requête accepte un nom de marque (`!doc doliprane 1000` → doc + principe actif
+DCI avec dosage) **ou** directement un principe actif (`!doc paracétamol
+1000` → pas de marque précise, affichage direct de la liste des produits
+équivalents pour cette DCI + ce dosage). Simulé côté maquette Liluvine avec un
+petit catalogue de démonstration (Doliprane/Efferalgan/Dafalgan/Paracétamol
+Biogaran = paracétamol 1000mg ; Advil/Nurofen/Ibuprofène Arrow = ibuprofène
+400mg ; Clamoxyl/Amoxicilline Biogaran = amoxicilline 500mg).
+
+**Équivalences = même(s) principe(s) actif(s) ET même dosage** — définition
+métier donnée par l'utilisateur. Sur WhatsApp, la fiche produit est envoyée
+avec un bouton de template nommé **« Équivalences »** ; l'appui renvoie la
+liste sans consommer de nouvelle requête (comptée comme une action sur la
+réponse déjà livrée, pas une nouvelle recherche facturable) — simulé dans la
+maquette par `handleEquivalencesTap()`.
+
+**Découverte technique réelle côté API VIDAL (testée en production, pas une
+supposition)** : VIDAL expose un regroupement officiel **VMP** ("Virtual
+Medicinal Product" — DCI + dosage + voie + forme galénique) directement dans
+l'appel produit déjà utilisé pour la fiche produit
+(`GET /product/{id}?aggregate=ROUTE&aggregate=DOCUMENTS` renvoie aussi
+`<vidal:vmp vidalId="…">`, aucun appel supplémentaire nécessaire pour
+l'obtenir). `GET /vmp/{vmp_id}/products` renvoie alors directement la liste
+des produits équivalents (marques ET génériques mélangés) — testé en réel
+sur DOLIPRANE 1000 mg (`vmp_id=3170`) : 24 produits renvoyés, dont DAFALGAN,
+DAFALGANTABS, DOLIPRANETABS, EFFERALGAN et une vingtaine de génériques
+PARACETAMOL, DOLIPRANE lui-même bien exclu via `exclude_product_id`. C'est
+plus fiable et beaucoup moins coûteux en appels qu'un recalcul maison à
+partir de `/product/{id}/molecules` (qui existe aussi et donne le détail
+DCI/dosage/excipients d'un produit isolé, mais sans lien retour vers les
+autres produits qui le partagent).
+
+**Implémentation réelle (fiche produit VIDAL, site)** :
+- `backend/vidal_client.py::parse_product_detail` renvoie désormais aussi
+  `vmp_id` (extrait du `<vidal:vmp>` déjà présent dans la réponse existante).
+- Nouvel endpoint `GET /vidal/vmp/{vmp_id}/equivalents?exclude_product_id=…`
+  (`backend/routes/vidal.py`) — réutilise `parse_products_search` telle
+  quelle, `/vmp/{id}/products` renvoie le même format d'entrée `PRODUCT` que
+  `/products?q=…`.
+- Frontend (`fiche-produit.html`) : bouton **« Voir les équivalences »**
+  affiché seulement si `vmp_id` est présent (pas de liste inventée quand
+  l'info est absente) ; liste chargée en différé, au premier clic seulement,
+  puis mise en cache côté page (`equivalentsLoaded`) pour ne pas re-solliciter
+  VIDAL à chaque toggle.
+
+**Validé en conditions réelles de bout en bout** (backend + frontend Vite,
+vrais identifiants VIDAL, navigateur Playwright) : sélection de DOLIPRANE
+1000 → `vmp_id` reçu → clic « Voir les équivalences » → 24 produits réels
+affichés (DOLIPRANE exclu) → re-clic masque la liste sans re-solliciter
+l'API.

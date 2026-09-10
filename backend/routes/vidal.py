@@ -81,6 +81,21 @@ async def product_detail(product_id: str):
     return parse_product_detail(xml_text)
 
 
+@router.get("/vmp/{vmp_id}/equivalents", dependencies=[Depends(_require_proxy_secret)])
+async def vmp_equivalents(vmp_id: str, exclude_product_id: str | None = None):
+    """Produits équivalents à un produit donné : même(s) principe(s) actif(s)
+    ET même dosage — s'appuie sur le regroupement VMP officiel de VIDAL
+    (confirmé par test réel, voir parse_product_detail) plutôt que de
+    recalculer l'équivalence nous-mêmes à partir des molécules. `vmp_id`
+    vient du champ `vmp_id` déjà renvoyé par /products/{id}/detail — aucun
+    appel VIDAL supplémentaire n'est nécessaire pour l'obtenir."""
+    xml_text = await vidal_get(f"/vmp/{vmp_id}/products", {"page-size": 50})
+    equivalents = parse_products_search(xml_text)
+    if exclude_product_id:
+        equivalents = [p for p in equivalents if p["id"] != exclude_product_id]
+    return {"vmp_id": vmp_id, "equivalents": equivalents}
+
+
 @router.get("/documents/proxy", dependencies=[Depends(_require_proxy_secret)])
 async def proxy_document(url: str = Query(..., min_length=1)):
     """Relaye un document VIDAL public (PDF notamment) depuis notre propre origine.

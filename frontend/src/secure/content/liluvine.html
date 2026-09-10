@@ -148,7 +148,11 @@
           </ul>
           Côté règles WhatsApp Business : un message entrant ouvre une fenêtre de service de 24h pendant laquelle Liluvine peut répondre librement ; l'invitation à s'inscrire et le rappel d'abonnement envoyés <i>hors</i> de cette fenêtre (ex. relance à J+2) devront passer par un modèle pré-approuvé par Meta, catégorie <b>UTILITY</b> (même convention que le modèle <code class="mono">ordonnance_pdf_fr</code> déjà utilisé) — pas MARKETING. WhatsApp ne filtre pas lui-même les expéditeurs autorisés : ce filtrage (numéro connu / en attente / bloqué) est entièrement à la charge de l'application, exactement ce que simule cette page.
           <br><br>
-          <b>Convention de requête produit — préfixe <code class="mono">!Aizenta</code></b> : un message n'est reconnu comme <i>requête produit VIDAL</i> (celle qui consomme le quota d'essai ou l'abonnement) que s'il commence par <code class="mono">!Aizenta</code> suivi d'un espace puis du nom du médicament — la casse n'a aucune importance, ni sur <code class="mono">!Aizenta</code> ni sur le nom (<code class="mono">!aizenta doliprane</code>, <code class="mono">!AIZENTA Doliprane</code> et <code class="mono">!Aizenta DOLIPRANE</code> sont strictement équivalents). Tout autre message reçu par Liluvine reçoit quand même une réponse (rappel du format attendu), mais <b>sans consommer de requête ni toucher au statut du numéro</b> : ce filtrage évite qu'une simple salutation ou un message hors-sujet soit compté comme une vraie recherche produit.
+          <b>Convention de requête produit — préfixes <code class="mono">!doc</code> / <code class="mono">!rech</code></b> (synonymes, casse libre sur les deux) : un message n'est reconnu comme <i>requête produit VIDAL</i> (celle qui consomme le quota d'essai ou l'abonnement) que s'il commence par <code class="mono">!doc</code> ou <code class="mono">!rech</code> suivi d'un espace puis du nom du médicament — ex. <code class="mono">!doc doliprane 1000</code> ou <code class="mono">!RECH Doliprane 1000</code>. Tout autre message reçu par Liluvine reçoit quand même une réponse (rappel du format attendu), mais <b>sans consommer de requête ni toucher au statut du numéro</b>.
+          <br><br>
+          <b>Recherche par nom de marque ou par DCI</b> : le Burkina Faso ayant généralisé la prescription par <b>DCI</b> (Dénomination Commune Internationale, ex. « paracétamol » plutôt que « Doliprane »), la recherche accepte les deux. Si le texte correspond à un nom de marque (<code class="mono">!doc doliprane 1000</code>), Liluvine renvoie sa fiche documentaire <b>et son principe actif (DCI) avec le dosage</b>. Si le texte correspond directement à un principe actif non rattaché à une marque précise (<code class="mono">!doc paracétamol 1000</code>), Liluvine affiche directement la liste des <b>produits équivalents</b> disponibles pour cette DCI et ce dosage.
+          <br><br>
+          <b>Équivalences</b> : deux produits sont équivalents s'ils ont exactement les mêmes principes actifs et les mêmes dosages. Sur WhatsApp, la fiche produit est envoyée avec un bouton de template nommé <b>« Équivalences »</b> — appuyer dessus renvoie la liste des produits équivalents sans consommer de nouvelle requête. Sur le site, un bouton « Voir les équivalences » déroule la même liste sur la fiche produit, quand l'information est disponible.
         </span>
       </div>
     </div>
@@ -203,8 +207,14 @@
         </div>
         <div class="field" style="flex:2 1 280px">
           <label>Message</label>
-          <input class="control" id="simQuery" placeholder="!Aizenta Doliprane 1000">
-          <div class="cfg-hint">Requête produit reconnue seulement si le message commence par <code class="mono">!Aizenta</code> (casse libre) + un espace + le nom du médicament. Tout autre texte déclenche la réponse générique de rappel du format.</div>
+          <input class="control" id="simQuery" list="simQueryExamples" placeholder="!doc Doliprane 1000">
+          <datalist id="simQueryExamples">
+            <option value="!doc Doliprane 1000">
+            <option value="!rech paracétamol 1000">
+            <option value="!doc Advil 400">
+            <option value="Bonjour, ça va ?">
+          </datalist>
+          <div class="cfg-hint">Requête produit reconnue seulement si le message commence par <code class="mono">!doc</code> ou <code class="mono">!rech</code> (synonymes, casse libre) + un espace + le nom du médicament <b>ou</b> de son principe actif (DCI). Tout autre texte déclenche la réponse générique de rappel du format.</div>
         </div>
         <button class="btn btn-primary" onclick="simulateIncoming()">Simuler l'envoi</button>
       </div>
@@ -397,18 +407,102 @@
     el.scrollIntoView({ block:'nearest' });
   }
 
-  // Convention Liluvine : seul un message qui commence par "!Aizenta" + un espace + le nom
-  // du médicament est traité comme une VRAIE requête produit (facturable en essai/abonnement).
-  // Casse libre sur "!Aizenta" (flag /i) ET sur le nom du médicament (capturé tel quel, non
-  // comparé) — "!aizenta doliprane" et "!AIZENTA DOLIPRANE" sont strictement équivalents.
-  const AIZENTA_RE = /^!aizenta\s+(.+)$/i;
+  // Convention Liluvine : seul un message qui commence par "!doc" OU "!rech" (synonymes) +
+  // un espace + le nom du médicament est traité comme une VRAIE requête produit (facturable
+  // en essai/abonnement). Casse libre sur le préfixe (flag /i) ET sur le texte recherché.
+  // "!Aizenta" a été abandonné : ce préfixe est déjà utilisé ailleurs dans Liluvine (hors VIDAL).
+  const DOC_RE = /^!(?:doc|rech)\s+(.+)$/i;
+
+  // Catalogue VIDAL simulé pour la démo — un id stable par produit (utilisé par le bouton
+  // "Équivalences"), sa marque, son principe actif (DCI) et son dosage. Deux produits sont
+  // "équivalents" s'ils partagent exactement le même dci ET le même dosage (règle métier).
+  const VIDAL_CATALOG = [
+    { id:'p1', brand:'Doliprane',            dosage:'1000 mg', dci:'paracétamol' },
+    { id:'p2', brand:'Efferalgan',           dosage:'1000 mg', dci:'paracétamol' },
+    { id:'p3', brand:'Dafalgan',             dosage:'1000 mg', dci:'paracétamol' },
+    { id:'p4', brand:'Paracétamol Biogaran', dosage:'1000 mg', dci:'paracétamol' },
+    { id:'p5', brand:'Doliprane',            dosage:'500 mg',  dci:'paracétamol' },
+    { id:'p6', brand:'Advil',                dosage:'400 mg',  dci:'ibuprofène' },
+    { id:'p7', brand:'Nurofen',              dosage:'400 mg',  dci:'ibuprofène' },
+    { id:'p8', brand:'Ibuprofène Arrow',     dosage:'400 mg',  dci:'ibuprofène' },
+    { id:'p9', brand:'Clamoxyl',             dosage:'500 mg',  dci:'amoxicilline' },
+    { id:'p10', brand:'Amoxicilline Biogaran', dosage:'500 mg', dci:'amoxicilline' },
+  ];
+
+  // Retire les accents pour une comparaison tolérante (ex. "paracetamol" ~ "paracétamol").
+  function normalizeText(s){ return (s ?? '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
+
+  // Cherche un produit par nom de marque + dosage explicite dans le texte de la requête.
+  function findProductByBrand(queryNorm){
+    const doseDigits = (queryNorm.match(/\d+/) || [])[0];
+    return VIDAL_CATALOG.find(p => {
+      const brandMatch = queryNorm.includes(normalizeText(p.brand));
+      const doseMatch = !doseDigits || p.dosage.replace(/\D/g, '') === doseDigits;
+      return brandMatch && doseMatch;
+    });
+  }
+
+  // Cherche directement par principe actif (DCI) — cas d'une prescription DCI (Burkina Faso).
+  // Retourne tous les produits de cette DCI (filtrés par dosage si un dosage est précisé).
+  function findByDci(queryNorm){
+    const dciList = [...new Set(VIDAL_CATALOG.map(p => p.dci))];
+    const matchedDci = dciList.find(d => queryNorm.includes(normalizeText(d)));
+    if (!matchedDci) return null;
+    const doseDigits = (queryNorm.match(/\d+/) || [])[0];
+    let candidates = VIDAL_CATALOG.filter(p => p.dci === matchedDci);
+    if (doseDigits) candidates = candidates.filter(p => p.dosage.replace(/\D/g, '') === doseDigits);
+    return { dci: matchedDci, candidates };
+  }
+
+  // Équivalences d'un produit = même(s) principe(s) actif(s) ET même(s) dosage(s), hors lui-même.
+  function getEquivalents(product){
+    return VIDAL_CATALOG.filter(p => p.id !== product.id && p.dci === product.dci && p.dosage === product.dosage);
+  }
+
+  function equivalencesButtonHtml(productId){
+    return `<div style="margin-top:8px"><button type="button" class="btn btn-ghost btn-sm" onclick="handleEquivalencesTap('${productId}', this)">🔘 Équivalences</button></div>`;
+  }
+
+  // Simule l'appui sur le bouton de template WhatsApp "Équivalences" : WhatsApp renvoie ce tap
+  // comme un message entrant, Liluvine répond avec la liste — sans consommer de nouvelle
+  // requête (ce n'est pas une nouvelle recherche, juste une action sur la réponse déjà livrée).
+  function handleEquivalencesTap(productId, btnEl){
+    const product = VIDAL_CATALOG.find(p => p.id === productId);
+    if (!product) return;
+    btnEl.disabled = true;
+    pushBubble('in', 'Vous', '🔘 Équivalences');
+    const eqs = getEquivalents(product);
+    const reply = eqs.length
+      ? `Produits équivalents à <b>${esc(product.brand)} ${esc(product.dosage)}</b> (même principe actif <b>${esc(product.dci)}</b>, même dosage) :<br>` + eqs.map(p => `• ${esc(p.brand)} ${esc(p.dosage)}`).join('<br>')
+      : `Aucun autre produit équivalent référencé pour ${esc(product.brand)} ${esc(product.dosage)} (${esc(product.dci)}).`;
+    pushBubble('out', 'Liluvine', reply);
+    document.getElementById('simWriteLog').textContent = `→ tap bouton "Équivalences" sur ${esc(product.brand)} — aucune écriture de compteur (pas une nouvelle requête)`;
+  }
 
   // Coeur de la logique métier Liluvine : à chaque message entrant, on regarde l'état du
   // numéro AVANT d'incrémenter les compteurs, on décide de la réponse, puis on met à jour
   // (et on "réécrit sur R2", simulé ici par la mutation de l'objet en mémoire).
+  // Construit le contenu de la fiche renvoyée par Liluvine pour une requête produit valide :
+  // - trouvée par marque -> doc + DCI/dosage + bouton Équivalences ;
+  // - trouvée seulement par DCI (prescription DCI, Burkina Faso) -> liste des équivalents direct ;
+  // - rien trouvé -> message d'échec (mais la requête a quand même été tentée/comptée).
+  function buildDocReply(query){
+    const queryNorm = normalizeText(query);
+    const product = findProductByBrand(queryNorm);
+    if (product){
+      return `📄 <b>${esc(product.brand)} ${esc(product.dosage)}</b> — fiche produit VIDAL envoyée en pièce jointe.<br>💊 Principe actif (DCI) : <b>${esc(product.dci)} ${esc(product.dosage)}</b>.` + equivalencesButtonHtml(product.id);
+    }
+    const dciResult = findByDci(queryNorm);
+    if (dciResult && dciResult.candidates.length){
+      const list = dciResult.candidates.map(p => `• ${esc(p.brand)} ${esc(p.dosage)}`).join('<br>');
+      return `Aucune marque précise reconnue pour « ${esc(query)} », recherche par principe actif (DCI) <b>${esc(dciResult.dci)}</b> : voici les produits disponibles avec cette composition :<br>${list}`;
+    }
+    return `Aucun résultat pour « ${esc(query)} ». Vérifiez l'orthographe, ou réessayez avec le nom du principe actif (DCI).`;
+  }
+
   function simulateIncoming(){
     const rawPhone = document.getElementById('simPhone').value.trim();
-    const rawMessage = document.getElementById('simQuery').value.trim() || '!Aizenta Doliprane 1000';
+    const rawMessage = document.getElementById('simQuery').value.trim() || '!doc Doliprane 1000';
     if (!rawPhone) { document.getElementById('simPhone').focus(); return; }
     const phone = rawPhone.replace(/[\s.-]/g, '');
     const nowIso = new Date().toISOString();
@@ -422,11 +516,11 @@
 
     // Message hors convention : Liluvine répond quand même (rappel du format attendu),
     // mais AUCUNE écriture sur R2, aucun compteur touché — ce n'est pas une requête produit.
-    const match = rawMessage.match(AIZENTA_RE);
+    const match = rawMessage.match(DOC_RE);
     if (!match){
-      pushBubble('out', 'Liluvine', `Je n'ai pas reconnu de requête produit. Pour interroger un médicament, écrivez : <code class="mono">!Aizenta &lt;nom du médicament&gt;</code> (ex. <code class="mono">!Aizenta Doliprane</code>).`);
+      pushBubble('out', 'Liluvine', `Je n'ai pas reconnu de requête produit. Pour interroger un médicament (ou son principe actif), écrivez : <code class="mono">!doc &lt;nom&gt;</code> ou <code class="mono">!rech &lt;nom&gt;</code> (ex. <code class="mono">!doc Doliprane 1000</code>).`);
       document.getElementById('simWriteLog').textContent =
-        `→ aucune écriture R2 : message hors convention "!Aizenta", pas une requête produit (numéro : ${esc(phone)})`;
+        `→ aucune écriture R2 : message hors convention "!doc"/"!rech", pas une requête produit (numéro : ${esc(phone)})`;
       return;
     }
     const query = match[1].trim();
@@ -445,11 +539,11 @@
       writeNote = `liluvine/numbers/${phone}.json (requête refusée — numéro bloqué)`;
     } else if (stateBefore === 'essai'){
       rec.freeRequestsUsed += 1;
-      reply = `📄 <b>${esc(query.split(',')[0] || query)}</b> — fiche produit VIDAL envoyée en pièce jointe. (Requête gratuite ${rec.freeRequestsUsed}/${config.freeRequestsThreshold} — essai jusqu'au ${fmtDate(rec.trialExpiresAt)}.)`;
+      reply = buildDocReply(query) + ` <span style="opacity:.7">(Requête gratuite ${rec.freeRequestsUsed}/${config.freeRequestsThreshold} — essai jusqu'au ${fmtDate(rec.trialExpiresAt)}.)</span>`;
       writeNote = `liluvine/numbers/${phone}.json (free_requests_used: ${rec.freeRequestsUsed})`;
     } else if (stateBefore === 'abonne'){
       const f = config.formulas[rec.subscription.formula];
-      reply = `📄 <b>${esc(query.split(',')[0] || query)}</b> — fiche produit VIDAL envoyée en pièce jointe. (Abonnement ${esc(f.label)} actif jusqu'au ${fmtDate(rec.subscription.expiresAt)}.)`;
+      reply = buildDocReply(query) + ` <span style="opacity:.7">(Abonnement ${esc(f.label)} actif jusqu'au ${fmtDate(rec.subscription.expiresAt)}.)</span>`;
       writeNote = `liluvine/numbers/${phone}.json (request_count: ${rec.requestCount})`;
     } else {
       const list = Object.entries(config.formulas).map(([,f]) => `${f.label} : ${fmtFcfa(f.price)}`).join(' · ');
