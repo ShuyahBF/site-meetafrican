@@ -70,7 +70,10 @@
   .control::placeholder{ color:var(--text-mute); font-weight:400; }
 
   .typeahead-wrap{ position:relative; }
-  .typeahead-list{ position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:35; background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-pop); max-height:340px; overflow-y:auto; display:none; }
+  /* Hauteur en vh (pas un px fixe) : sur mobile l'espace disponible sous le champ est
+     largement sous-utilisé avec une hauteur fixe — 2 à 3x plus grand pour exploiter le
+     reste de l'écran, plafonné à 900px pour ne pas déborder sur un grand écran desktop. */
+  .typeahead-list{ position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:35; background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-pop); max-height:min(78vh, 900px); overflow-y:auto; display:none; }
   .typeahead-count{ padding:7px 12px; font-size:10.5px; font-weight:700; color:var(--text-mute); border-bottom:1px solid var(--border-soft); background:var(--surface-2); }
   .typeahead-list.show{ display:block; }
   .typeahead-item{ padding:9px 12px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid var(--border-soft); }
