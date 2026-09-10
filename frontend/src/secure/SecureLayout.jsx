@@ -19,6 +19,7 @@ const links = [
   { to: "securisation", label: "Sécurisation" },
   { to: "posologie", label: "Posologie" },
   { to: "admin", label: "Admin (médecins)" },
+  { to: "logs", label: "Suivi des logs" },
 ];
 
 export default function SecureLayout() {
