@@ -108,6 +108,10 @@
   .footnote{ font-size:10.5px; color:var(--text-mute); line-height:1.5; margin-top:8px; }
 
   .empty-hint{ padding:24px 12px; text-align:center; color:var(--text-mute); font-size:12.5px; }
+
+  .equiv-item{ padding:8px 10px; font-size:12.5px; border-bottom:1px solid var(--border-soft); }
+  .equiv-item:last-child{ border-bottom:none; }
+  .equiv-list-box{ border:1px solid var(--border-soft); border-radius:10px; background:var(--surface-2); overflow:hidden; }
 </style>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Inter:wght@400;500;600;700&display=swap">
 
@@ -131,7 +135,9 @@
     <div class="vidal-note-body">
       <div class="srcbanner">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-        <span><b>Données réelles</b> (plus de simulation) : la recherche et le détail produit passent par un vrai appel backend vers <code>https://api.vidal.fr</code>, avec les identifiants de production de l'utilisateur (jamais exposés au navigateur). Un seul appel agrégé <code>GET /rest/api/product/{id}?aggregate=ROUTE&amp;aggregate=DOCUMENTS</code> renvoie voies d'administration et documents disponibles, confirmé par test réel le 10/09/2026 — pas une supposition tirée du manuel. Les documents HTML publics (monographie, VDF…) sont affichés tels quels dans l'iframe ci-dessous, en pointant directement vers leur URL VIDAL réelle. Ceux marqués « Externe » (RCP en PDF notamment, sur <code>document-rcp.vidal.fr</code>) sont hébergés hors du référentiel HTML VIDAL et renvoient un en-tête <code>X-Frame-Options: SAMEORIGIN</code> qui empêche leur affichage direct en iframe (vérifié par test réel) — ils sont donc relayés par notre backend (<code>GET /vidal/documents/proxy</code>, liste d'hôtes limitée) pour rester affichés dans la page, avec un repli en lien externe si ce relais échoue. VIDAL ne renvoie pas de date de révision par document dans ce flux : aucune date n'est affichée plutôt que d'en inventer une.</span>
+        <span><b>Données réelles</b> (plus de simulation) : la recherche et le détail produit passent par un vrai appel backend vers <code>https://api.vidal.fr</code>, avec les identifiants de production de l'utilisateur (jamais exposés au navigateur). Un seul appel agrégé <code>GET /rest/api/product/{id}?aggregate=ROUTE&amp;aggregate=DOCUMENTS</code> renvoie voies d'administration et documents disponibles, confirmé par test réel le 10/09/2026 — pas une supposition tirée du manuel. Les documents HTML publics (monographie, VDF…) sont affichés tels quels dans l'iframe ci-dessous, en pointant directement vers leur URL VIDAL réelle. Ceux marqués « Externe » (RCP en PDF notamment, sur <code>document-rcp.vidal.fr</code>) sont hébergés hors du référentiel HTML VIDAL et renvoient un en-tête <code>X-Frame-Options: SAMEORIGIN</code> qui empêche leur affichage direct en iframe (vérifié par test réel) — ils sont donc relayés par notre backend (<code>GET /vidal/documents/proxy</code>, liste d'hôtes limitée) pour rester affichés dans la page, avec un repli en lien externe si ce relais échoue. VIDAL ne renvoie pas de date de révision par document dans ce flux : aucune date n'est affichée plutôt que d'en inventer une.
+          <br><br>
+          <b>Équivalences</b> (même(s) principe(s) actif(s), même dosage) : s'appuie sur le regroupement <b>VMP</b> ("Virtual Medicinal Product") officiel de VIDAL, renvoyé directement dans l'appel produit déjà effectué (<code>vidal:vmp</code>) — confirmé par test réel, aucune supposition. La liste (<code>GET /rest/api/vmp/{'{'}vmp_id{'}'}/products</code>) n'est chargée qu'au clic sur « Voir les équivalences », pas systématiquement. Le bouton n'apparaît que si VIDAL renvoie un groupe VMP pour le produit consulté — pas de liste inventée quand l'information est absente.</span>
       </div>
     </div>
   </div>
@@ -151,9 +157,13 @@
           <span class="pname" id="pickedName"></span>
           <span class="typeahead-badge" id="pickedBadge"></span>
         </div>
-        <div class="field" style="margin-bottom:0">
+        <div class="field">
           <label>Voies d'administration disponibles</label>
           <div class="tagbox-static" id="routesList"></div>
+        </div>
+        <div class="field" id="equivalentsField" style="display:none;margin-bottom:0">
+          <button type="button" class="doc-btn" id="equivalentsToggle" onclick="toggleEquivalents()">Voir les équivalences</button>
+          <div id="equivalentsList" style="display:none;margin-top:10px"></div>
         </div>
       </div>
     </div>
@@ -292,10 +302,14 @@
     });
   }
 
-  let currentDetail = null; // { name, routes:[{id,name}], documents:[{item_type,title,url,is_html}] }
+  let currentDetail = null; // { name, vmp_id, routes:[{id,name}], documents:[{item_type,title,url,is_html}] }
+  let currentProductId = null;
+  let equivalentsLoaded = false;
 
   async function onProductSelected(id, name){
     currentDetail = null;
+    currentProductId = id;
+    equivalentsLoaded = false;
     document.getElementById('productInfo').style.display = 'block';
     document.getElementById('pickedName').textContent = name;
     const badge = document.getElementById('pickedBadge');
@@ -303,6 +317,11 @@
     badge.className = 'typeahead-badge ok';
 
     document.getElementById('routesList').innerHTML = `<span class="tag-static ex">Chargement…</span>`;
+    const equivField = document.getElementById('equivalentsField');
+    equivField.style.display = 'none';
+    document.getElementById('equivalentsList').style.display = 'none';
+    document.getElementById('equivalentsList').innerHTML = '';
+    document.getElementById('equivalentsToggle').textContent = 'Voir les équivalences';
     document.getElementById('docsCard').style.display = 'block';
     document.getElementById('docButtons').innerHTML = '';
     document.getElementById('docViewer').style.display = 'none';
@@ -318,6 +337,10 @@
         ? detail.routes.map(r => `<span class="tag-static">${esc(r.name)}</span>`).join('')
         : `<span class="tag-static ex">Aucune voie renvoyée par VIDAL pour ce produit</span>`;
 
+      // Bouton "Voir les équivalences" affiché seulement si VIDAL renvoie un groupe VMP
+      // pour ce produit (pas de liste inventée quand l'information est indisponible).
+      equivField.style.display = detail.vmp_id ? 'block' : 'none';
+
       const docs = detail.documents || [];
       document.getElementById('docButtons').innerHTML = docs.length
         ? docs.map(d => `
@@ -329,6 +352,35 @@
     } catch (err) {
       document.getElementById('routesList').innerHTML = `<span class="tag-static ex">Erreur VIDAL : ${esc(err.message)}</span>`;
       emptyHint.textContent = `Erreur VIDAL : ${err.message}`;
+    }
+  }
+
+  // Équivalences = même(s) principe(s) actif(s) ET même dosage — s'appuie sur le groupe
+  // VMP renvoyé par VIDAL (voir vidal_client.py::parse_product_detail), chargé seulement
+  // au premier clic (pas systématiquement à la sélection du produit).
+  async function toggleEquivalents(){
+    const listEl = document.getElementById('equivalentsList');
+    const toggleBtn = document.getElementById('equivalentsToggle');
+    const isOpen = listEl.style.display !== 'none';
+    if (isOpen){
+      listEl.style.display = 'none';
+      toggleBtn.textContent = 'Voir les équivalences';
+      return;
+    }
+    listEl.style.display = 'block';
+    toggleBtn.textContent = 'Masquer les équivalences';
+    if (equivalentsLoaded) return;
+
+    listEl.innerHTML = `<div class="equiv-list-box"><div class="equiv-item">Chargement…</div></div>`;
+    try {
+      const data = await vidalFetch(`/vidal/vmp/${encodeURIComponent(currentDetail.vmp_id)}/equivalents?exclude_product_id=${encodeURIComponent(currentProductId)}`);
+      const equivalents = data.equivalents || [];
+      listEl.innerHTML = equivalents.length
+        ? `<div class="equiv-list-box">${equivalents.map(p => `<div class="equiv-item">${esc(p.name)}</div>`).join('')}</div>`
+        : `<div class="equiv-list-box"><div class="equiv-item">Aucun autre produit équivalent référencé par VIDAL.</div></div>`;
+      equivalentsLoaded = true;
+    } catch (err) {
+      listEl.innerHTML = `<div class="equiv-list-box"><div class="equiv-item" style="color:var(--crit-text)">Erreur VIDAL : ${esc(err.message)}</div></div>`;
     }
   }
 
