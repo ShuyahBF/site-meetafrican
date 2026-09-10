@@ -96,3 +96,37 @@ présent dans l'environnement pour le stockage des ordonnances**, même si
 de nouveaux identifiants R2 apparaissent dans l'environnement sans
 précision explicite de l'utilisateur — vérifier le nom du bucket et son
 contenu avant d'y écrire quoi que ce soit.
+
+## Bucket R2 dédié VIDAL — provisionné et vérifié (10/09/2026)
+
+L'utilisateur a créé le bucket et fourni de nouvelles variables
+d'environnement dédiées, préfixées `R2_VIDAL_` (distinctes des `R2_*`
+génériques ci-dessus, qui restent celles d'Aizenta) :
+`R2_VIDAL_ACCESS_KEY_ID`, `R2_VIDAL_SECRET_ACCESS_KEY`,
+`R2_VIDAL_ACCOUNT_ID`, `R2_VIDAL_BUCKET` (= `vidal`), et
+`R2_VIDAL_JETON` (le jeton API Cloudflare natif généré en même temps que
+les clés S3 — non utilisé pour l'accès S3-compatible, potentiellement
+utile pour des opérations via l'API Cloudflare directe si besoin plus
+tard).
+
+**Piège rencontré et corrigé** : `R2_VIDAL_ACCOUNT_ID` contenait 34
+caractères au lieu des 32 attendus pour un Account ID Cloudflare
+(hexadécimal) — 2 caractères de trop, confirmé par l'utilisateur comme
+une erreur de copier-coller, corrigés en tronquant les 2 derniers
+caractères. À vérifier si cette variable d'environnement est un jour
+corrigée à la source (le contournement en tronquant ne doit pas devenir
+permanent dans du code réel).
+
+**Vérifié avec succès** (accès S3-compatible via `boto3`, `region_name="auto"`,
+endpoint `https://{account_id}.r2.cloudflarestorage.com`) :
+- `head_bucket('vidal')` → accès confirmé, bucket vide (0 objet).
+- `put_object` / `get_object` / `delete_object` → lecture/écriture/suppression
+  toutes fonctionnelles (testées avec un objet jetable, supprimé après coup).
+- `list_buckets` et `create_bucket` → `AccessDenied` (token scopé sur ce seul
+  bucket, sans droit de lister ou créer d'autres buckets) — cohérent avec
+  un bucket dédié VIDAL et rien d'autre.
+
+**Le bucket R2 dédié VIDAL est donc prêt à l'usage** pour le stockage des
+ordonnances anonymisées décrit plus haut, dès que le portage vers
+`Site-SawaliSmartSystems` implémente réellement l'upload/téléchargement
+(absent de ce prototype, qui reste 100 % simulé côté client).
