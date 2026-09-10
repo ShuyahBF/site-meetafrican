@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { SecureSettingsProvider, useSecureSettings } from "./SecureSettingsContext";
 
 // Coquille de la zone "/secure" : sidebar à 3 entrées (Sécurisation,
 // Posologie, Admin médecins) + la maquette active en plein cadre.
@@ -21,8 +22,17 @@ const links = [
 ];
 
 export default function SecureLayout() {
+  return (
+    <SecureSettingsProvider>
+      <SecureLayoutInner />
+    </SecureSettingsProvider>
+  );
+}
+
+function SecureLayoutInner() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const { theme, setTheme, vidalNotes, setVidalNotes } = useSecureSettings();
 
   useEffect(() => {
     setOpen(false);
@@ -47,6 +57,8 @@ export default function SecureLayout() {
           padding: 20px 14px;
           box-sizing: border-box;
           overflow-y: auto;
+          display: flex;
+          flex-direction: column;
         }
         .secure-sidebar-title {
           font-family: sans-serif;
@@ -75,6 +87,60 @@ export default function SecureLayout() {
         }
         .secure-nav a.active {
           background: rgba(255,255,255,0.16);
+        }
+        .secure-settings {
+          margin-top: 24px;
+          padding-top: 16px;
+          border-top: 1px solid rgba(255,255,255,0.14);
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+        .secure-settings-title {
+          font-family: sans-serif;
+          font-size: 10.5px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: rgba(255,255,255,0.5);
+        }
+        .secure-toggle-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          font-family: sans-serif;
+          font-size: 12.5px;
+          font-weight: 600;
+          color: rgba(255,255,255,0.9);
+          cursor: pointer;
+        }
+        .secure-switch {
+          position: relative;
+          width: 34px;
+          height: 20px;
+          flex: none;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.18);
+          border: none;
+          cursor: pointer;
+          padding: 0;
+        }
+        .secure-switch .knob {
+          position: absolute;
+          top: 2px;
+          left: 2px;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: #fff;
+          transition: transform 0.15s ease;
+        }
+        .secure-switch.on {
+          background: #2563eb;
+        }
+        .secure-switch.on .knob {
+          transform: translateX(14px);
         }
         .secure-main {
           flex: 1;
@@ -157,6 +223,34 @@ export default function SecureLayout() {
             </NavLink>
           ))}
         </nav>
+
+        <div className="secure-settings">
+          <div className="secure-settings-title">Réglages</div>
+          <label className="secure-toggle-row">
+            <span>Mode sombre</span>
+            <button
+              type="button"
+              className={`secure-switch${theme === "dark" ? " on" : ""}`}
+              role="switch"
+              aria-checked={theme === "dark"}
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            >
+              <span className="knob" />
+            </button>
+          </label>
+          <label className="secure-toggle-row">
+            <span>Notes VIDAL (admin)</span>
+            <button
+              type="button"
+              className={`secure-switch${vidalNotes ? " on" : ""}`}
+              role="switch"
+              aria-checked={vidalNotes}
+              onClick={() => setVidalNotes(!vidalNotes)}
+            >
+              <span className="knob" />
+            </button>
+          </label>
+        </div>
       </aside>
 
       <main className="secure-main" onClick={() => open && setOpen(false)}>

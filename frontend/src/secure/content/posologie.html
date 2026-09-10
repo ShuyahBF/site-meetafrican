@@ -54,8 +54,25 @@
   .topbar h1{ font-size:18px; font-weight:700; margin:0; color:var(--navy); }
   .topbar p{ margin:2px 0 0; font-size:12.5px; color:var(--text-mute); }
 
-  .srcbanner{ display:flex; align-items:flex-start; gap:8px; font-size:11.5px; line-height:1.5; color:var(--ok-text); background:var(--ok-bg); border:1px solid var(--ok-ring); border-radius:10px; padding:9px 12px; margin:0 0 14px; }
+  .srcbanner{ display:flex; align-items:flex-start; gap:8px; font-size:11.5px; line-height:1.5; color:var(--ok-text); background:var(--ok-bg); border:1px solid var(--ok-ring); border-radius:10px; padding:9px 12px; }
   .srcbanner svg{ flex:none; margin-top:1px; }
+
+  /* Commentaire de conformité au manuel VIDAL : utile en revue technique, pas au médecin.
+     Replié et masqué par défaut ; visible seulement quand l'admin active "Notes VIDAL"
+     (pilotable depuis la sidebar /secure, ou absent = visible par défaut pour l'aperçu
+     Claude autonome de cette maquette). */
+  .vidal-note{ margin:0 0 14px; }
+  html[data-vidal-notes="off"] .vidal-note{ display:none; }
+  .vidal-note-toggle{
+    display:flex; align-items:center; gap:6px; width:100%; text-align:left;
+    background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px;
+    padding:8px 12px; font-size:11px; font-weight:700; color:var(--text-soft);
+    cursor:pointer; font-family:inherit;
+  }
+  .vidal-note-toggle svg{ flex:none; transition:transform .15s ease; }
+  .vidal-note.expanded .vidal-note-toggle svg{ transform:rotate(90deg); }
+  .vidal-note-body{ display:none; margin-top:6px; }
+  .vidal-note.expanded .vidal-note-body{ display:block; }
 
   .card{ background:var(--surface); border:1px solid var(--border-soft); border-radius:16px; box-shadow:var(--shadow-card); margin-bottom:14px; overflow:hidden; }
   .card-head{ display:flex; align-items:center; gap:9px; padding:14px 16px 10px; }
@@ -148,9 +165,17 @@
     </div>
   </div>
 
-  <div class="srcbanner">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-    <span>Structure <code>&lt;posology-request&gt;</code> conforme à votre capture de référence (racine, <code>&lt;patient&gt;</code>, <code>&lt;routes&gt;</code> imbriquées). Les champs de recherche (allergies, pathologies, voies, indications) sont simulés avec des exemples — en production ils interrogent le référentiel VIDAL en direct, comme sur la page Sécurisation.</span>
+  <div class="vidal-note" id="vidalNote">
+    <button type="button" class="vidal-note-toggle" onclick="this.closest('.vidal-note').classList.toggle('expanded')">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      Note technique VIDAL (source du schéma)
+    </button>
+    <div class="vidal-note-body">
+      <div class="srcbanner">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        <span>Structure <code>&lt;posology-request&gt;</code> conforme à votre capture de référence (racine, <code>&lt;patient&gt;</code>, <code>&lt;routes&gt;</code> imbriquées). Les champs de recherche (allergies, pathologies, voies, indications) sont simulés avec des exemples — en production ils interrogent le référentiel VIDAL en direct, comme sur la page Sécurisation.</span>
+      </div>
+    </div>
   </div>
 
   <div class="two-col">

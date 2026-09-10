@@ -208,9 +208,26 @@
   .srcbanner{
     display:flex; align-items:flex-start; gap:8px; font-size:11.5px; line-height:1.5;
     color:var(--ok-text); background:var(--ok-bg); border:1px solid var(--ok-ring);
-    border-radius:10px; padding:9px 12px; margin:0 0 14px;
+    border-radius:10px; padding:9px 12px;
   }
   .srcbanner svg{ flex:none; margin-top:1px; }
+
+  /* Commentaires de conformité au manuel VIDAL : utiles en revue technique, pas au
+     médecin. Repliés et masqués par défaut ; visibles uniquement quand l'admin active
+     "Notes VIDAL" (pilotable depuis la sidebar /secure, ou absent = visible par défaut
+     pour l'aperçu Claude autonome de cette maquette). */
+  .vidal-note{ margin:0 0 14px; }
+  html[data-vidal-notes="off"] .vidal-note{ display:none; }
+  .vidal-note-toggle{
+    display:flex; align-items:center; gap:6px; width:100%; text-align:left;
+    background:var(--surface-2); border:1px solid var(--border-soft); border-radius:10px;
+    padding:8px 12px; font-size:11px; font-weight:700; color:var(--text-soft);
+    cursor:pointer; font-family:inherit;
+  }
+  .vidal-note-toggle svg{ flex:none; transition:transform .15s ease; }
+  .vidal-note.expanded .vidal-note-toggle svg{ transform:rotate(90deg); }
+  .vidal-note-body{ display:none; margin-top:6px; }
+  .vidal-note.expanded .vidal-note-body{ display:block; }
 
   .admin-toggle{ display:flex; align-items:center; gap:7px; margin-left:auto; flex:none; }
   .admin-toggle span{ font-size:10.5px; font-weight:700; color:var(--text-mute); text-transform:uppercase; letter-spacing:.03em; }
@@ -235,7 +252,7 @@
   body.vidal-locked .form-alert,
   body.vidal-locked > .wrap > .card:not(#licenseGateCard),
   body.vidal-locked .two-col,
-  body.vidal-locked .ctabar{ display:none !important; }
+  body.vidal-locked .ctabar-wrap{ display:none !important; }
   body.vidal-locked #licenseGateCard{ display:block; }
   .admin-flag{
     font-size:9.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;
@@ -392,19 +409,30 @@
   .chip-toolbar .count{ font-size:11.5px; color:var(--text-mute); }
   .chip-toolbar button{ border:none; background:transparent; color:var(--text-mute); font-size:11.5px; cursor:pointer; text-decoration:underline; }
 
+  .ctabar-wrap{ position:fixed; left:0; right:0; bottom:0; z-index:20; }
+  .ctabar-handle{
+    display:flex; align-items:center; justify-content:center; width:100%;
+    background:var(--surface); border:none; border-top:1px solid var(--border-soft);
+    padding:5px; cursor:pointer; color:var(--text-mute); font-family:inherit;
+  }
+  .ctabar-handle svg{ transition:transform .2s ease; }
+  .ctabar-handle.collapsed svg{ transform:rotate(180deg); }
   .ctabar{
-    position:fixed; left:0; right:0; bottom:0; z-index:20;
-    background:var(--surface); border-top:1px solid var(--border-soft);
+    background:var(--surface);
     box-shadow:0 -8px 24px -16px rgba(16,24,39,.25);
     padding:10px max(16px, calc((100% - 640px)/2));
     display:flex; flex-wrap:wrap; gap:8px;
+    max-height:140px; overflow:hidden;
+    transition:max-height .2s ease, padding .2s ease;
   }
-  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:7px; border-radius:11px; font-size:14px; font-weight:700; padding:12px 16px; border:none; cursor:pointer; font-family:inherit; }
-  .btn-ghost{ background:var(--surface-3); color:var(--text-soft); flex:1 1 100px; }
-  .btn-outline{ background:transparent; color:var(--navy); border:1.5px solid var(--navy); flex:1 1 150px; }
+  .ctabar.collapsed{ max-height:0; padding-top:0; padding-bottom:0; }
+  /* Même largeur pour les 4 actions : un seul flex-basis, uniforme, pour tous les boutons. */
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:7px; border-radius:11px; font-size:14px; font-weight:700; padding:12px 16px; border:none; cursor:pointer; font-family:inherit; flex:1 1 0; min-width:0; }
+  .btn-ghost{ background:var(--surface-3); color:var(--text-soft); }
+  .btn-outline{ background:transparent; color:var(--navy); border:1.5px solid var(--navy); }
   .btn-outline:hover{ background:var(--surface-3); }
   .btn-outline:disabled{ opacity:.4; cursor:not-allowed; }
-  .btn-whatsapp{ background:#25D366; color:#053120; flex:1 1 110px; }
+  .btn-whatsapp{ background:#25D366; color:#053120; }
   .btn-whatsapp:hover{ background:#1ebe5b; }
   .btn-whatsapp:disabled{ opacity:.4; cursor:not-allowed; }
   .analysis-badge{
@@ -424,7 +452,7 @@
   .wa-send-status.show{ display:flex; }
   .wa-tick{ font-weight:800; color:var(--text-mute); }
   .wa-tick.read{ color:#2563eb; }
-  .btn-primary{ background:var(--accent-deep); color:#fff; flex:0 1 120px; padding:12px 18px; }
+  .btn-primary{ background:var(--accent-deep); color:#fff; }
   .btn-primary:hover{ filter:brightness(0.88); }
   .btn-primary:disabled{ opacity:.45; cursor:not-allowed; }
 
@@ -627,9 +655,17 @@
     </div>
   </div>
 
-  <div class="srcbanner">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-    <span>Schéma XML conforme au Manuel d'intégration API REST VIDAL Sécurisation France (MI_APIREST, REV_03) : balises <code>&lt;patient&gt;</code>, <code>&lt;prescription-line&gt;</code>, <code>&lt;alert-types&gt;</code> vérifiées ligne à ligne dans le document. Les champs de recherche médicament / allergie / pathologie sont simulés ici avec des exemples ; en production ils interrogeront en direct le référentiel VIDAL (<code>/rest/api/...</code>).</span>
+  <div class="vidal-note" id="vidalNote">
+    <button type="button" class="vidal-note-toggle" onclick="this.closest('.vidal-note').classList.toggle('expanded')">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      Note technique VIDAL (source du schéma)
+    </button>
+    <div class="vidal-note-body">
+      <div class="srcbanner">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        <span>Schéma XML conforme au Manuel d'intégration API REST VIDAL Sécurisation France (MI_APIREST, REV_03) : balises <code>&lt;patient&gt;</code>, <code>&lt;prescription-line&gt;</code>, <code>&lt;alert-types&gt;</code> vérifiées ligne à ligne dans le document. Les champs de recherche médicament / allergie / pathologie sont simulés ici avec des exemples ; en production ils interrogeront en direct le référentiel VIDAL (<code>/rest/api/...</code>).</span>
+      </div>
+    </div>
   </div>
 
   <div class="form-alert" id="formAlert">
@@ -941,7 +977,11 @@
   </div>
 </div>
 
-<div class="ctabar">
+<div class="ctabar-wrap">
+<button type="button" class="ctabar-handle" id="ctabarHandle" onclick="toggleCtabar()" title="Replier/déplier les actions">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+</button>
+<div class="ctabar" id="ctabarButtons">
   <button class="btn btn-ghost" onclick="alert('Aperçu uniquement')">Réinitialiser</button>
   <button class="btn btn-primary" id="secureBtn" onclick="runSecure()">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>
@@ -955,6 +995,7 @@
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z"/></svg>
     Envoi WA
   </button>
+</div>
 </div>
 
 <script>
@@ -987,6 +1028,13 @@
     window.addEventListener('scroll', onScroll, { passive:true });
     onScroll();
   })();
+
+  // Barre d'actions repliable : utile pour libérer l'écran une fois la prescription
+  // sécurisée et l'ordonnance imprimée/envoyée, sans perdre l'accès aux 4 boutons.
+  function toggleCtabar(){
+    document.getElementById('ctabarButtons').classList.toggle('collapsed');
+    document.getElementById('ctabarHandle').classList.toggle('collapsed');
+  }
 
   function toggleRegister(){
     if (!patientId) {
