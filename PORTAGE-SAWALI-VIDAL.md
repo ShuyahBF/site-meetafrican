@@ -291,3 +291,43 @@ endpoints dans cette itération — il a plus de dépendances internes
 produits testés) qu'il aurait fallu retravailler en profondeur sans risquer
 de casser un mockup déjà validé. À cadrer séparément si l'utilisateur le
 souhaite.
+
+## Fiche produit VIDAL — 3 correctifs après premier test réel en production (10/09/2026)
+
+Suite au premier test réel de l'utilisateur sur l'environnement Render
+déployé (après avoir renseigné `VIDAL_APP_ID`/`VIDAL_APP_KEY`/
+`VIDAL_PROXY_SECRET` côté backend et `VITE_VIDAL_PROXY_SECRET` côté
+frontend — **les deux valeurs doivent être strictement identiques**,
+piège rencontré une première fois) :
+
+1. **Saisie forcée en majuscules** dans le champ de recherche produit —
+   convention VIDAL/pharma. La valeur du champ elle-même est transformée
+   (pas juste un `text-transform` CSS d'affichage), avec préservation de
+   la position du curseur. La recherche VIDAL reste insensible à la
+   casse (confirmé par test réel) : ceci est une pure convention de
+   saisie, pas un besoin fonctionnel.
+2. **Liste de résultats non tronquée** : l'ancien plafond arbitraire de
+   8 résultats affichés est supprimé — les ~25 résultats renvoyés par
+   VIDAL (taille de page par défaut de l'API) sont tous listés dans une
+   liste défilante plus haute (340px), avec un compteur en tête de liste.
+3. **Documents « Externe » affichés dans la page plutôt qu'en lien
+   sortant** : découverte par test réel que certains documents VIDAL
+   (RCP notamment, sur `document-rcp.vidal.fr`) renvoient un en-tête
+   `X-Frame-Options: SAMEORIGIN` qui empêche leur affichage direct en
+   iframe depuis leur URL VIDAL d'origine. Nouvel endpoint backend
+   `GET /api/vidal/documents/proxy?url=...` (liste d'hôtes autorisés
+   limitée à `api.vidal.fr`/`document-rcp.vidal.fr`, pour ne jamais
+   devenir un proxy ouvert) qui relaie le document depuis notre propre
+   origine, sans cet en-tête restrictif. Le frontend récupère le document
+   via `fetch()` (même secret partagé que les autres routes VIDAL),
+   crée une URL de blob (`URL.createObjectURL`) et l'affiche dans
+   l'iframe — avec repli en lien externe uniquement si ce relais échoue.
+   Ces URLs de documents sont publiques (aucun `app_id`/`app_key` requis),
+   donc ce nouvel endpoint ne consomme pas le quota VIDAL.
+
+**Validé en conditions réelles de bout en bout** (backend réel + frontend
+Vite + Playwright, credentials réels) : saisie "doliprane" → champ affiche
+"DOLIPRANE", liste de 25 résultats avec compteur "25+ résultats — affinez
+la recherche", document RCP externe (confirmé `X-Frame-Options: SAMEORIGIN`
+par `curl` direct) chargé en iframe via le proxy backend en ~4s (PDF de
+1,6 Mo) — pas de lien externe nécessaire, pas d'erreur JS.

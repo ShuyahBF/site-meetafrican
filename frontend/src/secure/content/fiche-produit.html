@@ -70,7 +70,8 @@
   .control::placeholder{ color:var(--text-mute); font-weight:400; }
 
   .typeahead-wrap{ position:relative; }
-  .typeahead-list{ position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:35; background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-pop); max-height:230px; overflow-y:auto; display:none; }
+  .typeahead-list{ position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:35; background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:var(--shadow-pop); max-height:340px; overflow-y:auto; display:none; }
+  .typeahead-count{ padding:7px 12px; font-size:10.5px; font-weight:700; color:var(--text-mute); border-bottom:1px solid var(--border-soft); background:var(--surface-2); }
   .typeahead-list.show{ display:block; }
   .typeahead-item{ padding:9px 12px; font-size:13px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid var(--border-soft); }
   .typeahead-item:last-child{ border-bottom:none; }
@@ -124,7 +125,7 @@
     <div class="vidal-note-body">
       <div class="srcbanner">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-        <span><b>Données réelles</b> (plus de simulation) : la recherche et le détail produit passent par un vrai appel backend vers <code>https://api.vidal.fr</code>, avec les identifiants de production de l'utilisateur (jamais exposés au navigateur). Un seul appel agrégé <code>GET /rest/api/product/{id}?aggregate=ROUTE&amp;aggregate=DOCUMENTS</code> renvoie voies d'administration et documents disponibles, confirmé par test réel le 10/09/2026 — pas une supposition tirée du manuel. Les documents HTML publics (monographie, VDF…) sont affichés tels quels dans l'iframe ci-dessous, en pointant directement vers leur URL VIDAL réelle ; ceux hébergés hors du référentiel HTML (RCP en PDF notamment, sur <code>document-rcp.vidal.fr</code>) s'ouvrent par un lien externe, marqués « Externe ». VIDAL ne renvoie pas de date de révision par document dans ce flux : aucune date n'est affichée plutôt que d'en inventer une.</span>
+        <span><b>Données réelles</b> (plus de simulation) : la recherche et le détail produit passent par un vrai appel backend vers <code>https://api.vidal.fr</code>, avec les identifiants de production de l'utilisateur (jamais exposés au navigateur). Un seul appel agrégé <code>GET /rest/api/product/{id}?aggregate=ROUTE&amp;aggregate=DOCUMENTS</code> renvoie voies d'administration et documents disponibles, confirmé par test réel le 10/09/2026 — pas une supposition tirée du manuel. Les documents HTML publics (monographie, VDF…) sont affichés tels quels dans l'iframe ci-dessous, en pointant directement vers leur URL VIDAL réelle. Ceux marqués « Externe » (RCP en PDF notamment, sur <code>document-rcp.vidal.fr</code>) sont hébergés hors du référentiel HTML VIDAL et renvoient un en-tête <code>X-Frame-Options: SAMEORIGIN</code> qui empêche leur affichage direct en iframe (vérifié par test réel) — ils sont donc relayés par notre backend (<code>GET /vidal/documents/proxy</code>, liste d'hôtes limitée) pour rester affichés dans la page, avec un repli en lien externe si ce relais échoue. VIDAL ne renvoie pas de date de révision par document dans ce flux : aucune date n'est affichée plutôt que d'en inventer une.</span>
       </div>
     </div>
   </div>
@@ -236,13 +237,20 @@
         const data = await vidalFetch(`/vidal/products/search?q=${encodeURIComponent(q)}`);
         if (seq !== requestSeq) return;
         const results = data.results || [];
-        list.innerHTML = results.length
-          ? results.slice(0, 8).map(m => `
+        if (!results.length){
+          list.innerHTML = `<div class="typeahead-empty">Aucun résultat pour « ${esc(q)} »</div>`;
+        } else {
+          // VIDAL renvoie jusqu'à 25 résultats par page — tous affichés (pas de troncature
+          // arbitraire côté front) dans une liste défilante plutôt qu'un sous-ensemble caché.
+          const countNote = data.results.length >= 25
+            ? `${results.length}+ résultats — affinez la recherche pour les voir tous`
+            : `${results.length} résultat${results.length > 1 ? 's' : ''} VIDAL`;
+          list.innerHTML = `<div class="typeahead-count">${esc(countNote)}</div>` + results.map(m => `
               <div class="typeahead-item" data-id="${esc(m.id)}" data-name="${esc(m.name)}">
                 <span>${highlightMatch(m.name, q)}</span>
                 <span class="typeahead-badge ok">VIDAL</span>
-              </div>`).join('')
-          : `<div class="typeahead-empty">Aucun résultat pour « ${esc(q)} »</div>`;
+              </div>`).join('');
+        }
         list.classList.add('show');
       } catch (err) {
         if (seq !== requestSeq) return;
@@ -250,7 +258,16 @@
       }
     }
 
+    // Saisie forcée en majuscules (convention VIDAL/pharma) — on transforme la valeur
+    // elle-même, pas juste l'affichage (text-transform CSS), pour que la recherche envoyée
+    // et la valeur retenue à la sélection soient déjà en majuscules. La recherche VIDAL
+    // elle-même est insensible à la casse (confirmé par test réel) : ceci est une
+    // convention d'affichage/saisie, pas un besoin fonctionnel.
     input.addEventListener('input', () => {
+      const selStart = input.selectionStart, selEnd = input.selectionEnd;
+      input.value = input.value.toUpperCase();
+      input.setSelectionRange(selStart, selEnd);
+
       const q = input.value.trim();
       if (debounceTimer) clearTimeout(debounceTimer);
       if (q.length < 2) { list.classList.remove('show'); return; }
@@ -309,7 +326,11 @@
     }
   }
 
-  function showDoc(itemType){
+  // Objets créés par URL.createObjectURL() : à libérer avant d'en créer un nouveau,
+  // sinon chaque changement de document laisse fuir la mémoire du blob précédent.
+  let currentBlobUrl = null;
+
+  async function showDoc(itemType){
     document.querySelectorAll('.doc-btn').forEach(b => b.classList.toggle('active', b.dataset.type === itemType));
     const doc = (currentDetail?.documents || []).find(d => d.item_type === itemType);
     if (!doc) return;
@@ -320,20 +341,45 @@
 
     const frame = document.getElementById('docFrame');
     const external = document.getElementById('docExternal');
+    const footnote = document.getElementById('docFootnote');
+    external.style.display = 'none';
+    frame.style.display = 'block';
+
+    if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
+
     if (doc.is_html){
-      frame.style.display = 'block';
+      frame.removeAttribute('srcdoc');
       frame.src = doc.url;
-      external.style.display = 'none';
-      document.getElementById('docFootnote').textContent =
-        `Document HTML public VIDAL, affiché tel quel (pas de reconstruction) — ${doc.url}`;
-    } else {
+      footnote.textContent = `Document HTML public VIDAL, affiché tel quel (pas de reconstruction) — ${doc.url}`;
+      return;
+    }
+
+    // Certains documents VIDAL (RCP notamment) renvoient un en-tête
+    // "X-Frame-Options: SAMEORIGIN" — vérifié par test réel contre document-rcp.vidal.fr —
+    // qui empêche de les charger en iframe directement depuis leur URL VIDAL. On les relaie
+    // donc via notre backend (GET /vidal/documents/proxy, liste d'hôtes limitée) qui les
+    // sert depuis notre propre origine, sans cette restriction, pour un affichage in-page.
+    frame.removeAttribute('src');
+    frame.srcdoc = `<body style="font-family:sans-serif;color:#8790a3;font-size:13px;padding:20px">Chargement du document…</body>`;
+    footnote.textContent = `Document relayé par le backend (le serveur VIDAL qui l'héberge bloque son affichage direct en iframe) — ${doc.url}`;
+    try {
+      const resp = await fetch(`${VIDAL_API.baseUrl}/vidal/documents/proxy?url=${encodeURIComponent(doc.url)}`, {
+        headers: { 'X-Vidal-Proxy-Secret': VIDAL_API.proxySecret || '' },
+      });
+      if (!resp.ok){
+        let detail = '';
+        try { detail = (await resp.json()).detail || ''; } catch(e){}
+        throw new Error(detail || `Erreur VIDAL (${resp.status})`);
+      }
+      const blob = await resp.blob();
+      currentBlobUrl = URL.createObjectURL(blob);
+      frame.removeAttribute('srcdoc');
+      frame.src = currentBlobUrl;
+    } catch (err) {
       frame.style.display = 'none';
-      frame.removeAttribute('src');
       external.style.display = 'block';
-      external.innerHTML = `Document externe (hors du référentiel HTML VIDAL) —
-        <a href="${esc(doc.url)}" target="_blank" rel="noopener">ouvrir dans un nouvel onglet</a>.`;
-      document.getElementById('docFootnote').textContent =
-        'Document PDF ou page hébergée hors du référentiel HTML VIDAL — jamais chargé en iframe, uniquement par lien externe.';
+      external.innerHTML = `Impossible d'afficher ce document dans la page (${esc(err.message)}).
+        <a href="${esc(doc.url)}" target="_blank" rel="noopener">Ouvrir dans un nouvel onglet</a>.`;
     }
   }
 
