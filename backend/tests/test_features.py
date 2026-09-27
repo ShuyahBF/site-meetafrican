@@ -506,3 +506,32 @@ def test_reconcile_activates_pending_payment_without_callback(client, make_user,
     assert client.portal.call(lambda: db.subscriptions.find_one({"id": sub_id}))["status"] == "active"
     # Passe suivante : plus rien en attente, rien n'est appliqué deux fois
     assert client.portal.call(pp.reconcile_pending_payments) == 0
+
+
+def test_payment_page_shows_beauthentik_branding(client, make_user, monkeypatch):
+    """La page PawaPay (compte partagé avec Sawali) affiche beAuthentik dans
+    "reason" et dans le libellé SMS (customerMessage), en français."""
+    import httpx
+
+    from config import get_settings
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "pawapay_environment", "sandbox")
+    monkeypatch.setattr(settings, "pawapay_api_token_sandbox", "tok")
+
+    sent = {}
+
+    async def fake_post(self, url, headers=None, json=None, **kw):
+        sent.update(json)  # corps envoyé à PawaPay
+        return httpx.Response(200, json={"redirectUrl": "https://pay.example/x"})
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+
+    _, headers, _ = make_user()
+    plan = client.get("/api/subscriptions/plans").json()[0]
+    sub = client.post("/api/subscriptions/subscribe", json={"plan_id": plan["id"]}, headers=headers).json()
+    r = client.post("/api/payments/pawapay/payment-page",
+                    json={"subscription_id": sub["subscription_id"], "amount_xof": 5000}, headers=headers)
+    assert r.status_code == 200, r.text
+    assert sent["customerMessage"] == "beAuthentik"
+    assert "beAuthentik" in sent["reason"] and len(sent["reason"]) <= 50
+    assert sent["language"] == "FR"
