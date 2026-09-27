@@ -388,6 +388,9 @@ export default function Welcome() {
           <div className="flex flex-wrap justify-center gap-4">
             <Link to="/connexion" className="hover:text-ink">Connexion</Link>
             <Link to="/inscription" className="hover:text-ink">Inscription</Link>
+            {/* Pages légales publiques */}
+            <Link to="/cgu" className="hover:text-ink">Conditions d'utilisation</Link>
+            <Link to="/confidentialite" className="hover:text-ink">Confidentialité</Link>
           </div>
         </div>
       </footer>
