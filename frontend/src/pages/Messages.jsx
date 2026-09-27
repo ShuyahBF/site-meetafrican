@@ -5,6 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import BottomNav from "@/components/BottomNav";
 import ProfilePhoto from "@/components/ProfilePhoto";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import VideoAccessRequests from "@/components/VideoAccessRequests";
 import { formatRelativeShort } from "@/lib/format";
 
 const REFRESH_MS = 15000;
@@ -45,6 +46,8 @@ export default function Messages() {
       </header>
 
       <main className="flex-1 pb-6">
+        {/* Demandes "Voir mes Moments en clair" à traiter */}
+        <VideoAccessRequests mode="pending" />
         {loading ? (
           <div className="flex justify-center py-20">
             <span className="h-9 w-9 animate-spin rounded-full border-4 border-slate-100 border-t-primary" />

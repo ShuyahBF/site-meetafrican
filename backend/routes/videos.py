@@ -17,16 +17,24 @@ Pas de modération a priori (comme TikTok) mais un signalement en un clic :
 au-delà de AUTO_HIDE_REPORTS signalements, la vidéo est retirée
 automatiquement en attendant la décision d'un modérateur.
 
-Choix assumé : contrairement aux photos (visage masqué sans abonnement), une
-vidéo est publiée VOLONTAIREMENT par son auteur pour être vue — le fil est
-donc visible en clair par tous les membres connectés. C'est la vitrine qui
-donne envie de s'abonner.
+Visibilité (règle de l'administrateur du site) :
+  - chaque vidéo est visible par TOUS, mais ENTIÈREMENT FLOUTÉE (flou
+    appliqué côté serveur dans les pixels, cf. video_processing.py) ;
+  - la version CLAIRE n'est servie qu'aux membres à l'identité VÉRIFIÉE
+    que l'auteur a ACCEPTÉS : soit par un match (like réciproque), soit en
+    acceptant leur demande "Voir en clair" (routes /video-access ci-dessous) ;
+  - l'auteur voit toujours ses propres vidéos en clair, les modérateurs aussi.
+La version claire vit dans le stockage PRIVÉ : son lien n'est jamais
+renvoyé à un membre non autorisé, et l'URL donnée aux autorisés expire.
 """
 from __future__ import annotations
 
+import asyncio
 import math
 import re
+import tempfile
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
@@ -35,8 +43,18 @@ from pydantic import BaseModel, Field
 from auth import get_current_admin, get_current_user
 from config import get_settings
 from db import db
-from models import Video, VideoComment, VideoStatus, VerificationStatus, _age_from_birthdate, _is_online
-from storage import save_public_media
+from models import (
+    Video,
+    VideoAccessRequest,
+    VideoAccessStatus,
+    VideoComment,
+    VideoStatus,
+    VerificationStatus,
+    _age_from_birthdate,
+    _is_online,
+)
+from storage import presigned_document_url, save_photo, save_private_media, save_public_media
+from video_processing import VideoProcessingError, process_video
 
 router = APIRouter(tags=["Vidéos (Moments)"])
 
@@ -52,6 +70,14 @@ AUTO_HIDE_REPORTS = 3
 FOR_YOU_POOL = 300
 
 HASHTAG_RE = re.compile(r"#([\wÀ-ÿ]{2,30})", re.UNICODE)
+
+# Durée de vie des URL temporaires de la version claire : assez longue pour
+# regarder et faire défiler le fil, courte pour qu'un lien partagé à un
+# tiers cesse vite de fonctionner.
+CLEAR_URL_TTL_SECONDS = 2 * 3600
+
+# Champs internes jamais renvoyés tels quels par l'API.
+_PRIVATE_FIELDS = ("clear_key",)
 
 
 def _now_dt() -> datetime:
@@ -114,25 +140,71 @@ async def _author_cards(user_ids: List[str]) -> dict:
     return cards
 
 
-async def _decorate(videos: List[dict], viewer_id: str) -> List[dict]:
-    """Ajoute à chaque vidéo : l'auteur, "déjà aimée par moi ?", et "déjà
-    liké le profil de l'auteur ?" (pour l'état du bouton "Ça me plaît")."""
+async def _clear_access_owner_ids(viewer: dict, owner_ids: List[str]) -> tuple[set, dict]:
+    """Parmi `owner_ids`, les auteurs dont `viewer` peut voir les vidéos EN
+    CLAIR, et l'état de ses demandes d'accès ({owner_id: statut}).
+
+    Règle : le visiteur doit avoir une identité VÉRIFIÉE et être accepté par
+    l'auteur — par un match, ou par une demande "Voir en clair" acceptée.
+    L'auteur lui-même et les modérateurs voient toujours en clair."""
+    owner_ids = list(set(owner_ids))
+    requests = await db.video_access_requests.find(
+        {"requester_id": viewer["id"], "owner_id": {"$in": owner_ids}}, {"_id": 0}
+    ).to_list(len(owner_ids) or 1)
+    request_status = {r["owner_id"]: r["status"] for r in requests}
+
+    allowed = {viewer["id"]} & set(owner_ids)
+    if viewer.get("role") in ("admin", "moderator"):
+        return set(owner_ids), request_status
+    if viewer.get("verification_status") != VerificationStatus.verified.value:
+        return allowed, request_status
+
+    allowed |= {oid for oid, st in request_status.items() if st == VideoAccessStatus.accepted.value}
+    matches = await db.matches.find(
+        {"$or": [
+            {"user_a": viewer["id"], "user_b": {"$in": owner_ids}},
+            {"user_b": viewer["id"], "user_a": {"$in": owner_ids}},
+        ]},
+        {"_id": 0},
+    ).to_list(len(owner_ids) or 1)
+    allowed |= {m["user_b"] if m["user_a"] == viewer["id"] else m["user_a"] for m in matches}
+    return allowed, request_status
+
+
+async def _decorate(videos: List[dict], viewer: dict) -> List[dict]:
+    """Prépare les vidéos pour l'affichage : auteur, "déjà aimée ?", "profil
+    déjà liké ?", et surtout la bonne VERSION de la vidéo :
+      - `url` = URL temporaire de la version claire si le visiteur y a droit,
+        sinon l'URL de la version floutée ;
+      - `is_clear` et `access` ("granted" | "pending" | "refused" | "none")
+        pilotent le cadenas et le bouton "Voir en clair" de l'interface.
+    La clé privée de la version claire n'est jamais renvoyée."""
     if not videos:
         return []
+    viewer_id = viewer["id"]
     ids = [v["id"] for v in videos]
     author_ids = [v["user_id"] for v in videos]
     liked = set(await db.video_likes.distinct("video_id", {"user_id": viewer_id, "video_id": {"$in": ids}}))
     profile_liked = set(await db.swipes.distinct(
         "target_user_id", {"user_id": viewer_id, "action": "like", "target_user_id": {"$in": author_ids}}
     ))
+    allowed, request_status = await _clear_access_owner_ids(viewer, author_ids)
     authors = await _author_cards(author_ids)
     out = []
     for v in videos:
         author = authors.get(v["user_id"])
         if not author:
             continue  # auteur supprimé/désactivé entre-temps
+        is_clear = v["user_id"] in allowed and bool(v.get("clear_key"))
+        url = await presigned_document_url(v["clear_key"], CLEAR_URL_TTL_SECONDS) if is_clear else v.get("blurred_url")
+        if v.get("status") == VideoStatus.published.value and not url:
+            continue  # vidéo incomplète : jamais servie
+        public = {k: val for k, val in v.items() if k not in _PRIVATE_FIELDS}
         out.append({
-            **v,
+            **public,
+            "url": url,
+            "is_clear": is_clear,
+            "access": "granted" if v["user_id"] in allowed else request_status.get(v["user_id"], "none"),
             "author": author,
             "liked_by_me": v["id"] in liked,
             "author_liked_by_me": v["user_id"] in profile_liked,
@@ -184,32 +256,54 @@ async def publish_video(
             detail=f"Vidéo trop volumineuse (max {settings.max_video_upload_bytes // (1024 * 1024)} Mo)",
         )
 
-    url = await save_public_media(content, file.content_type)
     caption = (caption or "").strip()
-    video = Video(
-        user_id=user["id"],
-        url=url,
-        content_type=file.content_type,
-        caption=caption,
-        hashtags=extract_hashtags(caption),
-        duration_seconds=duration_seconds,
-    )
+    video = Video(user_id=user["id"], caption=caption, hashtags=extract_hashtags(caption))
     await db.videos.insert_one(video.model_dump(mode="json"))
-    [decorated] = await _decorate([video.model_dump(mode="json")], user["id"])
+
+    # Fichier brut sur disque temporaire, puis compression + floutage en
+    # TÂCHE DE FOND (plusieurs secondes) : la réponse part tout de suite, la
+    # vidéo apparaît "En traitement" dans "Mes Moments" puis dans le fil.
+    suffix = {"video/mp4": ".mp4", "video/webm": ".webm", "video/quicktime": ".mov"}[file.content_type]
+    with tempfile.NamedTemporaryFile(prefix="maf-upload-", suffix=suffix, delete=False) as tmp:
+        tmp.write(content)
+    task = asyncio.create_task(_process_in_background(video.id, Path(tmp.name)))
+    _BACKGROUND_TASKS.add(task)  # garde une référence (sinon la tâche peut être ramassée)
+    task.add_done_callback(_BACKGROUND_TASKS.discard)
+
+    [decorated] = await _decorate([video.model_dump(mode="json")], user)
     return decorated
 
 
-@router.delete("/videos/{video_id}")
-async def delete_my_video(video_id: str, user: dict = Depends(get_current_user)):
-    """L'auteur supprime définitivement sa vidéo (et ses J'aime/commentaires)."""
-    video = await db.videos.find_one({"id": video_id, "user_id": user["id"]}, {"_id": 0, "id": 1})
-    if not video:
-        raise HTTPException(status_code=404, detail="Vidéo introuvable")
-    await db.videos.delete_one({"id": video_id})
-    await db.video_likes.delete_many({"video_id": video_id})
-    await db.video_comments.delete_many({"video_id": video_id})
-    await db.video_views.delete_many({"video_id": video_id})
-    return {"ok": True}
+_BACKGROUND_TASKS: set = set()
+
+
+async def _process_in_background(video_id: str, source: Path) -> None:
+    """Produit version claire (privée), version floutée et vignette
+    (publiques), puis publie la vidéo — ou la marque en échec avec un
+    message lisible. Le fichier brut est toujours supprimé à la fin."""
+    settings = get_settings()
+    try:
+        result = await asyncio.to_thread(process_video, source, settings.max_video_duration_seconds)
+        clear_key = await save_private_media(result.clear_mp4, "video/mp4")
+        blurred_url = await save_public_media(result.blurred_mp4, "video/mp4")
+        poster_url = await save_photo(result.poster_jpg, "image/jpeg")
+        await db.videos.update_one({"id": video_id}, {"$set": {
+            "clear_key": clear_key,
+            "blurred_url": blurred_url,
+            "poster_url": poster_url,
+            "duration_seconds": result.duration_seconds,
+            "status": VideoStatus.published.value,
+            "created_at": _now(),  # "publiée à" = fin du traitement
+        }})
+    except VideoProcessingError as exc:
+        await db.videos.update_one({"id": video_id}, {"$set": {"status": VideoStatus.failed.value, "failure_reason": str(exc)}})
+    except Exception as exc:  # noqa: BLE001 — jamais laisser une vidéo bloquée "en traitement"
+        print(f"[videos] traitement de {video_id} en échec : {exc!r}")
+        await db.videos.update_one({"id": video_id}, {"$set": {
+            "status": VideoStatus.failed.value, "failure_reason": "Erreur technique pendant le traitement",
+        }})
+    finally:
+        source.unlink(missing_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -264,7 +358,7 @@ async def video_feed(
         has_more = len(page) > limit
         page = page[:limit]
 
-    return {"items": await _decorate(page, user["id"]), "has_more": has_more}
+    return {"items": await _decorate(page, user), "has_more": has_more}
 
 
 @router.get("/videos/trending-tags")
@@ -284,18 +378,22 @@ async def trending_tags(user: dict = Depends(get_current_user)):
 
 @router.get("/users/{user_id}/videos")
 async def user_videos(user_id: str, viewer: dict = Depends(get_current_user)):
-    """Grille des vidéos d'un membre (sa fiche profil, ou "Mes vidéos")."""
+    """Grille des vidéos d'un membre (sa fiche profil, ou "Mes Moments").
+    L'auteur voit aussi ses vidéos en traitement ou en échec."""
+    statuses = [VideoStatus.published.value]
+    if user_id == viewer["id"]:
+        statuses += [VideoStatus.processing.value, VideoStatus.failed.value]
     items = await db.videos.find(
-        {"user_id": user_id, "status": VideoStatus.published.value}, {"_id": 0}
+        {"user_id": user_id, "status": {"$in": statuses}}, {"_id": 0}
     ).sort("created_at", -1).to_list(100)
-    return await _decorate(items, viewer["id"])
+    return await _decorate(items, viewer)
 
 
 @router.get("/videos/{video_id}")
 async def get_video(video_id: str, user: dict = Depends(get_current_user)):
     """Une vidéo seule — cible des liens de partage (/moments/<id>)."""
     video = await _get_published_or_404(video_id)
-    [decorated] = await _decorate([video], user["id"]) or [None]
+    [decorated] = await _decorate([video], user) or [None]
     if not decorated:
         raise HTTPException(status_code=404, detail="Vidéo introuvable")
     return decorated
@@ -433,8 +531,10 @@ async def admin_list_videos(
     authors = await _author_cards([v["user_id"] for v in items])
     for v in items:
         v["author"] = authors.get(v["user_id"])
-        reasons = await db.video_reports.distinct("reason", {"video_id": v["id"]})
-        v["report_reasons"] = reasons
+        v["report_reasons"] = await db.video_reports.distinct("reason", {"video_id": v["id"]})
+        # Les modérateurs jugent sur la version claire.
+        clear_key = v.pop("clear_key", None)
+        v["url"] = await presigned_document_url(clear_key, CLEAR_URL_TTL_SECONDS) if clear_key else v.get("blurred_url")
     return items
 
 
@@ -457,3 +557,60 @@ async def moderate_video(video_id: str, payload: VideoModeration, _: dict = Depe
         await db.video_reports.delete_many({"video_id": video_id})
     await db.videos.update_one({"id": video_id}, {"$set": update})
     return {"ok": True, "status": update["status"]}
+
+
+# ---------------------------------------------------------------------------
+# Accès à la version claire : demandes "Voir en clair"
+# ---------------------------------------------------------------------------
+
+@router.post("/users/{owner_id}/video-access", status_code=201)
+async def request_clear_access(owner_id: str, user: dict = Depends(get_current_user)):
+    """Demande à `owner_id` l'autorisation de voir ses vidéos en clair.
+    Réservé aux identités vérifiées (sinon l'autorisation ne servirait à rien)."""
+    if owner_id == user["id"]:
+        raise HTTPException(status_code=400, detail="Vous voyez déjà vos propres vidéos en clair")
+    if user.get("verification_status") != VerificationStatus.verified.value:
+        raise HTTPException(status_code=403, detail="Vérifiez d'abord votre identité pour demander à voir en clair")
+    owner = await db.users.find_one({"id": owner_id, "is_active": True}, {"_id": 0, "id": 1})
+    if not owner:
+        raise HTTPException(status_code=404, detail="Profil introuvable")
+
+    existing = await db.video_access_requests.find_one({"owner_id": owner_id, "requester_id": user["id"]}, {"_id": 0})
+    if existing:
+        if existing["status"] == VideoAccessStatus.refused.value:
+            # Un refus reste un refus : pas de relance possible (anti-harcèlement).
+            raise HTTPException(status_code=403, detail="Ce membre a refusé votre demande")
+        return {"status": existing["status"]}
+    req = VideoAccessRequest(owner_id=owner_id, requester_id=user["id"])
+    await db.video_access_requests.insert_one(req.model_dump(mode="json"))
+    return {"status": req.status.value}
+
+
+@router.get("/me/video-access/requests")
+async def my_incoming_requests(user: dict = Depends(get_current_user)):
+    """Demandes reçues en attente + membres déjà autorisés (pour pouvoir
+    révoquer)."""
+    items = await db.video_access_requests.find(
+        {"owner_id": user["id"], "status": {"$in": [VideoAccessStatus.pending.value, VideoAccessStatus.accepted.value]}},
+        {"_id": 0},
+    ).sort("created_at", -1).to_list(200)
+    cards = await _author_cards([r["requester_id"] for r in items])
+    return [{**r, "requester": cards[r["requester_id"]]} for r in items if r["requester_id"] in cards]
+
+
+class AccessDecision(BaseModel):
+    accept: bool
+
+
+@router.post("/me/video-access/requests/{request_id}")
+async def decide_request(request_id: str, payload: AccessDecision, user: dict = Depends(get_current_user)):
+    """Accepter / refuser une demande — ou révoquer (accept=false) un accès
+    déjà accordé."""
+    req = await db.video_access_requests.find_one({"id": request_id, "owner_id": user["id"]}, {"_id": 0})
+    if not req:
+        raise HTTPException(status_code=404, detail="Demande introuvable")
+    status = VideoAccessStatus.accepted if payload.accept else VideoAccessStatus.refused
+    await db.video_access_requests.update_one(
+        {"id": request_id}, {"$set": {"status": status.value, "decided_at": _now()}}
+    )
+    return {"ok": True, "status": status.value}

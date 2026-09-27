@@ -4,7 +4,8 @@ import { apiClient } from "@/lib/api";
 const POLL_MS = 20000;
 
 /**
- * Nombre total de messages non lus (badge sur l'onglet "Messages").
+ * Nombre total de messages non lus + demandes "Voir en clair" en attente
+ * (badge sur l'onglet "Messages").
  * Rafraîchi toutes les 20 s et quand l'onglet du navigateur redevient
  * visible — pas besoin d'un WebSocket global pour un simple compteur.
  */
@@ -16,7 +17,7 @@ export function useUnreadCount() {
     const load = () =>
       apiClient
         .get("/conversations/unread-count")
-        .then((r) => !cancelled && setUnread(r.data.unread))
+        .then((r) => !cancelled && setUnread(r.data.unread + (r.data.video_requests || 0)))
         .catch(() => {});
     load();
     const interval = setInterval(load, POLL_MS);

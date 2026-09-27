@@ -16,7 +16,9 @@ const VIEW_AFTER_MS = 2000;
  *   - double-tap = J'aime, avec un gros cœur qui éclate là où on a tapé ;
  *   - colonne d'actions à droite (profil + "Ça me plaît", J'aime,
  *     commentaires, cadeau, partage) ;
- *   - légende avec #hashtags cliquables et barre de progression fine en bas.
+ *   - légende avec #hashtags cliquables et barre de progression fine en bas ;
+ *   - vidéo FLOUTÉE (par le serveur) tant que l'auteur n'a pas accepté le
+ *     visiteur : cadenas + bouton "Voir en clair" (cf. AccessBadge).
  */
 export default function VideoSlide({
   video,
@@ -32,6 +34,8 @@ export default function VideoSlide({
   onMore,
   onTag,
   onViewed,
+  onRequestAccess,
+  viewerVerified,
 }) {
   const videoRef = useRef(null);
   const lastTapRef = useRef(0);
@@ -114,6 +118,8 @@ export default function VideoSlide({
       <video
         ref={videoRef}
         src={video.url}
+        // Vignette floutée affichée pendant le chargement (pas d'écran noir).
+        poster={video.poster_url || undefined}
         className="absolute inset-0 h-full w-full object-cover"
         loop
         playsInline
@@ -220,14 +226,22 @@ export default function VideoSlide({
         )}
       </div>
 
-      {/* Bouton son (haut droite) */}
-      <button
-        onClick={onToggleMute}
-        aria-label={muted ? "Activer le son" : "Couper le son"}
-        className="glass absolute right-3 top-16 flex h-9 w-9 items-center justify-center rounded-full text-white"
-      >
-        <span className="material-symbols-outlined text-xl">{muted ? "volume_off" : "volume_up"}</span>
-      </button>
+      {/* Bouton son (haut droite) — absent sur la version floutée, qui
+          n'a pas de piste audio (la voix identifie aussi). */}
+      {video.is_clear && (
+        <button
+          onClick={onToggleMute}
+          aria-label={muted ? "Activer le son" : "Couper le son"}
+          className="glass absolute right-3 top-16 flex h-9 w-9 items-center justify-center rounded-full text-white"
+        >
+          <span className="material-symbols-outlined text-xl">{muted ? "volume_off" : "volume_up"}</span>
+        </button>
+      )}
+
+      {/* Vidéo floutée : cadenas + action pour la voir en clair */}
+      {!video.is_clear && (
+        <AccessBadge video={video} viewerVerified={viewerVerified} onRequestAccess={onRequestAccess} />
+      )}
 
       {/* Barre de progression */}
       <div className="absolute inset-x-0 bottom-0 h-[3px] bg-white/20">
@@ -270,5 +284,47 @@ function CaptionWithTags({ caption, onTag }) {
     ) : (
       <span key={i}>{part}</span>
     ),
+  );
+}
+
+/**
+ * Pastille centrale sur une vidéo floutée. Selon la situation du visiteur :
+ *   - identité non vérifiée  -> lien vers la vérification ;
+ *   - pas encore demandé     -> bouton "Demander à voir en clair" ;
+ *   - demande en attente     -> "Demande envoyée" ;
+ *   - demande refusée        -> "Accès non accordé".
+ */
+function AccessBadge({ video, viewerVerified, onRequestAccess }) {
+  const first = video.author.full_name.split(" ")[0];
+  let content;
+  if (!viewerVerified) {
+    content = (
+      <Link to="/profil#verification" className="btn-primary h-10 px-4 text-xs">
+        <span className="material-symbols-outlined text-base">verified</span>
+        Vérifiez-vous pour voir en clair
+      </Link>
+    );
+  } else if (video.access === "pending") {
+    content = <span className="text-sm font-bold text-white">⏳ Demande envoyée à {first}</span>;
+  } else if (video.access === "refused") {
+    content = <span className="text-sm font-bold text-white/80">Accès non accordé</span>;
+  } else {
+    content = (
+      <button onClick={() => onRequestAccess(video)} className="btn-primary h-10 px-4 text-xs">
+        <span className="material-symbols-outlined text-base">visibility</span>
+        Demander à voir en clair
+      </button>
+    );
+  }
+  return (
+    <div className="pointer-events-none absolute left-0 right-20 top-[20%] flex justify-center pl-4">
+      <div className="glass pointer-events-auto flex flex-col items-center gap-2 rounded-3xl px-5 py-4 text-center">
+        <span className="material-symbols-outlined icon-filled text-3xl text-white">lock</span>
+        <p className="text-xs font-semibold text-white/85">
+          Vidéo floutée · visible en clair si {first} vous accepte
+        </p>
+        {content}
+      </div>
+    </div>
   );
 }

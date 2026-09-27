@@ -20,7 +20,7 @@ import { formatCount, formatLastSeen, responseBadge } from "@/lib/format";
 export default function UserProfile() {
   const { userId } = useParams();
   const navigate = useNavigate();
-  const { refresh } = useAuth();
+  const { user, refresh } = useAuth();
   const options = useProfileOptions();
   const [data, setData] = useState(null);
   const [videos, setVideos] = useState([]);
@@ -88,6 +88,17 @@ export default function UserProfile() {
       showToast(extractErrorMessage(err, "Action impossible"));
     } finally {
       setBusy(false);
+    }
+  };
+
+  // Demande à voir les Moments de ce membre en clair.
+  const requestAccess = async () => {
+    try {
+      const res = await apiClient.post(`/users/${profile.id}/video-access`);
+      setData((d) => ({ ...d, video_access: res.data.status }));
+      showToast("Demande envoyée 🔓");
+    } catch (err) {
+      showToast(extractErrorMessage(err, "Demande impossible"));
     }
   };
 
@@ -183,6 +194,14 @@ export default function UserProfile() {
 
         <section className="mt-7">
           <h2 className="section-title">Moments</h2>
+          {!data.is_me && data.videos_count > 0 && data.video_access !== "granted" && (
+            <ClearAccessCard
+              access={data.video_access}
+              viewerVerified={user?.verification_status === "verified"}
+              firstName={profile.full_name.split(" ")[0]}
+              onRequest={requestAccess}
+            />
+          )}
           <VideoGrid videos={videos} />
         </section>
       </main>
@@ -251,5 +270,30 @@ function RoundAction({ icon, label, onClick, disabled, primary = false }) {
     >
       <span className={`material-symbols-outlined text-3xl ${primary ? "icon-filled" : ""}`}>{icon}</span>
     </button>
+  );
+}
+
+/** Encart "Moments floutés" : explique la règle et propose l'action adaptée. */
+function ClearAccessCard({ access, viewerVerified, firstName, onRequest }) {
+  return (
+    <div className="mb-3 flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary/5 to-sunset/5 p-4 ring-1 ring-primary/10">
+      <span className="material-symbols-outlined icon-filled text-2xl text-primary">lock</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-extrabold">Moments floutés</p>
+        <p className="text-xs text-slate-500">
+          {access === "pending"
+            ? `Demande envoyée — ${firstName} doit l'accepter.`
+            : access === "refused"
+            ? `${firstName} n'a pas accordé l'accès.`
+            : `Visibles en clair si ${firstName} vous accepte (ou en cas de match).`}
+        </p>
+      </div>
+      {access === "none" &&
+        (viewerVerified ? (
+          <button onClick={onRequest} className="btn-primary h-9 shrink-0 px-3 text-xs">Voir en clair</button>
+        ) : (
+          <Link to="/profil#verification" className="btn-ghost h-9 shrink-0 px-3 text-xs">Me vérifier</Link>
+        ))}
+    </div>
   );
 }

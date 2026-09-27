@@ -89,7 +89,9 @@ export default function PublishVideo() {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (ev) => ev.total && setProgress(Math.round((ev.loaded / ev.total) * 100)),
       });
-      navigate(`/moments/${res.data.id}`, { replace: true });
+      // La vidéo est compressée + floutée en arrière-plan : on renvoie vers
+      // "Mes Moments", où elle apparaît "Traitement…" puis publiée.
+      if (res.data.id) navigate("/profil#moments", { replace: true });
     } catch (err) {
       setError(extractErrorMessage(err, "La publication a échoué, réessayez."));
     } finally {
@@ -179,6 +181,12 @@ export default function PublishVideo() {
               </button>
             ))}
           </div>
+
+          <p className="mt-4 flex gap-2 rounded-2xl bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-500">
+            <span className="material-symbols-outlined icon-filled text-base text-primary">lock</span>
+            Votre vidéo sera compressée et entièrement floutée pour tous. Seuls vos matchs et les membres vérifiés
+            que vous acceptez la verront en clair.
+          </p>
 
           {error && <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">{error}</p>}
 

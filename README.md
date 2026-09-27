@@ -20,6 +20,13 @@ MeetAfrican — site de rencontre pour hommes et femmes africains.
   #hashtags cliquables et tendances, défilement infini. Publication réservée
   aux identités **vérifiées** (gage d'authenticité), signalement en un clic
   (retrait automatique à 3 signalements, revue dans `/admin/videos`).
+- **Vidéos floutées par défaut** : chaque vidéo est compressée puis
+  **entièrement floutée côté serveur** (ffmpeg via `imageio-ffmpeg`, sans
+  son) — c'est cette version que tout le monde voit. La version **claire**
+  est rangée dans le stockage **privé** et n'est servie (URL temporaire)
+  qu'aux membres **vérifiés acceptés par l'auteur** : par un match, ou en
+  acceptant leur demande « Voir en clair » (boîte de réception ; accès
+  révocable depuis *Mon profil*). Voir `backend/video_processing.py`.
 - **Recherche avancée** (`/recherche`, maquette 10), **profil détaillé**
   éditable (centres d'intérêt, type de relation, enfants, profession —
   maquette 11) et **fiche publique** des membres (`/profils/:id`).
@@ -119,9 +126,8 @@ jamais utiliser en production**.
 
 ## Prochaines étapes
 
-- Vidéos : transcodage/compression côté serveur (ffmpeg) et vraies
-  miniatures — aujourd'hui la vidéo est servie telle qu'envoyée (50 Mo /
-  60 s max) et la vignette est la première image lue par le navigateur
+- Vidéos : le traitement (compression + flou) tourne dans le process web ;
+  à déplacer vers un worker dédié si le volume de publications augmente
 - Hub temps réel en mémoire (`backend/realtime.py`) : passer à Redis
   pub/sub si le backend tourne un jour sur plusieurs instances
 

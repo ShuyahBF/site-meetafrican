@@ -31,7 +31,8 @@ export default function Moments() {
   const { videoId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { refresh } = useAuth();
+  const { user, refresh } = useAuth();
+  const viewerVerified = user?.verification_status === "verified";
   const tag = searchParams.get("tag");
 
   const [tab, setTab] = useState("pour-toi");
@@ -205,6 +206,18 @@ export default function Moments() {
     }
   };
 
+  // "Demander à voir en clair" : l'auteur recevra la demande dans sa boîte
+  // de réception ; toutes ses vidéos du fil passent en "Demande envoyée".
+  const handleRequestAccess = async (video) => {
+    try {
+      const res = await apiClient.post(`/users/${video.author.id}/video-access`);
+      setItems((prev) => prev.map((v) => (v.user_id === video.user_id ? { ...v, access: res.data.status } : v)));
+      showToast(`Demande envoyée à ${video.author.full_name.split(" ")[0]} 🔓`);
+    } catch (err) {
+      showToast(extractErrorMessage(err, "Demande impossible"));
+    }
+  };
+
   const handleViewed = useCallback((id) => {
     if (viewedRef.current.has(id)) return;
     viewedRef.current.add(id);
@@ -264,6 +277,8 @@ export default function Moments() {
                 onMore={setOptionsFor}
                 onTag={openTag}
                 onViewed={handleViewed}
+                onRequestAccess={handleRequestAccess}
+                viewerVerified={viewerVerified}
               />
             </div>
           ))}

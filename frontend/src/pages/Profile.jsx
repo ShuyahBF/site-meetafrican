@@ -8,6 +8,7 @@ import BottomNav from "@/components/BottomNav";
 import ProfilePhoto from "@/components/ProfilePhoto";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import VideoGrid from "@/components/VideoGrid";
+import VideoAccessRequests from "@/components/VideoAccessRequests";
 import Toast, { useToast } from "@/components/Toast";
 
 const STATUS_LABEL = {
@@ -69,12 +70,22 @@ export default function Profile() {
     apiClient.get(`/users/${user.id}/videos`).then((r) => setVideos(r.data)).catch(() => {});
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Une vidéo en cours de traitement (compression + floutage) ? On
+  // rafraîchit "Mes Moments" toutes les 3 s jusqu'à la fin.
+  const hasProcessing = videos.some((v) => v.status === "processing");
+  useEffect(() => {
+    if (!hasProcessing || !user) return;
+    const t = setInterval(() => {
+      apiClient.get(`/users/${user.id}/videos`).then((r) => setVideos(r.data)).catch(() => {});
+    }, 3000);
+    return () => clearInterval(t);
+  }, [hasProcessing, user]);
+
   // Lien "Vérifier mon identité" depuis la page de publication : défile
   // jusqu'à la section vérification.
   useEffect(() => {
-    if (window.location.hash === "#verification") {
-      document.getElementById("verification")?.scrollIntoView({ behavior: "smooth" });
-    }
+    const target = { "#verification": "verification", "#moments": "moments" }[window.location.hash];
+    if (target) document.getElementById(target)?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -262,7 +273,7 @@ export default function Profile() {
         </section>
 
         {/* Mes Moments */}
-        <section className="mt-8">
+        <section id="moments" className="mt-8">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="section-title mb-0">Mes Moments</h2>
             <Link to="/moments/publier" className="flex items-center gap-1 text-sm font-bold text-primary">
@@ -270,7 +281,13 @@ export default function Profile() {
             </Link>
           </div>
           <VideoGrid videos={videos} emptyText="Publiez votre premier Moment pour vous faire remarquer ✨" />
+          <p className="mt-2 text-xs text-slate-400">
+            🔒 Vos vidéos sont floutées pour tout le monde. Seuls vos matchs et les membres vérifiés que vous
+            acceptez les voient en clair.
+          </p>
         </section>
+
+        <VideoAccessRequests mode="accepted" />
 
         {/* Vérification d'identité */}
         <section id="verification" className="mt-8 rounded-3xl bg-gradient-to-br from-sky-50 to-white p-5 ring-1 ring-sky-100">

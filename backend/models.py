@@ -508,29 +508,56 @@ class Message(BaseModel):
 # ---------------------------------------------------------------------------
 
 class VideoStatus(str, Enum):
-    published = "published"   # visible dans le fil
-    removed = "removed"       # retirée par la modération (reste en base, jamais servie)
+    processing = "processing"  # compression + floutage en cours (invisible dans le fil)
+    published = "published"    # visible dans le fil
+    failed = "failed"          # traitement impossible (fichier illisible, trop long…)
+    removed = "removed"        # retirée par la modération (reste en base, jamais servie)
 
 
 class Video(BaseModel):
+    """Vidéo courte. Deux versions sont produites au traitement (cf.
+    video_processing.py) :
+      - `blurred_url` : version entièrement floutée, PUBLIQUE, vue par tous ;
+      - `clear_key`   : clé de la version claire dans le stockage PRIVÉ —
+        jamais exposée telle quelle par l'API ; une URL temporaire est
+        générée uniquement pour les membres autorisés (routes/videos.py)."""
     id: str = Field(default_factory=_uuid)
     user_id: str
-    url: str
-    content_type: str
     caption: str = Field("", max_length=300)
     # #hashtags extraits de la légende (en minuscules, sans le #) — rendent
     # les tags cliquables et filtrables dans le fil, comme sur TikTok.
     hashtags: List[str] = Field(default_factory=list)
-    # Durée déclarée par le navigateur (lue sur le fichier avant envoi) —
-    # le serveur ne décode pas la vidéo, cf. routes/videos.py.
+    clear_key: Optional[str] = None
+    blurred_url: Optional[str] = None
+    poster_url: Optional[str] = None
+    # Durée réelle mesurée par ffmpeg au traitement.
     duration_seconds: Optional[float] = None
-    status: VideoStatus = VideoStatus.published
+    status: VideoStatus = VideoStatus.processing
+    failure_reason: Optional[str] = None
     likes_count: int = 0
     comments_count: int = 0
     views_count: int = 0
     reports_count: int = 0
     removed_reason: Optional[str] = None
     created_at: str = Field(default_factory=_now)
+
+
+class VideoAccessStatus(str, Enum):
+    pending = "pending"
+    accepted = "accepted"
+    refused = "refused"
+
+
+class VideoAccessRequest(BaseModel):
+    """Demande d'un membre VÉRIFIÉ (`requester_id`) pour voir en clair les
+    vidéos d'un autre membre (`owner_id`). L'autorisation vaut pour toutes
+    les vidéos de l'auteur, et reste révocable par lui."""
+    id: str = Field(default_factory=_uuid)
+    owner_id: str
+    requester_id: str
+    status: VideoAccessStatus = VideoAccessStatus.pending
+    created_at: str = Field(default_factory=_now)
+    decided_at: Optional[str] = None
 
 
 class VideoComment(BaseModel):

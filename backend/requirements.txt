@@ -14,3 +14,5 @@ python-dotenv==1.0.1
 anthropic==0.34.2
 boto3==1.34.144
 Pillow==10.4.0
+# ffmpeg embarqué (binaire statique) : compression + floutage des vidéos du fil Moments
+imageio-ffmpeg==0.6.0

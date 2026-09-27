@@ -33,6 +33,7 @@ from models import (
     to_user_public,
 )
 from routes.matching import _mask_photos_for_viewer, _opposite, _with_likes_received
+from routes.videos import _clear_access_owner_ids
 
 router = APIRouter(tags=["Profils & recherche"])
 
@@ -147,6 +148,11 @@ async def public_profile(user_id: str, viewer: dict = Depends(get_current_user))
         await db.conversations.find_one({"match_id": match["id"]}, {"_id": 0}) if match else None
     )
     videos_count = await db.videos.count_documents({"user_id": user_id, "status": "published"})
+    # Accès aux vidéos de ce membre en clair : "granted" | "pending" |
+    # "refused" | "none" (cf. routes/videos.py) — pilote le bouton "Voir ses
+    # Moments en clair" de la fiche.
+    allowed, request_status = await _clear_access_owner_ids(viewer, [user_id])
+    video_access = "granted" if user_id in allowed else request_status.get(user_id, "none")
 
     return {
         "profile": profile,
@@ -155,6 +161,7 @@ async def public_profile(user_id: str, viewer: dict = Depends(get_current_user))
         "is_match": bool(match),
         "conversation_id": conversation["id"] if conversation else None,
         "videos_count": videos_count,
+        "video_access": video_access,
     }
 
 

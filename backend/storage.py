@@ -83,6 +83,12 @@ async def save_photo(content: bytes, content_type: str) -> str:
 async def save_document(content: bytes, content_type: str) -> str:
     """Enregistre une pièce d'identité et renvoie sa CLÉ d'objet (jamais une
     URL publique) — utiliser `presigned_document_url` pour y accéder."""
+    return await save_private_media(content, content_type)
+
+
+async def save_private_media(content: bytes, content_type: str) -> str:
+    """Enregistre un fichier PRIVÉ (pièce d'identité, version claire d'une
+    vidéo) et renvoie sa CLÉ d'objet, jamais une URL publique."""
     settings = get_settings()
     key = _new_key(content_type)
 
@@ -106,9 +112,11 @@ async def save_document(content: bytes, content_type: str) -> str:
     return key
 
 
-async def presigned_document_url(key: str) -> Optional[str]:
-    """URL d'accès temporaire à une pièce d'identité — jamais stockée, générée
-    à chaque besoin (analyse IA, affichage en revue admin)."""
+async def presigned_document_url(key: str, ttl_seconds: Optional[int] = None) -> Optional[str]:
+    """URL d'accès temporaire à un fichier privé (pièce d'identité, vidéo
+    claire) — jamais stockée, générée à chaque besoin. `ttl_seconds` permet
+    une durée de vie différente de celle des pièces d'identité (une vidéo
+    doit rester lisible le temps de faire défiler le fil)."""
     settings = get_settings()
 
     if settings.storage_backend == "r2":
@@ -116,7 +124,7 @@ async def presigned_document_url(key: str) -> Optional[str]:
             return _r2_client().generate_presigned_url(
                 "get_object",
                 Params={"Bucket": settings.r2_bucket_documents, "Key": key},
-                ExpiresIn=settings.r2_presigned_url_ttl_seconds,
+                ExpiresIn=ttl_seconds or settings.r2_presigned_url_ttl_seconds,
             )
         return await asyncio.to_thread(_presign)
 

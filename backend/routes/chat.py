@@ -150,8 +150,9 @@ async def _mark_read(conversation_id: str, reader_id: str) -> str | None:
 
 @router.get("/conversations/unread-count")
 async def unread_count(user: dict = Depends(get_current_user)):
-    """Total de messages non lus, toutes conversations confondues — badge
-    rouge sur l'onglet "Messages" de la barre de navigation."""
+    """Total de messages non lus, toutes conversations confondues, et
+    demandes d'accès vidéo en attente — badge rouge sur l'onglet "Messages"
+    de la barre de navigation."""
     convs = await db.conversations.find(
         {"$or": [{"user_a": user["id"]}, {"user_b": user["id"]}]}, {"_id": 0, "id": 1}
     ).to_list(500)
@@ -160,7 +161,10 @@ async def unread_count(user: dict = Depends(get_current_user)):
         "sender_id": {"$ne": user["id"]},
         "read_at": None,
     })
-    return {"unread": total}
+    # Demandes "Voir mes Moments en clair" en attente de réponse : elles
+    # s'affichent en tête de la boîte de réception, on les compte aussi.
+    video_requests = await db.video_access_requests.count_documents({"owner_id": user["id"], "status": "pending"})
+    return {"unread": total, "video_requests": video_requests}
 
 
 @router.post("/conversations/{conversation_id}/read")
