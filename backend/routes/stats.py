@@ -15,7 +15,7 @@ membres.
 from __future__ import annotations
 
 import re
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -45,7 +45,9 @@ async def record_visit():
     ip = current_ip() or "inconnue"
     result = await db.site_visits.update_one(
         {"day": date.today().isoformat(), "ip": ip},
-        {"$setOnInsert": {"day": date.today().isoformat(), "ip": ip}},
+        # created_at_dt : purge automatique après 31 jours (index TTL, db.py) —
+        # l'IP ne sert qu'à éviter le double comptage du jour.
+        {"$setOnInsert": {"day": date.today().isoformat(), "ip": ip, "created_at_dt": datetime.now(timezone.utc)}},
         upsert=True,
     )
     if result.upserted_id is not None:

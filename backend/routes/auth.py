@@ -5,6 +5,10 @@ from datetime import date, datetime
 from typing import Optional
 
 from activity import current_ip, log_activity
+
+# Version des CGU / politique de confidentialité en vigueur (date de
+# publication, affichée en tête des pages /cgu et /confidentialite).
+TERMS_VERSION = "2026-09-28"
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from auth import create_access_token, get_current_user, hash_password, verify_password
@@ -59,6 +63,10 @@ async def register(payload: UserRegister):
     # IP d'inscription et de dernière connexion, consultables par l'admin.
     doc["registration_ip"] = doc["last_login_ip"] = current_ip()
     doc["last_login_at"] = datetime.now().astimezone().isoformat()
+    # Acceptation des CGU et de la politique de confidentialité (mention
+    # affichée sous le bouton d'inscription) : date + version acceptée.
+    doc["terms_accepted_at"] = doc["last_login_at"]
+    doc["terms_version"] = TERMS_VERSION
     await db.users.insert_one(doc.copy())
     token = create_access_token(user.id)
     return Token(access_token=token, user=to_user_public(doc))

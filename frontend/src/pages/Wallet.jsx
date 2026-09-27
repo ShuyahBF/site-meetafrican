@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PaymentReturnBanner from "@/components/PaymentReturnBanner";
+import PaymentMethods from "@/components/PaymentMethods";
 import { apiClient, extractErrorMessage } from "@/lib/api";
 import BottomNav from "@/components/BottomNav";
 
@@ -105,6 +106,7 @@ export default function Wallet() {
           >
             {paying ? "Redirection…" : "Recharger par Mobile Money"}
           </button>
+          <PaymentMethods compact className="mt-2" />
         </section>
 
         <section className="mt-8">

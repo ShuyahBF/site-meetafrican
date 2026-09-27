@@ -65,6 +65,13 @@ export default function Register() {
           {submitting ? "Création…" : "Créer mon compte"}
         </button>
 
+        {/* Acceptation des conditions : enregistrée côté serveur à l'inscription (date + version). */}
+        <p className="text-center text-xs leading-relaxed text-slate-500">
+          En créant un compte, vous certifiez avoir 18 ans ou plus et acceptez nos{" "}
+          <Link to="/cgu" className="font-semibold text-primary underline">conditions générales d'utilisation</Link> et notre{" "}
+          <Link to="/confidentialite" className="font-semibold text-primary underline">politique de confidentialité et de service</Link>.
+        </p>
+
         <p className="text-center text-sm text-slate-500 dark:text-slate-400">
           Déjà un compte ? <Link to="/connexion" className="font-semibold text-primary">Se connecter</Link>
         </p>

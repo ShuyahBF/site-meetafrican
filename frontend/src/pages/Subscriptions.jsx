@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { apiClient, extractErrorMessage } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import PaymentReturnBanner from "@/components/PaymentReturnBanner";
+import PaymentMethods from "@/components/PaymentMethods";
 
 function fmtXOF(n) {
   return Number(n || 0).toLocaleString("fr-FR") + " FCFA";
@@ -104,8 +105,9 @@ export default function Subscriptions() {
                 disabled={paying === p.id}
                 className="mt-4 h-12 w-full rounded-full bg-primary text-sm font-bold text-white disabled:opacity-50"
               >
-                {paying === p.id ? "Redirection…" : "Payer par Mobile Money (Orange / Moov / Telecel)"}
+                {paying === p.id ? "Redirection…" : "Payer par Mobile Money"}
               </button>
+              <PaymentMethods compact className="mt-2" />
               <button
                 onClick={() => { setProofPlanId(p.id); setProofSent(false); }}
                 className="mt-2 h-10 w-full rounded-full border border-slate-300 text-sm font-semibold text-slate-700 dark:border-white/20 dark:text-white"

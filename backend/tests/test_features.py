@@ -399,3 +399,110 @@ def test_admin_password_reset_switch(client, monkeypatch):
     monkeypatch.setattr(s, "admin_bootstrap_reset_password", True)
     client.portal.call(ensure_admin_user)          # avec : réinitialisé
     assert ok("Nouveau-mdp-2026") == 200
+
+
+# ---------------------------------------------------------------------------
+# Paiements PawaPay : notification vérifiée auprès de PawaPay
+# ---------------------------------------------------------------------------
+
+def _pending_subscription_payment(client, make_user, amount=5000):
+    """Crée (directement en base) un abonnement en attente + son paiement."""
+    import uuid
+
+    from db import db
+
+    user_id, headers, _ = make_user()
+    plan = client.get("/api/subscriptions/plans").json()[0]
+    sub = client.post("/api/subscriptions/subscribe", json={"plan_id": plan["id"]}, headers=headers).json()
+    deposit_id = str(uuid.uuid4())
+    client.portal.call(lambda: db.payments.insert_one({
+        "id": str(uuid.uuid4()), "deposit_id": deposit_id, "user_id": user_id,
+        "subscription_id": sub["subscription_id"], "purpose": "subscription", "amount": amount,
+        "currency": "XOF", "status": "initiated",
+    }))
+    return deposit_id, sub["subscription_id"], headers
+
+
+def test_webhook_is_verified_with_pawapay_before_activation(client, make_user, monkeypatch):
+    from config import get_settings
+    from db import db
+    import routes.payments_pawapay as pp
+
+    monkeypatch.setattr(get_settings(), "pawapay_callback_secret", "s3cret")
+    deposit_id, sub_id, _ = _pending_subscription_payment(client, make_user)
+    sub_status = lambda: client.portal.call(lambda: db.subscriptions.find_one({"id": sub_id}))["status"]
+    hook = lambda: client.post(f"/api/payments/pawapay/webhooks/deposits/s3cret", json={"depositId": deposit_id, "status": "COMPLETED"})
+
+    # Mauvais secret -> refusé
+    assert client.post("/api/payments/pawapay/webhooks/deposits/faux", json={"depositId": deposit_id}).status_code == 403
+
+    # Notification "COMPLETED" forgée alors que PawaPay dit "en cours" -> rien n'est activé
+    async def processing(_):
+        return {"depositId": deposit_id, "status": "PROCESSING"}
+    monkeypatch.setattr(pp, "_fetch_deposit", processing)
+    hook()
+    assert sub_status() == "pending"
+
+    # PawaPay injoignable -> 503 (PawaPay renverra la notification)
+    async def unreachable(_):
+        return None
+    monkeypatch.setattr(pp, "_fetch_deposit", unreachable)
+    assert hook().status_code == 503
+
+    # Confirmé par PawaPay avec le bon montant -> activé, une seule fois
+    # (réponse au format v2 de PawaPay, passée par le même extracteur que la prod)
+    v2_response = {"status": "FOUND", "data": {"depositId": deposit_id, "status": "COMPLETED", "amount": "5000", "currency": "XOF"}}
+    async def completed(_):
+        return pp._extract_deposit(v2_response)
+    monkeypatch.setattr(pp, "_fetch_deposit", completed)
+    assert hook().json()["applied"] is True
+    assert sub_status() == "active"
+    assert hook().json()["applied"] is False  # idempotent
+
+
+def test_payment_amount_mismatch_and_refresh_activation(client, make_user, monkeypatch):
+    from db import db
+    import routes.payments_pawapay as pp
+
+    # Montant incohérent -> pas d'activation
+    deposit_id, sub_id, headers = _pending_subscription_payment(client, make_user)
+    async def wrong_amount(_):
+        return {"depositId": deposit_id, "status": "COMPLETED", "amount": "100"}
+    monkeypatch.setattr(pp, "_fetch_deposit", wrong_amount)
+    r = client.get(f"/api/payments/pawapay/{deposit_id}", params={"refresh": True}, headers=headers).json()
+    assert r["status"] == "amount_mismatch"
+    assert client.portal.call(lambda: db.subscriptions.find_one({"id": sub_id}))["status"] == "pending"
+
+    # Page de retour (refresh) sans webhook : l'abonnement est bien activé
+    deposit_id, sub_id, headers = _pending_subscription_payment(client, make_user)
+    async def ok(_):
+        return {"depositId": deposit_id, "status": "COMPLETED", "amount": "5000"}
+    monkeypatch.setattr(pp, "_fetch_deposit", ok)
+    r = client.get(f"/api/payments/pawapay/{deposit_id}", params={"refresh": True}, headers=headers).json()
+    assert r["status"] == "completed"
+    assert client.portal.call(lambda: db.subscriptions.find_one({"id": sub_id}))["status"] == "active"
+
+
+def test_reconcile_activates_pending_payment_without_callback(client, make_user, monkeypatch):
+    """Compte PawaPay partagé (callback chez Sawali) : la passe de
+    rapprochement active l'abonnement sans aucune notification reçue."""
+    from datetime import datetime, timezone
+
+    from db import db
+    import routes.payments_pawapay as pp
+
+    deposit_id, sub_id, _ = _pending_subscription_payment(client, make_user, amount=5000)
+    # Paiement "pending" (membre redirigé vers PawaPay), créé à l'instant
+    client.portal.call(lambda: db.payments.update_one(
+        {"deposit_id": deposit_id},
+        {"$set": {"status": "pending", "created_at": datetime.now(timezone.utc).isoformat()}},
+    ))
+
+    async def completed(_):
+        return {"depositId": deposit_id, "status": "COMPLETED", "amount": "5000"}
+    monkeypatch.setattr(pp, "_fetch_deposit", completed)
+
+    assert client.portal.call(pp.reconcile_pending_payments) == 1
+    assert client.portal.call(lambda: db.subscriptions.find_one({"id": sub_id}))["status"] == "active"
+    # Passe suivante : plus rien en attente, rien n'est appliqué deux fois
+    assert client.portal.call(pp.reconcile_pending_payments) == 0

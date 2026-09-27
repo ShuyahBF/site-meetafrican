@@ -114,3 +114,6 @@ async def on_startup():
     # l'admin) — voir vidal_sync.py. Tâche best-effort : une erreur dans la
     # boucle ne doit jamais empêcher le serveur de démarrer/répondre.
     asyncio.create_task(sync_scheduler_loop())
+    # Boucle de fond : vérifie chaque minute auprès de PawaPay les paiements
+    # en attente (le callback du compte PawaPay partagé pointe vers Sawali).
+    asyncio.create_task(payments_pawapay.reconcile_loop())
