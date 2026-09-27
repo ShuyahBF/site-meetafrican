@@ -98,11 +98,31 @@ npm run dev
 L'app tourne sur http://localhost:5173, l'API sur http://localhost:8000/api
 (docs interactives sur `/docs`).
 
+### Traçabilité (adresses IP)
+
+Chaque action qui modifie des données (inscription, connexion, abonnement,
+paiement, publication, message, J'aime, signalement…) est journalisée avec
+l'adresse IP de son auteur (`backend/activity.py`), consultable dans
+**/admin/activite** (filtres par membre, IP, action ; synthèse des IP d'un
+membre). Les comptes gardent aussi leur IP d'inscription et de dernière
+connexion ; abonnements, paiements, vidéos et commentaires leur IP de
+création. Purge automatique du journal après 12 mois.
+
+### Données de test
+
+**/admin/donnees-test** génère une centaine de profils fictifs (photos,
+vidéos floutées, swipes, matchs, conversations…) tous marqués
+`is_test_data` et affichés avec un badge « Test », puis les supprime d'un
+clic (fichiers compris). Mot de passe commun des comptes de test affiché
+sur la page. Les compteurs publics de la page d'accueil ne les comptent pas.
+
 ### Accéder au back-office admin
 
 Définir `ADMIN_BOOTSTRAP_EMAIL` / `ADMIN_BOOTSTRAP_PASSWORD` dans `backend/.env`
 avant le premier démarrage : le compte est créé (ou promu admin s'il existe déjà)
-automatiquement. Se connecter ensuite sur `/connexion` avec cet email — la
+automatiquement. Mot de passe oublié : mettre
+`ADMIN_BOOTSTRAP_RESET_PASSWORD=true` le temps d'un redéploiement (le compte
+reprend `ADMIN_BOOTSTRAP_PASSWORD`), puis revenir à `false`. Se connecter ensuite sur `/connexion` avec cet email — la
 redirection vers `/admin` est automatique pour les comptes admin/modérateur.
 
 ### Tests automatisés

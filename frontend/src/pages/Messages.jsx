@@ -7,6 +7,7 @@ import ProfilePhoto from "@/components/ProfilePhoto";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import VideoAccessRequests from "@/components/VideoAccessRequests";
 import { formatRelativeShort } from "@/lib/format";
+import TestBadge from "@/components/TestBadge";
 
 const REFRESH_MS = 15000;
 
@@ -106,6 +107,7 @@ export default function Messages() {
                           <p className="flex items-center gap-1 truncate font-extrabold">
                             {c.other_user.full_name}
                             {c.other_user.is_verified && <VerifiedBadge className="text-sm" />}
+                            {c.other_user.is_test_data && <TestBadge />}
                           </p>
                           <p className={`truncate text-sm ${unread ? "font-bold text-ink" : "text-slate-500"}`}>
                             {fromMe && <span className="text-slate-400">Vous : </span>}

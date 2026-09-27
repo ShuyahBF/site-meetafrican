@@ -86,6 +86,10 @@ class Settings(BaseSettings):
     # le compte créé, ou à changer pour promouvoir quelqu'un d'autre.
     admin_bootstrap_email: Optional[str] = None
     admin_bootstrap_password: Optional[str] = None
+    # Mot de passe admin oublié : passer à true le temps d'UN redéploiement
+    # pour que le compte ADMIN_BOOTSTRAP_EMAIL reprenne le mot de passe
+    # ADMIN_BOOTSTRAP_PASSWORD, puis remettre à false.
+    admin_bootstrap_reset_password: bool = False
 
     # VIDAL Sécurisation (api.vidal.fr) — un seul couple app_id/app_key réel
     # fourni par l'utilisateur. Décision explicite (10/09/2026) : pas de

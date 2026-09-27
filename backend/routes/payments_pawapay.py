@@ -22,6 +22,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from activity import current_ip
 from auth import get_current_user
 from config import get_settings
 from db import db
@@ -142,6 +143,7 @@ async def create_payment_page(
         "country": country,
         "environment": s.pawapay_environment,
         "flow": "payment_page",
+        "ip": current_ip(),  # IP du payeur (suivi admin)
         "status": "initiated",
         "api_status": None,
         "api_message": None,
@@ -243,6 +245,7 @@ async def create_wallet_recharge(
         "country": country,
         "environment": s.pawapay_environment,
         "flow": "payment_page",
+        "ip": current_ip(),  # IP du payeur (suivi admin)
         "status": "initiated",
         "api_status": None,
         "api_message": None,

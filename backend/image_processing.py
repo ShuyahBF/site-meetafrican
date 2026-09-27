@@ -1,6 +1,6 @@
 """Traitement des photos de profil approuvées :
 
-  - `apply_watermark` : filigrane discret "bAuthentik" en bas de l'image,
+  - `apply_watermark` : filigrane discret "beAuthentik" en bas de l'image,
     appliqué à toute photo dès son approbation (IA ou admin) — dissuade la
     réutilisation des photos hors du site.
   - `apply_face_mask` : version masquée servie aux profils SANS abonnement
@@ -23,7 +23,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 FONT_PATH = Path(__file__).parent / "assets" / "fonts" / "PlusJakartaSans-Bold.ttf"
-BRAND_TEXT = "bAuthentik"
+BRAND_TEXT = "beAuthentik"
 
 
 def _font(size: int) -> ImageFont.FreeTypeFont:

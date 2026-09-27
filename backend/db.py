@@ -52,6 +52,16 @@ async def ensure_indexes() -> None:
     await db.subscriptions.create_index("user_id")
     await db.matches.create_index([("user_a", 1), ("user_b", 1)], unique=True)
     await db.messages.create_index("conversation_id")
+    # Journal d'activité (IP de chaque action) : recherche par membre / IP,
+    # tri chronologique, purge automatique après 12 mois (index TTL).
+    await db.activity_log.create_index([("created_at", -1)])
+    await db.activity_log.create_index("user_id")
+    await db.activity_log.create_index("ip")
+    await db.activity_log.create_index("created_at_dt", expireAfterSeconds=365 * 24 * 3600)
+    # Compteur de visites : une visite par IP et par jour.
+    await db.site_visits.create_index([("day", 1), ("ip", 1)], unique=True)
+    # Données de test (marquées is_test_data=True), cf. test_data.py
+    await db.users.create_index("is_test_data", sparse=True)
     # Comptage des messages non lus (badge "Messages")
     await db.messages.create_index([("conversation_id", 1), ("read_at", 1)])
     # Recherche avancée : filtres les plus courants

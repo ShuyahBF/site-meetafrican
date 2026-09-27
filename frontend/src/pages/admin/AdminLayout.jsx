@@ -9,6 +9,8 @@ const NAV = [
   { to: "/admin/paiements", label: "Paiements" },
   { to: "/admin/signalements", label: "Signalements" },
   { to: "/admin/abonnements", label: "Abonnements" },
+  { to: "/admin/activite", label: "Activité & IP" },
+  { to: "/admin/donnees-test", label: "Données de test" },
   { to: "/admin/parametres", label: "Paramètres" },
 ];
 
@@ -19,7 +21,7 @@ export default function AdminLayout() {
     <div className="min-h-screen bg-slate-100 font-display text-slate-900">
       <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
         <div>
-          <p className="text-lg font-bold text-primary">bAuthentik — Administration</p>
+          <p className="text-lg font-bold text-primary">beAuthentik — Administration</p>
           <p className="text-xs text-slate-500">Connecté en tant que {user?.full_name}</p>
         </div>
         <button onClick={logout} className="text-sm font-semibold text-slate-500 hover:text-primary">

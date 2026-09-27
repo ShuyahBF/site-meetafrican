@@ -1,4 +1,4 @@
-"""Point d'entrée FastAPI — bAuthentik backend."""
+"""Point d'entrée FastAPI — beAuthentik backend."""
 from __future__ import annotations
 
 import asyncio
@@ -8,6 +8,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from activity import ActivityLogMiddleware
 from config import get_settings
 from db import db, ensure_indexes
 from models import SiteAppearance
@@ -22,6 +23,8 @@ from routes import (
     profiles,
     ratings,
     referrals,
+    stats,
+    test_data,
     subscriptions,
     uploads,
     verification,
@@ -33,7 +36,11 @@ from vidal_sync import sync_scheduler_loop
 
 settings = get_settings()
 
-app = FastAPI(title="bAuthentik API", version="0.1.0")
+app = FastAPI(title="beAuthentik API", version="0.1.0")
+
+# Journal d'activité + IP de chaque requête (cf. activity.py). Ajouté AVANT
+# CORS : il s'exécute donc à l'intérieur, sur les requêtes déjà acceptées.
+app.add_middleware(ActivityLogMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -59,6 +66,8 @@ api.include_router(ratings.router)
 api.include_router(referrals.router)
 api.include_router(interactions.router)
 api.include_router(vidal.router)
+api.include_router(stats.router)
+api.include_router(test_data.router)
 
 
 @api.get("/health")

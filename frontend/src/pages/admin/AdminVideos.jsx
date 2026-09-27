@@ -78,6 +78,7 @@ export default function AdminVideos() {
               <video src={v.url} controls preload="metadata" className="aspect-[9/16] max-h-80 w-full bg-black object-contain" />
               <div className="space-y-1 p-4 text-sm">
                 <p className="font-semibold">{v.author?.full_name || "Auteur supprimé"}</p>
+                {v.ip && <p className="font-mono text-xs text-slate-400">IP de publication : {v.ip}</p>}
                 {v.caption && <p className="text-slate-600">{v.caption}</p>}
                 <p className="text-xs text-slate-500">
                   {v.views_count} vues · {v.likes_count} J'aime · {v.comments_count} commentaires

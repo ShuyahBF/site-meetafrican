@@ -196,7 +196,7 @@ export default function Moments() {
     const url = `${window.location.origin}/moments/${video.id}`;
     try {
       if (navigator.share) {
-        await navigator.share({ title: `${video.author.full_name} sur bAuthentik`, text: video.caption, url });
+        await navigator.share({ title: `${video.author.full_name} sur beAuthentik`, text: video.caption, url });
       } else {
         await navigator.clipboard.writeText(url);
         showToast("Lien copié 🔗");

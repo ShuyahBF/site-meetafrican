@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import ProfilePhoto from "@/components/ProfilePhoto";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import TestBadge from "@/components/TestBadge";
 
 // Vignette de profil (grille de résultats de recherche) : photo en
 // portrait, nom/âge/ville en surimpression, pastille "en ligne".
@@ -11,7 +12,8 @@ export default function ProfileTile({ profile }) {
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-3 pt-10 text-white">
         <p className="truncate text-sm font-extrabold">
           {profile.full_name.split(" ")[0]}
-          {profile.age ? `, ${profile.age}` : ""} {profile.verification_status === "verified" && <VerifiedBadge className="text-sm" />}
+          {profile.age ? `, ${profile.age}` : ""} {profile.verification_status === "verified" && <VerifiedBadge className="text-sm" />}{" "}
+          {profile.is_test_data && <TestBadge dark />}
         </p>
         {profile.city && <p className="truncate text-[11px] font-semibold text-white/80">{profile.city}</p>}
       </div>

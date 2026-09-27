@@ -68,9 +68,23 @@ export default function Welcome() {
   // Image modifiable par l'admin (Paramètres > Apparence) sans redéploiement.
   const [heroImage, setHeroImage] = useState(DEFAULT_HERO_IMAGE);
   const [plans, setPlans] = useState(FALLBACK_PLANS);
+  const [stats, setStats] = useState(null); // { registered, verified, visits, your_ip }
 
   useEffect(() => {
     apiClient.get("/appearance").then((r) => r.data?.hero_image_url && setHeroImage(r.data.hero_image_url)).catch(() => {});
+    // Compteurs publics + IP du visiteur. La visite n'est enregistrée qu'une
+    // fois par session de navigation (le serveur ne compte de toute façon
+    // qu'une visite par IP et par jour).
+    let alreadyCounted = false;
+    try {
+      alreadyCounted = sessionStorage.getItem("maf_visit") === "1";
+      sessionStorage.setItem("maf_visit", "1");
+    } catch {
+      // stockage indisponible (navigation privée…) : on enregistre la visite
+    }
+    (alreadyCounted ? apiClient.get("/stats/public") : apiClient.post("/stats/visit"))
+      .then((r) => setStats(r.data))
+      .catch(() => {});
     apiClient
       .get("/subscriptions/plans")
       .then((r) => r.data?.length && setPlans([...r.data].sort((a, b) => a.duration_days - b.duration_days)))
@@ -90,7 +104,7 @@ export default function Welcome() {
       <header className="sticky top-0 z-40 border-b border-slate-100/80 bg-white/80 backdrop-blur-lg">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
           <Link to="/" className="text-2xl font-extrabold tracking-tight">
-            b<span className="text-brand">Authentik</span>
+            be<span className="text-brand">Authentik</span>
           </Link>
           <nav className="hidden items-center gap-8 text-sm font-semibold text-slate-500 md:flex">
             <a href="#fonctionnalites" className="hover:text-ink">Fonctionnalités</a>
@@ -192,6 +206,25 @@ export default function Welcome() {
       </section>
 
       {/* ---------------------------------------------------------------- */}
+      {/* Compteurs en direct + IP du visiteur                              */}
+      {/* ---------------------------------------------------------------- */}
+      {stats && (
+        <section className="mx-auto max-w-6xl px-5">
+          <div className="grid grid-cols-3 divide-x divide-slate-100 rounded-3xl bg-white py-6 shadow-[0_4px_24px_rgba(18,6,11,0.06)] ring-1 ring-slate-100">
+            <Counter value={stats.registered} label="Inscrits" icon="group" />
+            <Counter value={stats.verified} label="Profils vérifiés" icon="verified" />
+            <Counter value={stats.visits} label="Visites" icon="visibility" />
+          </div>
+          {stats.your_ip && (
+            <p className="mt-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-slate-400">
+              <span className="material-symbols-outlined text-sm">lan</span>
+              Votre adresse IP : <span className="font-mono text-slate-600">{stats.your_ip}</span>
+            </p>
+          )}
+        </section>
+      )}
+
+      {/* ---------------------------------------------------------------- */}
       {/* Comment ça marche                                                 */}
       {/* ---------------------------------------------------------------- */}
       <section className="mx-auto max-w-6xl px-5 py-16">
@@ -249,7 +282,7 @@ export default function Welcome() {
               <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-white/70">Confiance</p>
               <h2 className="mt-3 text-3xl font-extrabold leading-tight md:text-4xl">Ici, les profils sont réels. Et votre vie privée aussi.</h2>
               <p className="mt-4 text-white/85">
-                Nous avons conçu bAuthentik pour que vous puissiez faire confiance aux personnes que vous rencontrez —
+                Nous avons conçu beAuthentik pour que vous puissiez faire confiance aux personnes que vous rencontrez —
                 et garder la main sur ce que vous montrez.
               </p>
             </div>
@@ -351,9 +384,9 @@ export default function Welcome() {
       <footer className="border-t border-slate-100">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-8 text-sm text-slate-400 sm:flex-row">
           <span className="font-extrabold text-ink">
-            b<span className="text-brand">Authentik</span>
+            be<span className="text-brand">Authentik</span>
           </span>
-          <span>© {new Date().getFullYear()} bAuthentik — Rencontres authentiques</span>
+          <span>© {new Date().getFullYear()} beAuthentik — Rencontres authentiques</span>
           <div className="flex gap-4">
             <Link to="/connexion" className="hover:text-ink">Connexion</Link>
             <Link to="/inscription" className="hover:text-ink">Inscription</Link>
@@ -420,5 +453,16 @@ function PlanCard({ name, price, currency, period, note, badge, savings, feature
     <div className="rounded-[1.9rem] bg-gradient-to-br from-primary to-sunset p-[2px] shadow-2xl shadow-primary/20 lg:-translate-y-3">{card}</div>
   ) : (
     card
+  );
+}
+
+/** Compteur de la bande de statistiques (chiffre au format français). */
+function Counter({ value, label, icon }) {
+  return (
+    <div className="flex flex-col items-center gap-1 px-2 text-center">
+      <span className="material-symbols-outlined icon-filled text-xl text-primary">{icon}</span>
+      <span className="text-2xl font-extrabold tracking-tight md:text-3xl">{new Intl.NumberFormat("fr-FR").format(value || 0)}</span>
+      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{label}</span>
+    </div>
   );
 }

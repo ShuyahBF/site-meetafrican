@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Optional
 
+from activity import current_ip, log_activity
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from auth import create_access_token, get_current_user, hash_password, verify_password
@@ -55,6 +56,9 @@ async def register(payload: UserRegister):
         referred_by=referred_by,
     )
     doc = user_insert_doc(user)
+    # IP d'inscription et de dernière connexion, consultables par l'admin.
+    doc["registration_ip"] = doc["last_login_ip"] = current_ip()
+    doc["last_login_at"] = datetime.now().astimezone().isoformat()
     await db.users.insert_one(doc.copy())
     token = create_access_token(user.id)
     return Token(access_token=token, user=to_user_public(doc))
@@ -70,6 +74,14 @@ async def login(payload: UserLogin):
     if not user.get("is_active", True):
         raise HTTPException(status_code=403, detail="Compte désactivé")
     user.pop("_id", None)
+    ip = current_ip()
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"last_login_ip": ip, "last_login_at": datetime.now().astimezone().isoformat()}},
+    )
+    # La tentative est déjà journalisée par le middleware (sans identité,
+    # le membre n'ayant pas encore de jeton) : on ajoute la connexion réussie.
+    await log_activity(user["id"], "Connexion réussie", ip)
     token = create_access_token(user["id"])
     return Token(access_token=token, user=to_user_public(user))
 
