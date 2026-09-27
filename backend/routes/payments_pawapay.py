@@ -63,6 +63,20 @@ def _base_url() -> str:
     return PAWAPAY_HOSTS.get(s.pawapay_environment, PAWAPAY_HOSTS["sandbox"])
 
 
+def _return_url(payload_url: Optional[str], page: str, deposit_id: str) -> str:
+    """Adresse où PawaPay renvoie le client après paiement : toujours une page
+    du SITE PUBLIC (https://beauthentik.net/...), jamais le serveur d'API.
+
+    Une adresse fournie par le navigateur n'est acceptée que si elle pointe
+    vers l'un des domaines autorisés (FRONTEND_ORIGIN) — sinon n'importe qui
+    pourrait fabriquer un lien de paiement qui redirige vers un site
+    frauduleux. La page d'arrivée affiche l'état du paiement (?paiement=)."""
+    s = get_settings()
+    if payload_url and any(payload_url.startswith(origin.rstrip("/") + "/") for origin in s.frontend_origins):
+        return payload_url
+    return f"{s.public_site_url}/{page}?paiement={deposit_id}"
+
+
 def _readable(field: Any) -> Optional[str]:
     """PawaPay renvoie failureReason/rejectionReason comme des objets
     {failureCode, failureMessage}. On les rend imprimables pour le front."""
@@ -102,8 +116,7 @@ async def create_payment_page(
 
     country = (payload.country or s.pawapay_default_country).upper()
     deposit_id = _uuid()
-    origin = (payload.return_url or str(request.base_url)).rstrip("/")
-    return_url = payload.return_url or f"{origin}/abonnement/retour?depositId={deposit_id}"
+    return_url = _return_url(payload.return_url, "abonnement", deposit_id)
 
     body: Dict[str, Any] = {
         "depositId": deposit_id,
@@ -204,8 +217,7 @@ async def create_wallet_recharge(
 
     country = (payload.country or s.pawapay_default_country).upper()
     deposit_id = _uuid()
-    origin = (payload.return_url or str(request.base_url)).rstrip("/")
-    return_url = payload.return_url or f"{origin}/portefeuille/retour?depositId={deposit_id}"
+    return_url = _return_url(payload.return_url, "portefeuille", deposit_id)
 
     body: Dict[str, Any] = {
         "depositId": deposit_id,

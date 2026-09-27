@@ -24,14 +24,24 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expires_minutes: int = 60 * 24 * 7  # 7 jours
 
-    # CORS — une ou plusieurs origines séparées par des virgules (utile pour
-    # accepter à la fois l'URL Render (*.onrender.com) et un domaine custom
-    # une fois branché, sans devoir choisir entre les deux).
+    # CORS — une ou plusieurs origines séparées par des virgules, le domaine
+    # officiel EN PREMIER (il sert aussi d'URL publique dans les liens envoyés
+    # aux membres et pour le retour des paiements), ex. en production :
+    # FRONTEND_ORIGIN=https://beauthentik.net,https://www.beauthentik.net
     frontend_origin: str = "http://localhost:5173"
 
     @property
     def frontend_origins(self) -> list[str]:
         return [o.strip() for o in self.frontend_origin.split(",") if o.strip()]
+
+    @property
+    def public_site_url(self) -> str:
+        """URL publique "principale" du site (liens envoyés aux membres :
+        parrainage…) = la PREMIÈRE origine de FRONTEND_ORIGIN. Mettre donc le
+        domaine officiel en tête, ex.
+        FRONTEND_ORIGIN=https://beauthentik.net,https://www.beauthentik.net"""
+        origins = self.frontend_origins
+        return origins[0].rstrip("/") if origins else "http://localhost:5173"
 
     # PawaPay (ported from ShuyahBF/Emergent, Site-SawaliSmartSystems)
     pawapay_environment: str = "sandbox"  # sandbox | production

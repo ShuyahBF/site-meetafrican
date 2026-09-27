@@ -45,7 +45,9 @@ async def my_referrals(user: dict = Depends(get_current_user)):
     ).sort("created_at", -1).to_list(200)
     return {
         "referral_code": user["referral_code"],
-        "referral_link": f"{app_settings.frontend_origin}/inscription?ref={user['referral_code']}",
+        # Première origine seulement : FRONTEND_ORIGIN peut lister plusieurs
+        # domaines séparés par des virgules (cf. config.public_site_url).
+        "referral_link": f"{app_settings.public_site_url}/inscription?ref={user['referral_code']}",
         "points": user.get("points", 0),
         "history": history,
     }

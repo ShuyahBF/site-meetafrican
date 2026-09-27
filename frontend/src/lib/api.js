@@ -1,6 +1,11 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+// Adresse de l'API : variable VITE_API_BASE_URL si définie au build, sinon
+// l'API officielle en production (https://api.beauthentik.net/api) et le
+// serveur local en développement.
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.PROD ? "https://api.beauthentik.net/api" : "http://localhost:8000/api");
 
 export const apiClient = axios.create({ baseURL: API_BASE_URL });
 

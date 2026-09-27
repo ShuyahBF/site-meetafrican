@@ -17,6 +17,10 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
+    # API publique : https://api.beauthentik.net/api (CNAME "api" chez
+    # Cloudflare vers ce service Render).
+    domains:
+      - api.beauthentik.net
     envVars:
       # Render utilise Python 3.14 par défaut, trop récent pour avoir des
       # wheels précompilées de pydantic-core==2.18.2 (dépendance de
@@ -44,12 +48,10 @@ services:
       - key: JWT_EXPIRES_MINUTES
         value: "10080"
 
-      # --- CORS : URL(s) du frontend, séparées par une virgule si plusieurs
-      # (ex. l'URL onrender.com pendant les tests + bauthentik.com une fois
-      # le domaine branché). À renseigner une fois le frontend déployé et son
-      # URL connue.
+      # --- CORS : URL(s) du site, séparées par une virgule. La PREMIÈRE sert
+      # aussi d'URL publique (liens de parrainage, retour des paiements).
       - key: FRONTEND_ORIGIN
-        sync: false
+        value: https://beauthentik.net,https://www.beauthentik.net
 
       # --- PawaPay (Mobile Money) ---
       - key: PAWAPAY_ENVIRONMENT
@@ -125,11 +127,15 @@ services:
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
+    # Site public : https://beauthentik.net (+ www), branchés chez Cloudflare.
+    domains:
+      - beauthentik.net
+      - www.beauthentik.net
     envVars:
-      # URL publique du backend + "/api", ex. https://meetafrican-backend.onrender.com/api
-      # À renseigner une fois le backend déployé et son URL connue.
+      # Adresse de l'API (même valeur que le défaut de production dans
+      # src/lib/api.js).
       - key: VITE_API_BASE_URL
-        sync: false
+        value: https://api.beauthentik.net/api
       # Même valeur que VIDAL_PROXY_SECRET côté backend (voir plus haut) — à
       # saisir manuellement des deux côtés, Render ne partage pas les valeurs
       # "sync: false" entre les deux services.

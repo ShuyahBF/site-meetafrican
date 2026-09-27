@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { apiClient, extractErrorMessage } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import PaymentReturnBanner from "@/components/PaymentReturnBanner";
 
 function fmtXOF(n) {
   return Number(n || 0).toLocaleString("fr-FR") + " FCFA";
 }
 
 export default function Subscriptions() {
+  const { refresh } = useAuth();
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(null); // plan_id en cours de paiement
@@ -54,6 +57,10 @@ export default function Subscriptions() {
 
   return (
     <div className="min-h-screen bg-background-light px-4 py-6 font-display dark:bg-background-dark">
+      {/* Retour de la page de paiement PawaPay (?paiement=<id>) */}
+      <div className="-mx-4 -mt-3 mb-3">
+        <PaymentReturnBanner onCompleted={refresh} />
+      </div>
       <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Passez à Premium</h1>
       <p className="mt-2 text-slate-500 dark:text-slate-400">
         Débloquez toutes les fonctionnalités et multipliez vos chances de trouver la bonne personne.
