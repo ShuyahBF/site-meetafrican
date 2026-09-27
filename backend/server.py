@@ -19,11 +19,13 @@ from routes import (
     matching,
     payments_pawapay,
     photos,
+    profiles,
     ratings,
     referrals,
     subscriptions,
     uploads,
     verification,
+    videos,
     vidal,
 )
 from seed import ensure_admin_user, seed_default_gifts, seed_default_plans
@@ -50,6 +52,8 @@ api.include_router(uploads.router)
 api.include_router(verification.router)
 api.include_router(photos.router)
 api.include_router(matching.router)
+api.include_router(profiles.router)
+api.include_router(videos.router)
 api.include_router(chat.router)
 api.include_router(ratings.router)
 api.include_router(referrals.router)

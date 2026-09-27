@@ -4,3 +4,6 @@
 # Base MongoDB en mémoire (MONGO_URL=mongomock://) — teste toute la logique
 # applicative sans connexion réseau à Atlas. Voir backend/db.py.
 mongomock-motor==0.0.36
+
+# Tests automatisés : cd backend && python -m pytest tests -q
+pytest==8.3.3

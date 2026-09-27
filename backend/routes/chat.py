@@ -2,13 +2,14 @@
 
 Le chat temps réel passe par WebSocket (/api/ws/conversations/{id}) ; les
 routes REST restent disponibles pour lister l'historique et comme repli si
-la connexion WebSocket échoue. Calcule aussi automatiquement le temps de
+la connexion WebSocket échoue. Le WebSocket transporte aussi l'indicateur
+"en train d'écrire…" et les accusés de lecture ("Vu"). Calcule aussi automatiquement le temps de
 réponse moyen par utilisateur (affiché comme badge de réactivité sur les
 profils, cf. maquette Stitch "Très réactive" / "Répond parfois")."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Dict, List, Set
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
@@ -16,6 +17,7 @@ from pydantic import BaseModel, Field
 from auth import decode_access_token, get_current_user
 from db import db
 from models import Message, PhotoStatus, _is_online
+from realtime import RateLimiter, conversation_channel, hub
 from routes.subscriptions import has_active_subscription
 
 router = APIRouter(tags=["Chat"])
@@ -109,6 +111,7 @@ async def list_conversations(user: dict = Depends(get_current_user)):
         last_message = await db.messages.find_one(
             {"conversation_id": c["id"]}, {"_id": 0}, sort=[("created_at", -1)]
         )
+        unread = await db.messages.count_documents(_unread_query(c["id"], user["id"]))
         results.append({
             "conversation_id": c["id"],
             "other_user": {
@@ -120,8 +123,51 @@ async def list_conversations(user: dict = Depends(get_current_user)):
                 "is_online": _is_online(other.get("last_seen_at")),
             },
             "last_message": last_message,
+            "unread_count": unread,
         })
     return results
+
+
+def _unread_query(conversation_id: str, reader_id: str) -> dict:
+    """Messages de l'AUTRE participant pas encore lus par `reader_id`."""
+    return {"conversation_id": conversation_id, "sender_id": {"$ne": reader_id}, "read_at": None}
+
+
+async def _mark_read(conversation_id: str, reader_id: str) -> str | None:
+    """Marque comme lus tous les messages reçus dans la conversation et
+    prévient l'autre participant (s'il est connecté) pour qu'il voie "Vu".
+    Renvoie la date de lecture, ou None s'il n'y avait rien à marquer."""
+    result = await db.messages.update_many(
+        _unread_query(conversation_id, reader_id), {"$set": {"read_at": _now()}}
+    )
+    if not result.modified_count:
+        return None
+    read_at = _now()
+    await hub.send(conversation_channel(conversation_id), "read", {"reader_id": reader_id, "read_at": read_at})
+    return read_at
+
+
+@router.get("/conversations/unread-count")
+async def unread_count(user: dict = Depends(get_current_user)):
+    """Total de messages non lus, toutes conversations confondues — badge
+    rouge sur l'onglet "Messages" de la barre de navigation."""
+    convs = await db.conversations.find(
+        {"$or": [{"user_a": user["id"]}, {"user_b": user["id"]}]}, {"_id": 0, "id": 1}
+    ).to_list(500)
+    total = await db.messages.count_documents({
+        "conversation_id": {"$in": [c["id"] for c in convs]},
+        "sender_id": {"$ne": user["id"]},
+        "read_at": None,
+    })
+    return {"unread": total}
+
+
+@router.post("/conversations/{conversation_id}/read")
+async def mark_conversation_read(conversation_id: str, user: dict = Depends(get_current_user)):
+    """Repli REST de l'événement WebSocket "read"."""
+    await _get_conversation_or_403(conversation_id, user["id"])
+    await _mark_read(conversation_id, user["id"])
+    return {"ok": True}
 
 
 @router.get("/conversations/{conversation_id}/messages", response_model=List[Message])
@@ -142,44 +188,34 @@ class MessageCreate(BaseModel):
 async def send_message(conversation_id: str, payload: MessageCreate, user: dict = Depends(get_current_user)):
     conv = await _get_conversation_or_403(conversation_id, user["id"])
     message = await _persist_message(conv, user, payload.text)
-    await ws_manager.broadcast(conversation_id, message.model_dump(mode="json"))
+    await hub.send(conversation_channel(conversation_id), "message", message.model_dump(mode="json"))
     return message
 
 
 # ---------------------------------------------------------------------------
-# WebSocket — diffusion en temps réel des nouveaux messages
+# WebSocket — messages, "en train d'écrire…", accusés de lecture, présence
 # ---------------------------------------------------------------------------
+#
+# Protocole (JSON) :
+#   client -> serveur : {"type": "message", "text": "..."}   (ou l'ancien
+#                       format {"text": "..."}, toujours accepté)
+#                       {"type": "typing"}   l'utilisateur tape au clavier
+#                       {"type": "read"}     l'utilisateur a vu les messages
+#   serveur -> client : {"type": "message",  "data": Message}
+#                       {"type": "typing",   "data": {"user_id"}}
+#                       {"type": "read",     "data": {"reader_id", "read_at"}}
+#                       {"type": "presence", "data": {"user_ids": [...]}}
+#                       {"type": "error",    "data": {"detail"}}
 
-class ConnectionManager:
-    """Registre en mémoire des connexions WebSocket actives par conversation.
-
-    Suffisant pour un seul process backend. Si le service est un jour
-    déployé sur plusieurs instances, remplacer par un pub/sub partagé
-    (Redis, etc.) pour que les diffusions traversent les process."""
-
-    def __init__(self) -> None:
-        self._connections: Dict[str, Set[WebSocket]] = {}
-
-    async def connect(self, conversation_id: str, ws: WebSocket) -> None:
-        await ws.accept()
-        self._connections.setdefault(conversation_id, set()).add(ws)
-
-    def disconnect(self, conversation_id: str, ws: WebSocket) -> None:
-        conns = self._connections.get(conversation_id)
-        if conns:
-            conns.discard(ws)
-            if not conns:
-                self._connections.pop(conversation_id, None)
-
-    async def broadcast(self, conversation_id: str, payload: dict) -> None:
-        for ws in list(self._connections.get(conversation_id, set())):
-            try:
-                await ws.send_json({"type": "message", "data": payload})
-            except Exception:  # noqa: BLE001
-                self.disconnect(conversation_id, ws)
+# Anti-flood : 8 messages max toutes les 10 secondes par utilisateur.
+message_limiter = RateLimiter(max_events=8, window_seconds=10)
 
 
-ws_manager = ConnectionManager()
+async def _broadcast_presence(conversation_id: str) -> None:
+    """Qui a la conversation ouverte en ce moment (affiche "Dans la
+    conversation" dans l'en-tête de l'autre participant)."""
+    channel = conversation_channel(conversation_id)
+    await hub.send(channel, "presence", {"user_ids": sorted(hub.user_ids(channel))})
 
 
 @router.websocket("/ws/conversations/{conversation_id}")
@@ -197,19 +233,40 @@ async def conversation_ws(websocket: WebSocket, conversation_id: str, token: str
         await websocket.close(code=4403)  # accès refusé
         return
 
-    await ws_manager.connect(conversation_id, websocket)
+    channel = conversation_channel(conversation_id)
+    await hub.connect(channel, websocket, user_id)
+    await _broadcast_presence(conversation_id)
     try:
         while True:
             payload = await websocket.receive_json()
+            if not isinstance(payload, dict):
+                continue
+            event_type = payload.get("type") or "message"
+
+            if event_type == "typing":
+                # Relayé uniquement à l'autre participant, jamais stocké.
+                await hub.send(channel, "typing", {"user_id": user_id}, exclude_user=user_id)
+                continue
+
+            if event_type == "read":
+                await _mark_read(conversation_id, user_id)
+                continue
+
+            if event_type != "message":
+                continue
             text = (payload.get("text") or "").strip()
             if not text or len(text) > 2000:
+                continue
+            if not message_limiter.allow(user_id):
+                await websocket.send_json({"type": "error", "data": {"detail": "Doucement ! Trop de messages d'un coup."}})
                 continue
             # L'utilisateur peut avoir changé entre-temps (réactivité, etc.) — on
             # relit son état courant avant de persister.
             fresh_user = await db.users.find_one({"id": user_id}, {"_id": 0}) or user
             message = await _persist_message(conv, fresh_user, text)
-            await ws_manager.broadcast(conversation_id, message.model_dump(mode="json"))
+            await hub.send(channel, "message", message.model_dump(mode="json"))
     except WebSocketDisconnect:
         pass
     finally:
-        ws_manager.disconnect(conversation_id, websocket)
+        hub.disconnect(channel, websocket)
+        await _broadcast_presence(conversation_id)

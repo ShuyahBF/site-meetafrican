@@ -31,6 +31,12 @@ CONTENT_TYPE_EXT = {
     "image/webp": ".webp",
     "image/heic": ".heic",
     "image/heif": ".heif",
+    # Vidéos courtes (fil "Moments") — stockées dans le même bucket PUBLIC
+    # que l'album photo : ce sont des contenus que l'auteur publie
+    # volontairement pour être vus.
+    "video/mp4": ".mp4",
+    "video/webm": ".webm",
+    "video/quicktime": ".mov",
 }
 
 
@@ -53,7 +59,8 @@ def _new_key(content_type: str) -> str:
 
 
 async def save_photo(content: bytes, content_type: str) -> str:
-    """Enregistre une photo de profil et renvoie une URL PUBLIQUE stable."""
+    """Enregistre une photo de profil (ou tout autre média PUBLIC, comme une
+    vidéo du fil "Moments") et renvoie une URL PUBLIQUE stable."""
     settings = get_settings()
     key = _new_key(content_type)
 
@@ -117,3 +124,10 @@ async def presigned_document_url(key: str) -> Optional[str]:
     # pointe vers le mount /api/private-files (voir server.py), lisible aussi
     # bien par l'analyse IA (téléchargement http) que par le navigateur.
     return f"{settings.public_base_url}/api/private-files/{key}"
+
+
+async def save_public_media(content: bytes, content_type: str) -> str:
+    """Alias explicite de save_photo pour les médias publics non-photo
+    (vidéos) : même bucket, même URL publique, mais un nom qui ne laisse pas
+    croire qu'il s'agit d'une photo de l'album."""
+    return await save_photo(content, content_type)
