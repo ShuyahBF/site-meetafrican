@@ -121,6 +121,7 @@ async def list_conversations(user: dict = Depends(get_current_user)):
                 "gender": other.get("gender"),
                 "last_seen_at": other.get("last_seen_at"),
                 "is_online": _is_online(other.get("last_seen_at")),
+                "is_verified": other.get("verification_status") == "verified",
             },
             "last_message": last_message,
             "unread_count": unread,

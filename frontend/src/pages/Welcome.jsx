@@ -19,9 +19,9 @@ const FEATURES = [
     text: "Un match ne se fait que si l'intérêt est réciproque — fini les messages sans réponse.",
   },
   {
-    icon: "chat",
-    title: "Discussion en temps réel",
-    text: "Échangez instantanément avec vos matchs, en toute confidentialité.",
+    icon: "play_circle",
+    title: "Des Moments en vidéo",
+    text: "Découvrez les gens tels qu'ils sont, en vidéo : un double-tap pour aimer, un match pour discuter en direct.",
   },
 ];
 
@@ -46,8 +46,8 @@ export default function Welcome() {
           cette page n'a que deux destinations (inscription / connexion),
           déjà mises en avant plus bas. */}
       <header className="flex items-center justify-center px-4 py-5">
-        <span className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
-          b<span className="text-primary">Authentik</span>
+        <span className="text-xl font-extrabold tracking-tight text-ink">
+          b<span className="text-brand">Authentik</span>
         </span>
       </header>
 
@@ -60,10 +60,12 @@ export default function Welcome() {
             alt="Un couple souriant"
             className="h-full w-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/40 to-background-dark/10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
         </div>
 
-        <div className="relative -mt-16 px-4 text-center md:-mt-20">
+        {/* Titre posé EN BAS de la photo (lisible grâce au dégradé sombre),
+            la suite de la page restant sur fond blanc. */}
+        <div className="absolute inset-x-0 bottom-6 px-4 text-center">
           <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight text-white drop-shadow-sm md:text-5xl">
             La rencontre commence ici
           </h1>
@@ -97,7 +99,7 @@ export default function Welcome() {
         <div className="flex w-full max-w-[480px] flex-1 flex-col items-stretch gap-3 px-4">
           <Link
             to="/inscription"
-            className="flex h-14 w-full min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-full bg-primary px-5 text-base font-bold leading-normal tracking-[0.015em] text-white shadow-lg shadow-primary/30 transition-transform active:scale-[0.98]"
+            className="btn-primary h-14 w-full text-base"
           >
             Créer un compte
           </Link>
