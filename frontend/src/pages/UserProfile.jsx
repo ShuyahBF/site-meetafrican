@@ -11,6 +11,7 @@ import MatchCelebration from "@/components/MatchCelebration";
 import UserActionsMenu from "@/components/UserActionsMenu";
 import Toast, { useToast } from "@/components/Toast";
 import { formatCount, formatLastSeen, responseBadge } from "@/lib/format";
+import TestBadge from "@/components/TestBadge";
 
 /**
  * Fiche publique d'un membre (fond blanc) : carrousel de photos, identité
@@ -148,6 +149,7 @@ export default function UserProfile() {
               <span className="truncate">{profile.full_name}</span>
               {profile.age && <span className="font-bold text-slate-400">{profile.age}</span>}
               {profile.verification_status === "verified" && <VerifiedBadge className="text-2xl" />}
+              {profile.is_test_data && <TestBadge />}
             </h1>
             {(profile.city || profile.country) && (
               <p className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-slate-500">

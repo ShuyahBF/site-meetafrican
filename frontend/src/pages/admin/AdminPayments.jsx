@@ -43,6 +43,7 @@ export default function AdminPayments() {
               </a>
               <div className="flex-1 text-xs text-slate-500">
                 Utilisateur {item.user_id} · Formule {item.plan_id}
+                {item.ip && <span className="font-mono"> · IP {item.ip}</span>}
               </div>
               <div className="flex gap-2">
                 <button

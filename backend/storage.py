@@ -139,3 +139,35 @@ async def save_public_media(content: bytes, content_type: str) -> str:
     (vidéos) : même bucket, même URL publique, mais un nom qui ne laisse pas
     croire qu'il s'agit d'une photo de l'album."""
     return await save_photo(content, content_type)
+
+
+async def delete_public_media(url: str) -> None:
+    """Supprime un fichier PUBLIC à partir de son URL (photo, vidéo floutée,
+    vignette). Silencieux si le fichier n'existe plus. Utilisé par la purge
+    des données de test (test_data.py)."""
+    settings = get_settings()
+    key = (url or "").rstrip("/").split("/")[-1]
+    if not key:
+        return
+    if settings.storage_backend == "r2":
+        def _delete():
+            _r2_client().delete_object(Bucket=settings.r2_bucket_photos, Key=key)
+        await asyncio.to_thread(_delete)
+        return
+    from pathlib import Path
+    (Path(settings.uploads_dir) / key).unlink(missing_ok=True)
+
+
+async def delete_private_media(key: str) -> None:
+    """Supprime un fichier PRIVÉ à partir de sa clé (vidéo claire)."""
+    settings = get_settings()
+    if not key:
+        return
+    if settings.storage_backend == "r2":
+        def _delete():
+            _r2_client().delete_object(Bucket=settings.r2_bucket_documents, Key=key)
+        await asyncio.to_thread(_delete)
+        return
+    from pathlib import Path
+    uploads_path = Path(settings.uploads_dir)
+    (uploads_path.parent / f"{uploads_path.name}-private" / key).unlink(missing_ok=True)

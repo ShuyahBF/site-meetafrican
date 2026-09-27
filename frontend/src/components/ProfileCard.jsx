@@ -3,6 +3,7 @@ import ProfilePhoto from "@/components/ProfilePhoto";
 import GiftModal from "@/components/GiftModal";
 import PointsModal from "@/components/PointsModal";
 import { formatLastSeen, responseBadge } from "@/lib/format";
+import TestBadge from "@/components/TestBadge";
 
 // Carte de profil complète (photo, présence, réactivité, actions) — utilisée
 // par Discover pour la pile de découverte. Chaque action (`onXxx`) est
@@ -51,6 +52,7 @@ export default function ProfileCard({
           <p className="text-lg font-bold text-white">
             {profile.full_name}
             {profile.age ? `, ${profile.age}` : ""}
+            {profile.is_test_data && <TestBadge dark className="ml-2" />}
           </p>
           {profile.city && <p className="text-sm text-white/80">{profile.city}</p>}
           <p className="mt-1 text-xs text-white/70">

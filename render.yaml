@@ -101,6 +101,10 @@ services:
         sync: false
       - key: ADMIN_BOOTSTRAP_PASSWORD
         sync: false
+      # "true" le temps d'un redéploiement pour réinitialiser le mot de
+      # passe admin oublié (le compte reprend ADMIN_BOOTSTRAP_PASSWORD).
+      - key: ADMIN_BOOTSTRAP_RESET_PASSWORD
+        sync: false
 
       # --- VIDAL Sécurisation (api.vidal.fr) — un seul couple app_id/app_key
       # réel, toujours en production (pas de sandbox distincte pour ce

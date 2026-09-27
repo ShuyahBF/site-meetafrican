@@ -7,6 +7,7 @@ import UserActionsMenu from "@/components/UserActionsMenu";
 import ProfilePhoto from "@/components/ProfilePhoto";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { formatLastSeen } from "@/lib/format";
+import TestBadge from "@/components/TestBadge";
 
 // Emojis envoyables en un tap quand le champ est vide (brise-glace ludique).
 const ICEBREAKERS = ["👋🏾", "😍", "😂", "🔥", "🙏🏾"];
@@ -149,6 +150,7 @@ export default function Conversation() {
               <p className="flex items-center gap-1 truncate text-base font-extrabold">
                 {otherUser.full_name}
                 {otherUser.is_verified && <VerifiedBadge className="text-base" />}
+                {otherUser.is_test_data && <TestBadge />}
               </p>
               <p className={`truncate text-xs font-semibold ${otherTyping || otherInRoom || otherUser.is_online ? "text-emerald-500" : "text-slate-400"}`}>
                 {status}

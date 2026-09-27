@@ -275,3 +275,127 @@ def test_payment_return_url_always_on_public_site(monkeypatch):
     # Domaine étranger ou simple préfixe trompeur -> ignoré
     assert _return_url("https://evil.example/phish", "abonnement", "d2").startswith("https://beauthentik.net/")
     assert _return_url("https://beauthentik.net.evil.example/x", "abonnement", "d3").startswith("https://beauthentik.net/")
+
+
+# ---------------------------------------------------------------------------
+# Traçabilité IP, compteurs publics, données de test
+# ---------------------------------------------------------------------------
+
+def _admin_headers(client, make_user):
+    from db import db
+
+    admin_id, headers, _ = make_user()
+    client.portal.call(lambda: db.users.update_one({"id": admin_id}, {"$set": {"role": "admin"}}))
+    return headers
+
+
+def test_every_action_records_client_ip(client, make_user):
+    ip = "41.207.13.37"  # IP publique burkinabè fictive, telle que transmise par le proxy Render
+    _, h, _ = make_user()
+    xff = {**h, "X-Forwarded-For": f"{ip}, 10.0.0.1"}
+    client.put("/api/me/profile", json={"city": "Ouagadougou"}, headers=xff)
+    plan_id = client.get("/api/subscriptions/plans").json()[0]["id"]
+    sub = client.post("/api/subscriptions/subscribe", json={"plan_id": plan_id}, headers=xff).json()
+
+    import time
+    time.sleep(0.3)  # journalisation en tâche de fond
+    admin = _admin_headers(client, make_user)
+    log = client.get("/api/admin/activity", params={"ip": ip}, headers=admin).json()
+    actions = {i["action"] for i in log["items"]}
+    assert {"Modification du profil", "Souscription à un abonnement"} <= actions
+    assert all(i["user"] for i in log["items"])
+
+    from db import db
+    doc = client.portal.call(lambda: db.subscriptions.find_one({"id": sub["subscription_id"]}))
+    assert doc["ip"] == ip
+
+    # Connexion : IP de dernière connexion + ligne "Connexion réussie"
+    email = client.get("/api/auth/me", headers=h).json()
+    user_doc = client.portal.call(lambda: db.users.find_one({"id": email["id"]}))
+    r = client.post("/api/auth/login", json={"identifier": user_doc["email"], "password": "motdepasse123"},
+                    headers={"X-Forwarded-For": ip})
+    assert r.status_code == 200
+    user_doc = client.portal.call(lambda: db.users.find_one({"id": email["id"]}))
+    assert user_doc["last_login_ip"] == ip
+    summary = client.get(f"/api/admin/activity/user/{email['id']}", headers=admin).json()
+    assert summary["ips"][0]["ip"] == ip
+
+    # Réservé au back-office
+    assert client.get("/api/admin/activity", headers=h).status_code == 403
+
+
+def test_public_counters_and_visitor_ip(client, make_user):
+    before = client.post("/api/stats/visit", headers={"X-Forwarded-For": "102.180.1.1"}).json()
+    assert before["your_ip"] == "102.180.1.1"
+    # Même IP le même jour : pas de double comptage ; autre IP : +1
+    again = client.post("/api/stats/visit", headers={"X-Forwarded-For": "102.180.1.1"}).json()
+    other = client.post("/api/stats/visit", headers={"X-Forwarded-For": "102.180.1.2"}).json()
+    assert again["visits"] == before["visits"] and other["visits"] == before["visits"] + 1
+    make_user(verified=True)
+    after = client.get("/api/stats/public").json()
+    assert after["registered"] == before["registered"] + 1 and after["verified"] == before["verified"] + 1
+
+
+def test_test_data_generate_then_purge_everything(client, make_user):
+    import time
+
+    from db import db
+
+    admin = _admin_headers(client, make_user)
+    real_id, real, _ = make_user(gender="homme")
+    counters_before = client.get("/api/stats/public").json()
+
+    assert client.post("/api/admin/test-data/generate", json={"count": 12, "videos": 2}, headers=admin).status_code == 202
+    for _ in range(300):
+        status = client.get("/api/admin/test-data", headers=admin).json()
+        if status["job"]["status"] in ("done", "failed"):
+            break
+        time.sleep(0.2)
+    assert status["job"]["status"] == "done", status["job"]
+    assert status["counts"]["users"] == 12 and status["counts"]["videos"] == 2
+
+    # Les comptes de test sont visibles (badge) mais jamais comptés publiquement
+    assert client.get("/api/stats/public").json()["registered"] == counters_before["registered"]
+    results = client.get("/api/search", params={"age_min": 18, "age_max": 99}, headers=real).json()["results"]
+    test_profile = next(p for p in results if p["is_test_data"])  # badge « Test » exposé
+
+    # On peut se connecter avec un compte de test (mot de passe commun)
+    email = status["credentials"]["sample_accounts"][0]["email"]
+    assert client.post("/api/auth/login", json={"identifier": email, "password": status["credentials"]["password"]}).status_code == 200
+
+    # Un vrai membre interagit avec un profil de test -> trace à purger aussi
+    client.post("/api/swipe", json={"target_user_id": test_profile["id"], "action": "like"}, headers=real)
+
+    assert client.delete("/api/admin/test-data", headers=admin).status_code == 202
+    for _ in range(300):
+        job = client.get("/api/admin/test-data", headers=admin).json()
+        if job["job"]["status"] in ("purged", "failed"):
+            break
+        time.sleep(0.2)
+    assert job["job"]["status"] == "purged", job["job"]
+    for coll in ("users", "videos", "swipes", "matches", "messages", "conversations", "video_likes", "test_media"):
+        assert client.portal.call(lambda c=coll: db[c].count_documents({"is_test_data": True})) == 0, coll
+    assert client.portal.call(lambda: db.swipes.count_documents({"target_user_id": test_profile["id"]})) == 0
+    # Le vrai membre, lui, est intact
+    assert client.portal.call(lambda: db.users.count_documents({"id": real_id})) == 1
+
+
+def test_admin_password_reset_switch(client, monkeypatch):
+    """ADMIN_BOOTSTRAP_RESET_PASSWORD=true : le compte admin reprend le mot
+    de passe de ADMIN_BOOTSTRAP_PASSWORD au démarrage (mot de passe oublié)."""
+    from config import get_settings
+    from seed import ensure_admin_user
+
+    s = get_settings()
+    monkeypatch.setattr(s, "admin_bootstrap_email", "boss@beauthentik.net")
+    monkeypatch.setattr(s, "admin_bootstrap_password", "Ancien-mdp-2026")
+    client.portal.call(ensure_admin_user)
+    ok = lambda pw: client.post("/api/auth/login", json={"identifier": "boss@beauthentik.net", "password": pw}).status_code
+    assert ok("Ancien-mdp-2026") == 200
+
+    monkeypatch.setattr(s, "admin_bootstrap_password", "Nouveau-mdp-2026")
+    client.portal.call(ensure_admin_user)          # sans l'interrupteur : inchangé
+    assert ok("Nouveau-mdp-2026") == 401
+    monkeypatch.setattr(s, "admin_bootstrap_reset_password", True)
+    client.portal.call(ensure_admin_user)          # avec : réinitialisé
+    assert ok("Nouveau-mdp-2026") == 200

@@ -53,6 +53,7 @@ from models import (
     _age_from_birthdate,
     _is_online,
 )
+from activity import current_ip
 from storage import presigned_document_url, save_photo, save_private_media, save_public_media
 from video_processing import VideoProcessingError, process_video
 
@@ -77,7 +78,7 @@ HASHTAG_RE = re.compile(r"#([\wÀ-ÿ]{2,30})", re.UNICODE)
 CLEAR_URL_TTL_SECONDS = 2 * 3600
 
 # Champs internes jamais renvoyés tels quels par l'API.
-_PRIVATE_FIELDS = ("clear_key",)
+_PRIVATE_FIELDS = ("clear_key", "ip")
 
 
 def _now_dt() -> datetime:
@@ -132,6 +133,7 @@ async def _author_cards(user_ids: List[str]) -> dict:
             "country": d.get("country"),
             "is_verified": d.get("verification_status") == VerificationStatus.verified.value,
             "is_online": _is_online(d.get("last_seen_at")),
+            "is_test_data": bool(d.get("is_test_data")),
             # Miniature ronde de l'avatar : version masquée si elle existe
             # (même règle que les photos du profil : visage visible en clair
             # seulement dans la fiche, pour les abonnés).
@@ -257,7 +259,7 @@ async def publish_video(
         )
 
     caption = (caption or "").strip()
-    video = Video(user_id=user["id"], caption=caption, hashtags=extract_hashtags(caption))
+    video = Video(user_id=user["id"], caption=caption, hashtags=extract_hashtags(caption), ip=current_ip())
     await db.videos.insert_one(video.model_dump(mode="json"))
 
     # Fichier brut sur disque temporaire, puis compression + floutage en
@@ -443,7 +445,7 @@ async def list_comments(video_id: str, user: dict = Depends(get_current_user)):
     comments = await db.video_comments.find({"video_id": video_id}, {"_id": 0}).sort("created_at", -1).to_list(200)
     authors = await _author_cards([c["user_id"] for c in comments])
     return [
-        {**c, "author": authors.get(c["user_id"]), "is_mine": c["user_id"] == user["id"]}
+        {**{k: v for k, v in c.items() if k != "ip"}, "author": authors.get(c["user_id"]), "is_mine": c["user_id"] == user["id"]}
         for c in comments if c["user_id"] in authors
     ]
 
@@ -459,7 +461,7 @@ async def add_comment(video_id: str, payload: CommentCreate, user: dict = Depend
     if not text:
         raise HTTPException(status_code=400, detail="Commentaire vide")
     comment = VideoComment(video_id=video_id, user_id=user["id"], text=text)
-    await db.video_comments.insert_one(comment.model_dump(mode="json"))
+    await db.video_comments.insert_one({**comment.model_dump(mode="json"), "ip": current_ip()})
     await db.videos.update_one({"id": video_id}, {"$inc": {"comments_count": 1}})
     authors = await _author_cards([user["id"]])
     return {**comment.model_dump(mode="json"), "author": authors.get(user["id"]), "is_mine": True}

@@ -117,7 +117,7 @@ export default function PublishVideo() {
           </div>
           <h2 className="mt-6 text-2xl font-extrabold">Vérifiez votre identité pour publier</h2>
           <p className="mt-3 text-sm leading-relaxed text-slate-500">
-            Sur bAuthentik, chaque vidéo vient d'une personne réelle. Envoyez votre pièce d'identité : le badge
+            Sur beAuthentik, chaque vidéo vient d'une personne réelle. Envoyez votre pièce d'identité : le badge
             <VerifiedBadge className="mx-1 text-sm" /> s'affichera sur votre profil et vos Moments.
           </p>
           {user?.verification_status === "pending" ? (

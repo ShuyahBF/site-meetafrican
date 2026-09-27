@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { formatCount } from "@/lib/format";
+import TestBadge from "@/components/TestBadge";
 
 // Délai max entre deux taps pour qu'ils comptent comme un double-tap.
 const DOUBLE_TAP_MS = 280;
@@ -208,6 +209,7 @@ export default function VideoSlide({
           {author.full_name}
           {author.age ? <span className="whitespace-nowrap font-semibold text-white/85"> · {author.age} ans</span> : null}
           {author.is_verified && <VerifiedBadge className="ml-1 text-lg" />}
+          {author.is_test_data && <TestBadge dark className="ml-1.5" />}
           {author.is_online && <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-emerald-400 align-middle ring-2 ring-emerald-400/30" />}
         </Link>
         {(author.city || author.country) && (

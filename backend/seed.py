@@ -79,12 +79,19 @@ async def ensure_admin_user() -> None:
 
     existing = await db.users.find_one({"email": settings.admin_bootstrap_email})
     if existing:
+        update = {}
         if existing.get("role") != Role.admin.value:
-            await db.users.update_one({"id": existing["id"]}, {"$set": {"role": Role.admin.value}})
+            update["role"] = Role.admin.value
+        if settings.admin_bootstrap_reset_password:
+            # Réinitialisation volontaire (mot de passe oublié) — cf. config.py
+            update["password_hash"] = hash_password(settings.admin_bootstrap_password)
+            update["is_active"] = True
+        if update:
+            await db.users.update_one({"id": existing["id"]}, {"$set": update})
         return
 
     admin = User(
-        full_name="Administrateur bAuthentik",
+        full_name="Administrateur beAuthentik",
         email=settings.admin_bootstrap_email,
         password_hash=hash_password(settings.admin_bootstrap_password),
         gender=Gender.homme,

@@ -8,6 +8,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+from activity import current_ip
 from auth import get_current_user
 from db import db
 from models import PaymentProof, Subscription, SubscriptionPlan
@@ -51,6 +52,7 @@ async def subscribe(payload: SubscribeRequest, user: dict = Depends(get_current_
         raise HTTPException(status_code=404, detail="Formule introuvable")
     subscription = Subscription(user_id=user["id"], plan_id=plan["id"])
     doc = subscription.model_dump(mode="json")
+    doc["ip"] = current_ip()  # IP de souscription (suivi admin)
     await db.subscriptions.insert_one(doc.copy())
     return {
         "subscription_id": subscription.id,
@@ -89,7 +91,7 @@ async def submit_payment_proof(payload: PaymentProofCreate, user: dict = Depends
         plan_id=subscription["plan_id"],
         screenshot_url=payload.screenshot_url,
     )
-    await db.payment_proofs.insert_one(proof.model_dump(mode="json"))
+    await db.payment_proofs.insert_one({**proof.model_dump(mode="json"), "ip": current_ip()})
     return proof
 
 

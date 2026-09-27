@@ -21,6 +21,8 @@ import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminPhotos from "@/pages/admin/AdminPhotos";
 import AdminVideos from "@/pages/admin/AdminVideos";
+import AdminActivity from "@/pages/admin/AdminActivity";
+import AdminTestData from "@/pages/admin/AdminTestData";
 import AdminVerifications from "@/pages/admin/AdminVerifications";
 import AdminPayments from "@/pages/admin/AdminPayments";
 import AdminReports from "@/pages/admin/AdminReports";
@@ -66,6 +68,8 @@ export default function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="photos" element={<AdminPhotos />} />
             <Route path="videos" element={<AdminVideos />} />
+            <Route path="activite" element={<AdminActivity />} />
+            <Route path="donnees-test" element={<AdminTestData />} />
             <Route path="verifications" element={<AdminVerifications />} />
             <Route path="paiements" element={<AdminPayments />} />
             <Route path="signalements" element={<AdminReports />} />

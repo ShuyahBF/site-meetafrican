@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from auth import decode_access_token, get_current_user
 from db import db
 from models import Message, PhotoStatus, _is_online
+from activity import ip_from_headers, log_activity
 from realtime import RateLimiter, conversation_channel, hub
 from routes.subscriptions import has_active_subscription
 
@@ -122,6 +123,7 @@ async def list_conversations(user: dict = Depends(get_current_user)):
                 "last_seen_at": other.get("last_seen_at"),
                 "is_online": _is_online(other.get("last_seen_at")),
                 "is_verified": other.get("verification_status") == "verified",
+                "is_test_data": bool(other.get("is_test_data")),
             },
             "last_message": last_message,
             "unread_count": unread,
@@ -239,6 +241,7 @@ async def conversation_ws(websocket: WebSocket, conversation_id: str, token: str
         return
 
     channel = conversation_channel(conversation_id)
+    ws_ip = ip_from_headers(dict(websocket.headers), websocket.client.host if websocket.client else None)
     await hub.connect(channel, websocket, user_id)
     await _broadcast_presence(conversation_id)
     try:
@@ -270,6 +273,11 @@ async def conversation_ws(websocket: WebSocket, conversation_id: str, token: str
             fresh_user = await db.users.find_one({"id": user_id}, {"_id": 0}) or user
             message = await _persist_message(conv, fresh_user, text)
             await hub.send(channel, "message", message.model_dump(mode="json"))
+            await log_activity(
+                user_id, "Message envoyé", ws_ip,
+                method="WS", path=f"/api/ws/conversations/{conversation_id}",
+                details={"message_id": message.id},
+            )
     except WebSocketDisconnect:
         pass
     finally:
