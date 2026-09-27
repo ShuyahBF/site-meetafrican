@@ -13,6 +13,27 @@ MeetAfrican — site de rencontre pour hommes et femmes africains.
   entre comptes, signalement de faux profils, points de parrainage social et
   back-office admin (`/admin`) fonctionnels de bout en bout — testés en local
   (voir section Tests ci-dessous).
+- **Esprit TikTok** : fil vidéo vertical plein écran **« Moments »** (`/moments`)
+  — lecture auto, double-tap = J'aime avec cœur animé, colonne d'actions
+  (profil + « Ça me plaît » qui peut créer un match, commentaires en tiroir,
+  cadeau, partage), onglets *Pour toi* / *Près de moi* / *Mes matchs*,
+  #hashtags cliquables et tendances, défilement infini. Publication réservée
+  aux identités **vérifiées** (gage d'authenticité), signalement en un clic
+  (retrait automatique à 3 signalements, revue dans `/admin/videos`).
+- **Vidéos floutées par défaut** : chaque vidéo est compressée puis
+  **entièrement floutée côté serveur** (ffmpeg via `imageio-ffmpeg`, sans
+  son) — c'est cette version que tout le monde voit. La version **claire**
+  est rangée dans le stockage **privé** et n'est servie (URL temporaire)
+  qu'aux membres **vérifiés acceptés par l'auteur** : par un match, ou en
+  acceptant leur demande « Voir en clair » (boîte de réception ; accès
+  révocable depuis *Mon profil*). Voir `backend/video_processing.py`.
+- **Recherche avancée** (`/recherche`, maquette 10), **profil détaillé**
+  éditable (centres d'intérêt, type de relation, enfants, profession —
+  maquette 11) et **fiche publique** des membres (`/profils/:id`).
+- **Chat enrichi** : « en train d'écrire… », accusés de lecture « Vu »,
+  présence dans la conversation, compteur de messages non lus.
+- **Charte** : fond **blanc** pour toutes les fenêtres, dégradé signature
+  rose → orange, micro-animations (voir `frontend/tailwind.config.js`).
 
 ## Stack
 
@@ -71,6 +92,17 @@ avant le premier démarrage : le compte est créé (ou promu admin s'il existe d
 automatiquement. Se connecter ensuite sur `/connexion` avec cet email — la
 redirection vers `/admin` est automatique pour les comptes admin/modérateur.
 
+### Tests automatisés
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+python -m pytest tests -q
+```
+
+Base MongoDB en mémoire et stockage local temporaire : aucune donnée réelle
+touchée.
+
 ### Tests sans accès à MongoDB Atlas
 
 `MONGO_URL=mongomock://` dans `.env` bascule vers une base MongoDB **en
@@ -93,6 +125,11 @@ jamais utiliser en production**.
    correspondantes.
 
 ## Prochaines étapes
+
+- Vidéos : le traitement (compression + flou) tourne dans le process web ;
+  à déplacer vers un worker dédié si le volume de publications augmente
+- Hub temps réel en mémoire (`backend/realtime.py`) : passer à Redis
+  pub/sub si le backend tourne un jour sur plusieurs instances
 
 - Gestion des comptes utilisateurs côté admin (liste, désactivation directe,
   changement de rôle) au-delà des files de modération

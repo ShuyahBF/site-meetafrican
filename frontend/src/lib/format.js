@@ -36,3 +36,23 @@ export function responseBadge(avgResponseSeconds) {
   }
   return { label: "Répond parfois", className: "bg-slate-500/90 text-white" };
 }
+
+/** Compteurs compacts façon TikTok : 950 -> "950", 1520 -> "1,5 k", 2300000 -> "2,3 M". */
+export function formatCount(n) {
+  const value = Number(n) || 0;
+  if (value < 1000) return String(value);
+  if (value < 1_000_000) return `${(value / 1000).toFixed(value < 10_000 ? 1 : 0).replace(".", ",").replace(",0", "")} k`;
+  return `${(value / 1_000_000).toFixed(1).replace(".", ",").replace(",0", "")} M`;
+}
+
+/** Date relative courte pour commentaires/messages : "à l'instant", "5 min", "3 h", "2 j", puis la date. */
+export function formatRelativeShort(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const minutes = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (minutes < 1) return "à l'instant";
+  if (minutes < 60) return `${minutes} min`;
+  if (minutes < 24 * 60) return `${Math.floor(minutes / 60)} h`;
+  if (minutes < 7 * 24 * 60) return `${Math.floor(minutes / 1440)} j`;
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+}

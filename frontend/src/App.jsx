@@ -13,9 +13,14 @@ import Messages from "@/pages/Messages";
 import Conversation from "@/pages/Conversation";
 import Referrals from "@/pages/Referrals";
 import Wallet from "@/pages/Wallet";
+import Moments from "@/pages/Moments";
+import PublishVideo from "@/pages/PublishVideo";
+import Search from "@/pages/Search";
+import UserProfile from "@/pages/UserProfile";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminPhotos from "@/pages/admin/AdminPhotos";
+import AdminVideos from "@/pages/admin/AdminVideos";
 import AdminVerifications from "@/pages/admin/AdminVerifications";
 import AdminPayments from "@/pages/admin/AdminPayments";
 import AdminReports from "@/pages/admin/AdminReports";
@@ -42,6 +47,12 @@ export default function App() {
           <Route path="/" element={<Welcome />} />
           <Route path="/inscription" element={<Register />} />
           <Route path="/connexion" element={<Login />} />
+          {/* Fil vidéo façon TikTok : /moments, lien partagé /moments/:id */}
+          <Route path="/moments" element={<Protected><Moments /></Protected>} />
+          <Route path="/moments/publier" element={<Protected><PublishVideo /></Protected>} />
+          <Route path="/moments/:videoId" element={<Protected><Moments /></Protected>} />
+          <Route path="/recherche" element={<Protected><Search /></Protected>} />
+          <Route path="/profils/:userId" element={<Protected><UserProfile /></Protected>} />
           <Route path="/decouverte" element={<Protected><Discover /></Protected>} />
           <Route path="/matchs" element={<Protected><Matches /></Protected>} />
           <Route path="/messages" element={<Protected><Messages /></Protected>} />
@@ -54,6 +65,7 @@ export default function App() {
           <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
             <Route index element={<AdminDashboard />} />
             <Route path="photos" element={<AdminPhotos />} />
+            <Route path="videos" element={<AdminVideos />} />
             <Route path="verifications" element={<AdminVerifications />} />
             <Route path="paiements" element={<AdminPayments />} />
             <Route path="signalements" element={<AdminReports />} />

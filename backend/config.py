@@ -45,7 +45,12 @@ class Settings(BaseSettings):
     # production (perdu à chaque redéploiement). storage_backend="r2" :
     # Cloudflare R2 (compatible S3) — voir backend/storage.py.
     storage_backend: str = "local"  # local | r2
-    max_upload_bytes: int = 8 * 1024 * 1024  # 8 Mo
+    max_upload_bytes: int = 8 * 1024 * 1024  # 8 Mo (photos, pièces d'identité)
+    # Vidéos courtes du fil "Moments" : taille et durée maximales. La durée
+    # est contrôlée côté navigateur (lecture des métadonnées avant envoi) et
+    # re-vérifiée sur la valeur déclarée côté serveur.
+    max_video_upload_bytes: int = 50 * 1024 * 1024  # 50 Mo
+    max_video_duration_seconds: int = 60
 
     # Mode local uniquement
     uploads_dir: str = "./uploads"

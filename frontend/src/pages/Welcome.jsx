@@ -1,114 +1,424 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 const DEFAULT_HERO_IMAGE = "/images/hero-couple.jpg";
 
-// Trois bénéfices réels de l'app (pas des promesses en l'air : chaque item
-// correspond à une fonctionnalité déjà implémentée côté backend), présentés
-// façon "pourquoi nous choisir" plutôt que le carrousel générique d'avant.
-const FEATURES = [
-  {
-    icon: "verified_user",
-    title: "Profils vérifiés",
-    text: "Chaque pièce d'identité est contrôlée avant validation du profil, pour une communauté plus sûre.",
-  },
-  {
-    icon: "favorite",
-    title: "Des rencontres qui comptent",
-    text: "Un match ne se fait que si l'intérêt est réciproque — fini les messages sans réponse.",
-  },
-  {
-    icon: "chat",
-    title: "Discussion en temps réel",
-    text: "Échangez instantanément avec vos matchs, en toute confidentialité.",
-  },
+// Formules affichées si l'API est momentanément injoignable — mêmes valeurs
+// que les formules par défaut du backend (backend/seed.py). Les vraies
+// formules (modifiables dans l'admin) remplacent celles-ci dès réception.
+const FALLBACK_PLANS = [
+  { id: "1_semaine", name: "1 Semaine", duration_days: 7, price_xof: 5000, features: ["Accès illimité au chat", "Voir toutes les photos", "Filtres de recherche avancée"] },
+  { id: "1_mois", name: "1 Mois", duration_days: 30, price_xof: 12000, badge: "Populaire", features: ["Accès illimité au chat", "Voir toutes les photos", "Filtres de recherche avancée", "Voir qui a visité votre profil"] },
+  { id: "12_mois", name: "12 Mois", duration_days: 365, price_xof: 55000, savings_pct: 62, featured: true, badge: "Meilleure offre", features: ["Accès illimité au chat", "Voir toutes les photos", "Filtres de recherche avancée", "Voir qui a visité votre profil", "Navigation sans publicité"] },
 ];
 
+// Ce que propose le compte gratuit (fonctionnalités réellement ouvertes
+// sans abonnement dans le code actuel).
+const FREE_FEATURES = [
+  "Créer son profil et ses photos",
+  "Swiper, liker et matcher",
+  "Regarder les Moments (floutés)",
+  "Publier des Moments (identité vérifiée)",
+];
+
+// Fonctionnalités mises en avant — chacune correspond à une fonctionnalité
+// réellement implémentée (pas de promesse en l'air).
+const FEATURES = [
+  { icon: "play_circle", title: "Les Moments, en vidéo", text: "Un fil vertical façon TikTok : défilez, double-tapez pour aimer, découvrez les gens tels qu'ils sont.", tint: "from-primary/15 to-sunset/15", big: true },
+  { icon: "verified", title: "100 % identités vérifiées", text: "Pièce d'identité contrôlée par IA puis par un humain en cas de doute. Le badge bleu ne ment pas.", tint: "from-sky-100 to-sky-50" },
+  { icon: "lock", title: "Votre image vous appartient", text: "Vos vidéos sont floutées pour tous. Seuls vos matchs et les membres que vous acceptez vous voient en clair.", tint: "from-purple-100 to-purple-50" },
+  { icon: "bolt", title: "Chat en temps réel", text: "Messages instantanés, « en train d'écrire… », accusés « Vu ». La conversation coule naturellement.", tint: "from-amber-100 to-amber-50" },
+  { icon: "tune", title: "Recherche avancée", text: "Âge, ville, pays, type de relation, enfants, centres d'intérêt : trouvez exactement qui vous correspond.", tint: "from-emerald-100 to-emerald-50" },
+  { icon: "redeem", title: "Cadeaux & coups de cœur", text: "Une rose, un bouquet, un diamant : faites-vous remarquer avec élégance.", tint: "from-rose-100 to-rose-50" },
+];
+
+const STEPS = [
+  { n: "1", title: "Créez votre profil", text: "Gratuit, en 2 minutes. Ajoutez vos photos et vérifiez votre identité." },
+  { n: "2", title: "Explorez", text: "Regardez les Moments, swipez, filtrez par ville ou par centres d'intérêt." },
+  { n: "3", title: "Matchez & discutez", text: "Dès que c'est réciproque, la conversation s'ouvre, en direct." },
+];
+
+const FAQ = [
+  { q: "L'inscription est-elle gratuite ?", a: "Oui. Créer son profil, swiper, matcher et regarder les Moments est gratuit. L'abonnement Premium débloque tout le reste." },
+  { q: "Comment payer l'abonnement ?", a: "Par Mobile Money (Orange Money, Moov Money, Telecel Money…) via une page de paiement sécurisée. Aucune carte bancaire nécessaire." },
+  { q: "Qui peut voir mes vidéos ?", a: "Tout le monde voit une version entièrement floutée. La version claire est réservée à vos matchs et aux membres vérifiés que vous acceptez — et vous pouvez retirer l'accès à tout moment." },
+  { q: "Pourquoi vérifier mon identité ?", a: "Pour garantir une communauté de personnes réelles. La vérification donne le badge bleu et permet de publier des Moments. Votre pièce n'est jamais montrée aux autres membres." },
+];
+
+/** 55000 -> "55 000" (espaces fines insécables, format français). */
+const fcfa = (n) => new Intl.NumberFormat("fr-FR").format(n);
+
+/** Libellé de période d'une formule : "/ semaine", "/ mois", "/ an", sinon "/ 90 jours". */
+function periodLabel(days) {
+  if (days === 7) return "/ semaine";
+  if (days === 30 || days === 31) return "/ mois";
+  if (days === 365) return "/ an";
+  return `/ ${days} jours`;
+}
+
+/**
+ * Page d'accueil publique — fond blanc, simple et stylée :
+ * héros avec maquette de téléphone animée, étapes, fonctionnalités
+ * (grille "bento"), garanties de confiance, tarifs, FAQ, appel final.
+ */
 export default function Welcome() {
-  // Image modifiable par l'admin (Paramètres > Apparence de la page
-  // d'accueil) sans redéploiement ; repli sur l'image embarquée par défaut
-  // tant que rien n'a été réglé.
+  const { user } = useAuth();
+  // Image modifiable par l'admin (Paramètres > Apparence) sans redéploiement.
   const [heroImage, setHeroImage] = useState(DEFAULT_HERO_IMAGE);
+  const [plans, setPlans] = useState(FALLBACK_PLANS);
 
   useEffect(() => {
+    apiClient.get("/appearance").then((r) => r.data?.hero_image_url && setHeroImage(r.data.hero_image_url)).catch(() => {});
     apiClient
-      .get("/appearance")
-      .then((r) => {
-        if (r.data?.hero_image_url) setHeroImage(r.data.hero_image_url);
-      })
+      .get("/subscriptions/plans")
+      .then((r) => r.data?.length && setPlans([...r.data].sort((a, b) => a.duration_days - b.duration_days)))
       .catch(() => {});
   }, []);
 
+  // Connecté : les appels à l'action mènent directement à l'application.
+  const primaryTo = user ? "/moments" : "/inscription";
+  const primaryLabel = user ? "Ouvrir l'application" : "Créer mon compte gratuit";
+  const planTo = user ? "/abonnement" : "/inscription";
+
   return (
-    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light font-display dark:bg-background-dark">
-      {/* Barre de marque minimale — juste le wordmark, pas de navigation :
-          cette page n'a que deux destinations (inscription / connexion),
-          déjà mises en avant plus bas. */}
-      <header className="flex items-center justify-center px-4 py-5">
-        <span className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
-          b<span className="text-primary">Authentik</span>
-        </span>
+    <div className="min-h-screen overflow-x-hidden bg-white font-display text-ink">
+      {/* ---------------------------------------------------------------- */}
+      {/* Barre de navigation                                               */}
+      {/* ---------------------------------------------------------------- */}
+      <header className="sticky top-0 z-40 border-b border-slate-100/80 bg-white/80 backdrop-blur-lg">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
+          <Link to="/" className="text-2xl font-extrabold tracking-tight">
+            b<span className="text-brand">Authentik</span>
+          </Link>
+          <nav className="hidden items-center gap-8 text-sm font-semibold text-slate-500 md:flex">
+            <a href="#fonctionnalites" className="hover:text-ink">Fonctionnalités</a>
+            <a href="#confiance" className="hover:text-ink">Sécurité</a>
+            <a href="#tarifs" className="hover:text-ink">Tarifs</a>
+            <a href="#faq" className="hover:text-ink">FAQ</a>
+          </nav>
+          <div className="flex items-center gap-2">
+            {!user && (
+              <Link to="/connexion" className="whitespace-nowrap rounded-full px-3 py-2 text-sm font-bold text-ink hover:bg-slate-50 sm:px-4">
+                <span className="sm:hidden">Connexion</span>
+                <span className="hidden sm:inline">Se connecter</span>
+              </Link>
+            )}
+            <Link to={primaryTo} className="btn-primary h-10 px-5 text-sm">
+              {user ? "Ouvrir" : "S'inscrire"}
+            </Link>
+          </div>
+        </div>
       </header>
 
-      {/* Hero : photo + dégradé pour garder le texte lisible par-dessus,
-          quel que soit le contenu de l'image. */}
-      <div className="relative w-full">
-        <div className="relative h-[46vh] w-full overflow-hidden md:h-[54vh]">
-          <img
-            src={heroImage}
-            alt="Un couple souriant"
-            className="h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-background-dark via-background-dark/40 to-background-dark/10" />
-        </div>
+      {/* ---------------------------------------------------------------- */}
+      {/* Héros                                                             */}
+      {/* ---------------------------------------------------------------- */}
+      <section className="relative">
+        {/* Halos colorés d'arrière-plan (décor) */}
+        <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-primary/15 blur-3xl" />
+        <div className="pointer-events-none absolute -right-24 top-40 h-96 w-96 rounded-full bg-sunset/15 blur-3xl" />
 
-        <div className="relative -mt-16 px-4 text-center md:-mt-20">
-          <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight text-white drop-shadow-sm md:text-5xl">
-            La rencontre commence ici
-          </h1>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-white/90 md:text-base">
-            La plateforme pensée pour les Africains qui veulent rencontrer,
-            échanger et construire une vraie relation — où qu'ils soient.
-          </p>
-        </div>
-      </div>
-
-      {/* Bénéfices — grille de cartes, plus lisible qu'un carrousel horizontal
-          qu'une partie du contenu reste hors champ sans indice visuel. */}
-      <div className="mx-auto grid w-full max-w-4xl grid-cols-1 gap-4 px-4 py-10 sm:grid-cols-3">
-        {FEATURES.map((f) => (
-          <div
-            key={f.title}
-            className="flex flex-col items-center gap-3 rounded-xl bg-white p-6 text-center shadow-sm ring-1 ring-black/5 dark:bg-white/5 dark:ring-white/10"
-          >
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-              <span className="material-symbols-outlined text-3xl text-primary">{f.icon}</span>
+        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 pb-16 pt-10 md:grid-cols-2 md:pb-24 md:pt-16">
+          <div className="text-center md:text-left">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-1.5 text-xs font-bold text-slate-600 shadow-sm ring-1 ring-slate-100">
+              <span className="material-symbols-outlined icon-filled text-base text-sky-500">verified</span>
+              Des profils 100 % vérifiés
+            </span>
+            <h1 className="mt-5 text-[2.6rem] font-extrabold leading-[1.05] tracking-tight md:text-6xl">
+              Rencontrez des Africains <span className="text-brand">authentiques</span>.
+            </h1>
+            <p className="mx-auto mt-5 max-w-md text-base leading-relaxed text-slate-500 md:mx-0 md:text-lg">
+              Des vidéos, des vrais profils, des matchs qui comptent. Le site de rencontre pensé pour l'Afrique et sa
+              diaspora — où que vous soyez.
+            </p>
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center md:justify-start">
+              <Link to={primaryTo} className="btn-primary h-14 w-full px-8 text-base sm:w-auto">
+                {primaryLabel}
+                <span className="material-symbols-outlined">arrow_forward</span>
+              </Link>
+              <a href="#tarifs" className="btn-ghost h-14 w-full px-8 text-base sm:w-auto">Voir les tarifs</a>
             </div>
-            <p className="text-base font-bold text-slate-900 dark:text-white">{f.title}</p>
-            <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">{f.text}</p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-semibold text-slate-400 md:justify-start">
+              <span className="flex items-center gap-1"><span className="material-symbols-outlined text-base text-emerald-500">check_circle</span>Inscription gratuite</span>
+              <span className="flex items-center gap-1"><span className="material-symbols-outlined text-base text-emerald-500">check_circle</span>Paiement Mobile Money</span>
+              <span className="flex items-center gap-1"><span className="material-symbols-outlined text-base text-emerald-500">check_circle</span>Vie privée protégée</span>
+            </div>
           </div>
-        ))}
-      </div>
 
-      <div className="flex-grow" />
+          {/* Maquette de téléphone : aperçu du fil Moments (pur CSS) */}
+          <div className="relative mx-auto w-[270px] md:w-[300px]">
+            <div className="relative aspect-[9/19] overflow-hidden rounded-[2.75rem] bg-ink p-2.5 shadow-[0_30px_80px_-20px_rgba(244,37,106,0.45)]">
+              <div className="relative h-full w-full overflow-hidden rounded-[2.2rem]">
+                <img src={heroImage} alt="Un couple souriant" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+                <div className="absolute inset-x-0 top-4 flex justify-center gap-4 text-[11px] font-extrabold text-white/70">
+                  <span>Près de moi</span><span className="text-white underline decoration-2 underline-offset-4">Pour toi</span><span>Matchs</span>
+                </div>
+                <div className="absolute bottom-16 right-2.5 flex flex-col items-center gap-3 text-white">
+                  <span className="material-symbols-outlined icon-filled text-3xl text-primary drop-shadow">favorite</span>
+                  <span className="material-symbols-outlined icon-filled text-3xl drop-shadow">chat_bubble</span>
+                  <span className="material-symbols-outlined icon-filled text-3xl drop-shadow">redeem</span>
+                </div>
+                <div className="absolute bottom-5 left-4 right-14 text-white">
+                  <p className="flex items-center gap-1 text-sm font-extrabold">
+                    Kofi · 32 ans <span className="material-symbols-outlined icon-filled text-sm text-sky-400">verified</span>
+                  </p>
+                  <p className="text-[11px] text-white/80">Dimanche à Abidjan avec le sourire 🌅 #abidjan</p>
+                </div>
+              </div>
+            </div>
+            {/* Pastilles flottantes */}
+            <div className="absolute -left-10 top-20 animate-[fade-in_0.6s_ease-out] rounded-2xl bg-white px-3.5 py-2.5 shadow-xl ring-1 ring-slate-100 md:-left-16">
+              <p className="text-[11px] font-bold text-slate-400">Nouveau</p>
+              <p className="text-sm font-extrabold text-brand">C'est un match ! 💘</p>
+            </div>
+            <div className="absolute -right-8 top-1/2 rounded-2xl bg-white px-3.5 py-2.5 shadow-xl ring-1 ring-slate-100 md:-right-14">
+              <p className="flex items-center gap-1 text-sm font-extrabold">
+                <span className="material-symbols-outlined icon-filled text-lg text-sky-500">verified</span> Identité vérifiée
+              </p>
+            </div>
+            <div className="absolute -bottom-5 left-6 flex items-center gap-2 rounded-full bg-white px-4 py-2 shadow-xl ring-1 ring-slate-100">
+              <span className="flex gap-1">
+                {[0, 1, 2].map((d) => (
+                  <span key={d} className="h-1.5 w-1.5 animate-typing-dot rounded-full bg-primary" style={{ animationDelay: `${d * 0.15}s` }} />
+                ))}
+              </span>
+              <span className="text-xs font-bold text-slate-500">Awa est en train d'écrire…</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <div className="sticky bottom-0 flex justify-center bg-background-light pb-6 pt-4 dark:bg-background-dark">
-        <div className="flex w-full max-w-[480px] flex-1 flex-col items-stretch gap-3 px-4">
-          <Link
-            to="/inscription"
-            className="flex h-14 w-full min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-full bg-primary px-5 text-base font-bold leading-normal tracking-[0.015em] text-white shadow-lg shadow-primary/30 transition-transform active:scale-[0.98]"
-          >
-            Créer un compte
-          </Link>
-          <Link
-            to="/connexion"
-            className="flex h-14 w-full min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-full bg-transparent px-5 text-base font-bold leading-normal tracking-[0.015em] text-slate-800 hover:bg-primary/10 dark:text-white"
-          >
-            Se connecter
+      {/* ---------------------------------------------------------------- */}
+      {/* Comment ça marche                                                 */}
+      {/* ---------------------------------------------------------------- */}
+      <section className="mx-auto max-w-6xl px-5 py-16">
+        <SectionTitle kicker="Simple comme bonjour" title="Trois étapes pour faire de belles rencontres" />
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          {STEPS.map((s) => (
+            <div key={s.n} className="relative rounded-3xl bg-slate-50 p-6">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand text-lg font-extrabold text-white shadow-lg shadow-primary/25">
+                {s.n}
+              </span>
+              <p className="mt-4 text-lg font-extrabold">{s.title}</p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-500">{s.text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* Fonctionnalités (grille "bento")                                  */}
+      {/* ---------------------------------------------------------------- */}
+      <section id="fonctionnalites" className="scroll-mt-20 mx-auto max-w-6xl px-5 py-16">
+        <SectionTitle kicker="Fonctionnalités" title="Tout pour se découvrir, vraiment" />
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map((f) => (
+            <div
+              key={f.title}
+              className={`group flex flex-col rounded-3xl bg-gradient-to-br ${f.tint} p-6 transition duration-300 hover:-translate-y-1 hover:shadow-xl ${
+                f.big ? "ring-2 ring-primary/40" : ""
+              }`}
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm">
+                <span className="material-symbols-outlined icon-filled text-2xl text-primary">{f.icon}</span>
+              </span>
+              <div>
+                <p className="mt-5 text-lg font-extrabold">{f.title}</p>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600">{f.text}</p>
+              </div>
+              {f.big && (
+                <Link to={primaryTo} className="mt-auto inline-flex items-center gap-1 pt-4 text-sm font-extrabold text-primary">
+                  Découvrir les Moments <span className="material-symbols-outlined text-lg transition group-hover:translate-x-1">arrow_forward</span>
+                </Link>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* Confiance & sécurité                                              */}
+      {/* ---------------------------------------------------------------- */}
+      <section id="confiance" className="scroll-mt-20 mx-auto max-w-6xl px-5 py-16">
+        <div className="overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-primary to-sunset p-8 text-white md:p-14">
+          <div className="grid items-center gap-10 md:grid-cols-2">
+            <div>
+              <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-white/70">Confiance</p>
+              <h2 className="mt-3 text-3xl font-extrabold leading-tight md:text-4xl">Ici, les profils sont réels. Et votre vie privée aussi.</h2>
+              <p className="mt-4 text-white/85">
+                Nous avons conçu bAuthentik pour que vous puissiez faire confiance aux personnes que vous rencontrez —
+                et garder la main sur ce que vous montrez.
+              </p>
+            </div>
+            <ul className="space-y-3">
+              {[
+                ["badge", "Vérification d'identité par IA + revue humaine"],
+                ["blur_on", "Vidéos floutées, en clair sur votre accord uniquement"],
+                ["flag", "Signalement en un clic, modération réactive"],
+                ["favorite", "Match uniquement si l'intérêt est réciproque"],
+                ["account_balance_wallet", "Paiement Mobile Money sécurisé"],
+              ].map(([icon, text]) => (
+                <li key={text} className="flex items-center gap-3 rounded-2xl bg-white/15 px-4 py-3 backdrop-blur">
+                  <span className="material-symbols-outlined text-xl">{icon}</span>
+                  <span className="text-sm font-bold">{text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* Tarifs                                                            */}
+      {/* ---------------------------------------------------------------- */}
+      <section id="tarifs" className="scroll-mt-20 mx-auto max-w-6xl px-5 py-16">
+        <SectionTitle kicker="Tarifs" title="Commencez gratuitement, passez Premium quand vous voulez" />
+        <p className="mx-auto mt-3 max-w-xl text-center text-sm text-slate-500">
+          Sans engagement, sans renouvellement caché. Payez en Mobile Money, en FCFA.
+        </p>
+
+        <div className={`mt-12 grid items-stretch gap-5 sm:grid-cols-2 ${plans.length >= 3 ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
+          {/* Offre gratuite */}
+          <PlanCard
+            name="Découverte"
+            price="0"
+            period="pour toujours"
+            features={FREE_FEATURES}
+            cta="Commencer gratuitement"
+            to={primaryTo}
+          />
+          {plans.map((p) => (
+            <PlanCard
+              key={p.id}
+              name={p.name}
+              price={fcfa(p.price_xof)}
+              currency="FCFA"
+              period={periodLabel(p.duration_days)}
+              // Équivalent mensuel pour les formules longues : l'argument qui fait mouche.
+              note={p.duration_days >= 60 ? `soit ${fcfa(Math.round(p.price_xof / (p.duration_days / 30)))} FCFA / mois` : null}
+              badge={p.badge}
+              savings={p.savings_pct}
+              featured={p.featured}
+              features={p.features}
+              cta="Choisir cette formule"
+              to={planTo}
+            />
+          ))}
+        </div>
+        <p className="mt-6 flex items-center justify-center gap-2 text-xs font-semibold text-slate-400">
+          <span className="material-symbols-outlined text-base">lock</span>
+          Paiement sécurisé · Orange Money · Moov Money · Telecel Money
+        </p>
+      </section>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* FAQ                                                               */}
+      {/* ---------------------------------------------------------------- */}
+      <section id="faq" className="scroll-mt-20 mx-auto max-w-3xl px-5 py-16">
+        <SectionTitle kicker="FAQ" title="Vos questions" />
+        <div className="mt-8 space-y-3">
+          {FAQ.map((item) => (
+            <details key={item.q} className="group rounded-2xl bg-slate-50 px-5 py-4 open:bg-white open:shadow-lg open:ring-1 open:ring-slate-100">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-bold">
+                {item.q}
+                <span className="material-symbols-outlined text-primary transition group-open:rotate-45">add</span>
+              </summary>
+              <p className="mt-3 text-sm leading-relaxed text-slate-500">{item.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* Appel final + pied de page                                        */}
+      {/* ---------------------------------------------------------------- */}
+      <section className="mx-auto max-w-6xl px-5 pb-16 pt-4">
+        <div className="relative overflow-hidden rounded-[2.5rem] bg-ink px-8 py-14 text-center text-white">
+          <div className="pointer-events-none absolute -left-20 -top-20 h-72 w-72 rounded-full bg-primary/40 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -right-10 h-72 w-72 rounded-full bg-sunset/40 blur-3xl" />
+          <h2 className="relative text-3xl font-extrabold md:text-4xl">Votre prochaine belle histoire commence ici.</h2>
+          <p className="relative mx-auto mt-3 max-w-md text-white/70">Inscription gratuite, en deux minutes.</p>
+          <Link to={primaryTo} className="btn-primary relative mt-8 h-14 px-8 text-base">
+            {primaryLabel}
+            <span className="material-symbols-outlined">arrow_forward</span>
           </Link>
         </div>
-      </div>
+      </section>
+
+      <footer className="border-t border-slate-100">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-5 py-8 text-sm text-slate-400 sm:flex-row">
+          <span className="font-extrabold text-ink">
+            b<span className="text-brand">Authentik</span>
+          </span>
+          <span>© {new Date().getFullYear()} bAuthentik — Rencontres authentiques</span>
+          <div className="flex gap-4">
+            <Link to="/connexion" className="hover:text-ink">Connexion</Link>
+            <Link to="/inscription" className="hover:text-ink">Inscription</Link>
+          </div>
+        </div>
+      </footer>
     </div>
+  );
+}
+
+function SectionTitle({ kicker, title }) {
+  return (
+    <div className="text-center">
+      <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-primary">{kicker}</p>
+      <h2 className="mx-auto mt-3 max-w-2xl text-3xl font-extrabold leading-tight tracking-tight md:text-4xl">{title}</h2>
+    </div>
+  );
+}
+
+/**
+ * Carte de tarif. La formule `featured` est mise en avant : contour en
+ * dégradé, légère surélévation, bouton plein ; les autres restent sobres.
+ */
+function PlanCard({ name, price, currency, period, note, badge, savings, featured, features, cta, to }) {
+  const card = (
+    <div className={`relative flex h-full flex-col rounded-[1.75rem] bg-white p-6 ${featured ? "" : "ring-1 ring-slate-200"}`}>
+      {badge && (
+        <span
+          className={`absolute -top-3 left-6 rounded-full px-3 py-1 text-[11px] font-extrabold ${
+            featured ? "bg-brand text-white shadow-lg shadow-primary/30" : "bg-ink text-white"
+          }`}
+        >
+          {badge}
+        </span>
+      )}
+      <p className="text-sm font-extrabold uppercase tracking-wider text-slate-400">{name}</p>
+      <p className="mt-3 flex items-baseline gap-1.5">
+        <span className={`text-4xl font-extrabold tracking-tight ${featured ? "text-brand" : ""}`}>{price}</span>
+        {currency && <span className="text-sm font-bold text-slate-400">{currency}</span>}
+      </p>
+      <p className="text-sm font-semibold text-slate-400">{period}</p>
+      {(note || savings) && (
+        <p className="mt-2 flex flex-wrap items-center gap-2 text-xs font-bold">
+          {savings ? <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-600">−{savings} %</span> : null}
+          {note && <span className="text-slate-500">{note}</span>}
+        </p>
+      )}
+      <ul className="mt-6 flex-1 space-y-2.5">
+        {features.map((f) => (
+          <li key={f} className="flex items-start gap-2 text-sm text-slate-600">
+            <span className={`material-symbols-outlined icon-filled mt-px text-lg ${featured ? "text-primary" : "text-emerald-500"}`}>check_circle</span>
+            {f}
+          </li>
+        ))}
+      </ul>
+      <Link to={to} className={`${featured ? "btn-primary" : "btn-ghost"} mt-7 w-full`}>
+        {cta}
+      </Link>
+    </div>
+  );
+
+  // Contour en dégradé pour la formule vedette (padding de 2 px coloré).
+  return featured ? (
+    <div className="rounded-[1.9rem] bg-gradient-to-br from-primary to-sunset p-[2px] shadow-2xl shadow-primary/20 lg:-translate-y-3">{card}</div>
+  ) : (
+    card
   );
 }

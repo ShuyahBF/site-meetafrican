@@ -20,7 +20,7 @@ export default function Register() {
     setSubmitting(true);
     try {
       await register(form);
-      navigate("/decouverte");
+      navigate("/moments");
     } catch (err) {
       setError(extractErrorMessage(err, "Erreur lors de l'inscription"));
     } finally {

@@ -18,7 +18,7 @@ export default function Login() {
     try {
       const loggedInUser = await login(identifier, password);
       const isStaff = loggedInUser.role === "admin" || loggedInUser.role === "moderator";
-      navigate(isStaff ? "/admin" : "/decouverte");
+      navigate(isStaff ? "/admin" : "/moments");
     } catch (err) {
       setError(extractErrorMessage(err, "Identifiants invalides"));
     } finally {

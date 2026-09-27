@@ -106,7 +106,7 @@ export default function ProfileCard({
 
 const TONE_CLASSES = {
   neutral: "border-2 border-slate-300 text-slate-500 dark:border-white/20 dark:text-white",
-  primary: "bg-primary text-white",
+  primary: "bg-gradient-to-br from-primary to-sunset text-white shadow-lg shadow-primary/30",
   pink: "bg-pink-500/10 text-pink-500 border-2 border-pink-500/30",
 };
 

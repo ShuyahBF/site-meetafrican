@@ -47,3 +47,66 @@ body {
   word-wrap: normal;
   direction: ltr;
 }
+
+/* Icône Material pleine (cœur rempli quand "aimé", etc.) — nécessite l'axe
+   FILL chargé dans index.html. */
+.icon-filled {
+  font-variation-settings: "FILL" 1;
+}
+
+@layer components {
+  /* Dégradé signature "coucher de soleil" (rose -> orange). */
+  .bg-brand {
+    @apply bg-gradient-to-r from-primary to-sunset;
+  }
+  .text-brand {
+    @apply bg-gradient-to-r from-primary to-sunset bg-clip-text text-transparent;
+  }
+
+  /* Bouton principal : pilule en dégradé, ombre colorée, léger
+     enfoncement au clic (retour tactile). */
+  .btn-primary {
+    @apply inline-flex h-12 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-primary to-sunset px-6 text-sm font-bold text-white shadow-lg shadow-primary/30 transition active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100;
+  }
+  /* Bouton secondaire : fond blanc, contour doux. */
+  .btn-ghost {
+    @apply inline-flex h-12 items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-6 text-sm font-bold text-ink transition hover:bg-slate-50 active:scale-[0.97] disabled:opacity-50;
+  }
+
+  /* Puce (centre d'intérêt, hashtag, filtre) — état actif en dégradé. */
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition active:scale-95;
+  }
+  .chip-active {
+    @apply border-transparent bg-gradient-to-r from-primary to-sunset text-white shadow-md shadow-primary/25;
+  }
+
+  /* Carte blanche arrondie (fenêtres, panneaux). */
+  .card {
+    @apply rounded-2xl bg-white shadow-[0_4px_24px_rgba(18,6,11,0.06)] ring-1 ring-slate-100;
+  }
+
+  /* Pastille "verre dépoli" posée sur une vidéo (onglets, compteurs). */
+  .glass {
+    @apply bg-black/25 backdrop-blur-md;
+  }
+
+  /* Titre de section (petites capitales espacées). */
+  .section-title {
+    @apply mb-3 text-xs font-extrabold uppercase tracking-[0.12em] text-slate-400;
+  }
+}
+
+/* Masque la barre de défilement (fil vidéo, carrousels horizontaux) tout
+   en gardant le défilement au doigt/à la molette. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Zone de sécurité en bas des iPhone (barre d'accueil). */
+.pb-safe {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}

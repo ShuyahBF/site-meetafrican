@@ -69,6 +69,10 @@ services:
         value: r2
       - key: MAX_UPLOAD_BYTES
         value: "8388608"
+      - key: MAX_VIDEO_UPLOAD_BYTES
+        value: "52428800"
+      - key: MAX_VIDEO_DURATION_SECONDS
+        value: "60"
       - key: R2_ACCOUNT_ID
         sync: false
       - key: R2_ACCESS_KEY_ID

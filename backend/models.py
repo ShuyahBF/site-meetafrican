@@ -42,6 +42,31 @@ class Role(str, Enum):
     admin = "admin"
 
 
+class RelationshipGoal(str, Enum):
+    """Type de relation recherchée (maquette 10 "Recherche avancée")."""
+    serieuse = "serieuse"        # relation sérieuse
+    mariage = "mariage"          # en vue d'un mariage
+    amitie = "amitie"            # amitié / rencontres
+    a_voir = "a_voir"            # pas encore décidé
+
+
+class ChildrenStatus(str, Enum):
+    """Situation vis-à-vis des enfants (maquette 10, rubrique "Style de vie")."""
+    sans_enfant = "sans_enfant"            # n'a pas d'enfants
+    a_des_enfants = "a_des_enfants"        # a des enfants
+    en_veut = "en_veut"                    # n'en a pas mais en veut
+    n_en_veut_pas = "n_en_veut_pas"        # n'en a pas et n'en veut pas
+
+
+# Centres d'intérêt proposés (maquettes 10 et 11). Liste fermée : garantit
+# que la recherche par centre d'intérêt retrouve bien les profils (pas de
+# fautes de frappe / variantes libres).
+INTERESTS = [
+    "Sport", "Cinéma", "Voyages", "Musique", "Art", "Cuisine", "Photographie",
+    "Danse", "Lecture", "Mode", "Foi", "Entrepreneuriat", "Nature", "Jeux vidéo",
+]
+
+
 # ---------------------------------------------------------------------------
 # Auth / Utilisateurs
 # ---------------------------------------------------------------------------
@@ -97,6 +122,11 @@ class User(BaseModel):
     bio: Optional[str] = Field(None, max_length=500)
     city: Optional[str] = None
     country: Optional[str] = None
+    # Profil détaillé (modifiable via PUT /me/profile, filtrable via /search)
+    interests: List[str] = Field(default_factory=list)
+    relationship_goal: Optional[RelationshipGoal] = None
+    children: Optional[ChildrenStatus] = None
+    profession: Optional[str] = None
     photos: List[Photo] = Field(default_factory=list)
     role: Role = Role.user
     verification_status: VerificationStatus = VerificationStatus.unverified
@@ -147,6 +177,10 @@ class UserPublic(BaseModel):
     bio: Optional[str] = None
     city: Optional[str] = None
     country: Optional[str] = None
+    interests: List[str] = Field(default_factory=list)
+    relationship_goal: Optional[RelationshipGoal] = None
+    children: Optional[ChildrenStatus] = None
+    profession: Optional[str] = None
     photos: List[Photo] = Field(default_factory=list)
     role: Role = Role.user
     verification_status: VerificationStatus
@@ -462,4 +496,73 @@ class Message(BaseModel):
     conversation_id: str
     sender_id: str
     text: str = Field(..., min_length=1, max_length=2000)
+    created_at: str = Field(default_factory=_now)
+    # Accusé de lecture : date à laquelle le destinataire a vu le message
+    # (None tant qu'il ne l'a pas lu). Mis à jour par l'événement WebSocket
+    # "read" ou par POST /conversations/{id}/read — voir routes/chat.py.
+    read_at: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Vidéos courtes — fil vertical façon TikTok ("Moments"), voir routes/videos.py
+# ---------------------------------------------------------------------------
+
+class VideoStatus(str, Enum):
+    processing = "processing"  # compression + floutage en cours (invisible dans le fil)
+    published = "published"    # visible dans le fil
+    failed = "failed"          # traitement impossible (fichier illisible, trop long…)
+    removed = "removed"        # retirée par la modération (reste en base, jamais servie)
+
+
+class Video(BaseModel):
+    """Vidéo courte. Deux versions sont produites au traitement (cf.
+    video_processing.py) :
+      - `blurred_url` : version entièrement floutée, PUBLIQUE, vue par tous ;
+      - `clear_key`   : clé de la version claire dans le stockage PRIVÉ —
+        jamais exposée telle quelle par l'API ; une URL temporaire est
+        générée uniquement pour les membres autorisés (routes/videos.py)."""
+    id: str = Field(default_factory=_uuid)
+    user_id: str
+    caption: str = Field("", max_length=300)
+    # #hashtags extraits de la légende (en minuscules, sans le #) — rendent
+    # les tags cliquables et filtrables dans le fil, comme sur TikTok.
+    hashtags: List[str] = Field(default_factory=list)
+    clear_key: Optional[str] = None
+    blurred_url: Optional[str] = None
+    poster_url: Optional[str] = None
+    # Durée réelle mesurée par ffmpeg au traitement.
+    duration_seconds: Optional[float] = None
+    status: VideoStatus = VideoStatus.processing
+    failure_reason: Optional[str] = None
+    likes_count: int = 0
+    comments_count: int = 0
+    views_count: int = 0
+    reports_count: int = 0
+    removed_reason: Optional[str] = None
+    created_at: str = Field(default_factory=_now)
+
+
+class VideoAccessStatus(str, Enum):
+    pending = "pending"
+    accepted = "accepted"
+    refused = "refused"
+
+
+class VideoAccessRequest(BaseModel):
+    """Demande d'un membre VÉRIFIÉ (`requester_id`) pour voir en clair les
+    vidéos d'un autre membre (`owner_id`). L'autorisation vaut pour toutes
+    les vidéos de l'auteur, et reste révocable par lui."""
+    id: str = Field(default_factory=_uuid)
+    owner_id: str
+    requester_id: str
+    status: VideoAccessStatus = VideoAccessStatus.pending
+    created_at: str = Field(default_factory=_now)
+    decided_at: Optional[str] = None
+
+
+class VideoComment(BaseModel):
+    id: str = Field(default_factory=_uuid)
+    video_id: str
+    user_id: str
+    text: str = Field(..., min_length=1, max_length=500)
     created_at: str = Field(default_factory=_now)
