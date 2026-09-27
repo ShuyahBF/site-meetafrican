@@ -33,6 +33,15 @@ class Settings(BaseSettings):
     def frontend_origins(self) -> list[str]:
         return [o.strip() for o in self.frontend_origin.split(",") if o.strip()]
 
+    @property
+    def public_site_url(self) -> str:
+        """URL publique "principale" du site (liens envoyés aux membres :
+        parrainage…) = la PREMIÈRE origine de FRONTEND_ORIGIN. Mettre donc le
+        domaine officiel en tête, ex.
+        FRONTEND_ORIGIN=https://beauthentik.net,https://www.beauthentik.net"""
+        origins = self.frontend_origins
+        return origins[0].rstrip("/") if origins else "http://localhost:5173"
+
     # PawaPay (ported from ShuyahBF/Emergent, Site-SawaliSmartSystems)
     pawapay_environment: str = "sandbox"  # sandbox | production
     pawapay_api_token_sandbox: Optional[str] = None

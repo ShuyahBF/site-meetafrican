@@ -44,10 +44,10 @@ services:
       - key: JWT_EXPIRES_MINUTES
         value: "10080"
 
-      # --- CORS : URL(s) du frontend, séparées par une virgule si plusieurs
-      # (ex. l'URL onrender.com pendant les tests + bauthentik.com une fois
-      # le domaine branché). À renseigner une fois le frontend déployé et son
-      # URL connue.
+      # --- CORS : URL(s) du frontend, séparées par une virgule si plusieurs.
+      # La PREMIÈRE sert aussi d'URL publique dans les liens envoyés aux
+      # membres (parrainage) : y mettre le domaine officiel, ex.
+      # https://beauthentik.net,https://www.beauthentik.net,https://meetafrican-frontend.onrender.com
       - key: FRONTEND_ORIGIN
         sync: false
 

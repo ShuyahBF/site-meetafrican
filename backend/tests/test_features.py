@@ -249,3 +249,14 @@ def test_chat_typing_read_receipts_and_unread(client, make_user):
             event = ws_a.receive_json()
             assert event["type"] == "read" and event["data"]["reader_id"] == b_id
             assert client.get("/api/conversations/unread-count", headers=b).json()["unread"] == 0
+
+
+def test_referral_link_uses_first_public_origin(client, make_user, monkeypatch):
+    """FRONTEND_ORIGIN peut lister plusieurs domaines : le lien de parrainage
+    doit utiliser le premier, pas la liste entière."""
+    from config import get_settings
+
+    monkeypatch.setattr(get_settings(), "frontend_origin", "https://beauthentik.net, https://www.beauthentik.net")
+    _, h, _ = make_user()
+    link = client.get("/api/me/referrals", headers=h).json()["referral_link"]
+    assert link.startswith("https://beauthentik.net/inscription?ref=")
