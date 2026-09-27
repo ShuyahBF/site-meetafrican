@@ -17,6 +17,9 @@ import Moments from "@/pages/Moments";
 import PublishVideo from "@/pages/PublishVideo";
 import Search from "@/pages/Search";
 import UserProfile from "@/pages/UserProfile";
+// Pages légales publiques (CGU + politique de confidentialité et de service)
+import Cgu from "@/pages/legal/Cgu";
+import Confidentialite from "@/pages/legal/Confidentialite";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminPhotos from "@/pages/admin/AdminPhotos";
@@ -49,6 +52,8 @@ export default function App() {
           <Route path="/" element={<Welcome />} />
           <Route path="/inscription" element={<Register />} />
           <Route path="/connexion" element={<Login />} />
+          <Route path="/cgu" element={<Cgu />} />
+          <Route path="/confidentialite" element={<Confidentialite />} />
           {/* Fil vidéo façon TikTok : /moments, lien partagé /moments/:id */}
           <Route path="/moments" element={<Protected><Moments /></Protected>} />
           <Route path="/moments/publier" element={<Protected><PublishVideo /></Protected>} />

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import PaymentMethods from "@/components/PaymentMethods";
 
 const DEFAULT_HERO_IMAGE = "/images/hero-couple.jpg";
 
@@ -42,7 +43,7 @@ const STEPS = [
 
 const FAQ = [
   { q: "L'inscription est-elle gratuite ?", a: "Oui. Créer son profil, swiper, matcher et regarder les Moments est gratuit. L'abonnement Premium débloque tout le reste." },
-  { q: "Comment payer l'abonnement ?", a: "Par Mobile Money (Orange Money, Moov Money, Telecel Money…) via une page de paiement sécurisée. Aucune carte bancaire nécessaire." },
+  { q: "Comment payer l'abonnement ?", a: "Par Mobile Money : Orange Money, Moov Money, Telecel Money, Sank Money, via la page de paiement sécurisée PawaPay. Aucune carte bancaire nécessaire." },
   { q: "Qui peut voir mes vidéos ?", a: "Tout le monde voit une version entièrement floutée. La version claire est réservée à vos matchs et aux membres vérifiés que vous acceptez — et vous pouvez retirer l'accès à tout moment." },
   { q: "Pourquoi vérifier mon identité ?", a: "Pour garantir une communauté de personnes réelles. La vérification donne le badge bleu et permet de publier des Moments. Votre pièce n'est jamais montrée aux autres membres." },
 ];
@@ -341,10 +342,7 @@ export default function Welcome() {
             />
           ))}
         </div>
-        <p className="mt-6 flex items-center justify-center gap-2 text-xs font-semibold text-slate-400">
-          <span className="material-symbols-outlined text-base">lock</span>
-          Paiement sécurisé · Orange Money · Moov Money · Telecel Money
-        </p>
+        <PaymentMethods className="mt-10" />
       </section>
 
       {/* ---------------------------------------------------------------- */}
@@ -387,7 +385,9 @@ export default function Welcome() {
             be<span className="text-brand">Authentik</span>
           </span>
           <span>© {new Date().getFullYear()} beAuthentik — Rencontres authentiques</span>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap justify-center gap-4">
+            <Link to="/cgu" className="hover:text-ink">Conditions d'utilisation</Link>
+            <Link to="/confidentialite" className="hover:text-ink">Confidentialité</Link>
             <Link to="/connexion" className="hover:text-ink">Connexion</Link>
             <Link to="/inscription" className="hover:text-ink">Inscription</Link>
           </div>

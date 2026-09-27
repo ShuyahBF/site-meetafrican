@@ -14,6 +14,8 @@ Docs PawaPay v2 : https://docs.pawapay.io/v2/api-reference/deposits
 """
 from __future__ import annotations
 
+import secrets
+
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
@@ -211,7 +213,7 @@ async def create_wallet_recharge(
 ):
     """Même mécanique que /payment-page (abonnement), mais crédite le
     portefeuille de l'utilisateur au lieu d'activer un abonnement — voir la
-    branche purpose=="wallet_recharge" dans _apply_webhook ci-dessous."""
+    branche purpose=="wallet_recharge" dans _apply_verified_status ci-dessous."""
     s = get_settings()
     token = _active_token()
     if not token:
@@ -299,6 +301,10 @@ async def create_wallet_recharge(
 async def get_payment_status(
     deposit_id: str, refresh: bool = False, user: dict = Depends(get_current_user)
 ):
+    """État d'un paiement. `refresh=true` (page de retour après paiement) :
+    interroge PawaPay et APPLIQUE le résultat (activation de l'abonnement,
+    crédit du portefeuille) — utile si la notification (webhook) de
+    PawaPay tarde ou se perd."""
     payment = await db.payments.find_one({"deposit_id": deposit_id}, {"_id": 0})
     if not payment:
         raise HTTPException(status_code=404, detail="Paiement introuvable")
@@ -307,60 +313,104 @@ async def get_payment_status(
     if not refresh or payment["status"] in ("completed", "failed"):
         return payment
 
+    entry = await _fetch_deposit(deposit_id)
+    if entry:
+        await _apply_verified_status(payment, entry)
+    return await db.payments.find_one({"deposit_id": deposit_id}, {"_id": 0})
+
+
+def _extract_deposit(body: Any) -> Optional[Dict[str, Any]]:
+    """Réponse de GET /v2/deposits/{id} -> objet dépôt. Tolère les formats
+    connus : {"status": "FOUND", "data": {...}}, {"data": [...]}, [...] ou
+    l'objet dépôt directement."""
+    if isinstance(body, list):
+        return body[0] if body else None
+    if isinstance(body, dict):
+        inner = body.get("data")
+        if isinstance(inner, list):
+            return inner[0] if inner else None
+        if isinstance(inner, dict):
+            return inner
+        if body.get("depositId"):
+            return body
+    return None
+
+
+async def _fetch_deposit(deposit_id: str) -> Optional[Dict[str, Any]]:
+    """Statut FAISANT FOI d'un dépôt, demandé directement à PawaPay (avec
+    notre jeton API). None si PawaPay est injoignable ou ne connaît pas le
+    dépôt."""
     token = _active_token()
     if not token:
-        return payment
+        return None
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             r = await client.get(
                 f"{_base_url()}/v2/deposits/{deposit_id}",
                 headers={"Authorization": f"Bearer {token}"},
             )
-            data = r.json() if r.status_code < 500 else {}
-    except httpx.HTTPError:
-        return payment  # on laisse tel quel, le webhook ou un prochain refresh rattrapera
-
-    entries = data if isinstance(data, list) else data.get("data") or [data]
-    entry = entries[0] if entries else {}
-    api_status = (entry or {}).get("status")
-    update: Dict[str, Any] = {"updated_at": _now()}
-    if api_status:
-        update["status"] = api_status.lower()
-        update["api_status"] = api_status
-    fr = (entry or {}).get("failureReason")
-    if fr:
-        update["api_message"] = _readable(fr)
-    await db.payments.update_one({"deposit_id": deposit_id}, {"$set": update})
-    payment.update(update)
-    return payment
+        if r.status_code >= 400:
+            return None
+        return _extract_deposit(r.json())
+    except (httpx.HTTPError, ValueError):
+        return None
 
 
-async def _apply_webhook(payload: Dict[str, Any]) -> Dict[str, Any]:
-    deposit_id = payload.get("depositId") or payload.get("deposit_id")
-    if not deposit_id:
-        return {"ok": False, "reason": "depositId manquant"}
-    payment = await db.payments.find_one({"deposit_id": deposit_id}, {"_id": 0})
-    if not payment:
-        await db.webhook_logs.insert_one({
-            "id": _uuid(), "topic": "pawapay_orphan", "payload": payload, "created_at": _now(),
-        })
-        return {"ok": False, "reason": "paiement inconnu (orphelin loggé)"}
+def _deposit_amount(entry: Dict[str, Any]) -> Optional[float]:
+    """Montant du dépôt tel que connu de PawaPay (plusieurs noms selon la
+    version de l'API)."""
+    for key in ("amount", "depositedAmount", "requestedAmount"):
+        if entry.get(key) not in (None, ""):
+            try:
+                return float(entry[key])
+            except (TypeError, ValueError):
+                return None
+    details = entry.get("amountDetails") or {}
+    try:
+        return float(details["amount"]) if details.get("amount") not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
 
-    status_raw = (payload.get("status") or "").upper()
+
+async def _apply_verified_status(payment: Dict[str, Any], entry: Dict[str, Any]) -> Dict[str, Any]:
+    """Applique le statut VÉRIFIÉ auprès de PawaPay, une seule fois :
+    - COMPLETED : contrôle du montant, puis activation de l'abonnement ou
+      crédit du portefeuille ;
+    - FAILED / REJECTED : paiement en échec ;
+    - autre (en cours) : simple mise à jour de l'état brut.
+    Point d'entrée UNIQUE (webhook et page de retour) : l'activation ne
+    peut donc ni être oubliée, ni être faite deux fois."""
+    deposit_id = payment["deposit_id"]
+    status_raw = (entry.get("status") or "").upper()
     status_map = {"COMPLETED": "completed", "FAILED": "failed", "REJECTED": "failed"}
-    new_status = status_map.get(status_raw, payment["status"])
+    new_status = status_map.get(status_raw)
 
-    # Idempotence : rien à faire si déjà appliqué
-    if payment["status"] == new_status:
+    update: Dict[str, Any] = {"api_status": status_raw or None, "updated_at": _now()}
+    message = _readable(entry.get("failureReason") or entry.get("rejectionReason"))
+    if message:
+        update["api_message"] = message
+
+    if new_status == "completed":
+        paid = _deposit_amount(entry)
+        if paid is not None and abs(paid - float(payment["amount"])) > 0.01:
+            # Montant différent de celui demandé : on n'active rien, un
+            # humain doit regarder (visible dans l'admin Paiements).
+            update.update({"status": "amount_mismatch", "api_message": f"Montant reçu {paid} ≠ montant attendu {payment['amount']}"})
+            await db.payments.update_one({"deposit_id": deposit_id}, {"$set": update})
+            return {"ok": False, "reason": "montant incohérent"}
+
+    if not new_status:
+        await db.payments.update_one({"deposit_id": deposit_id}, {"$set": update})
         return {"ok": True, "applied": False}
 
-    update = {
-        "status": new_status,
-        "api_status": status_raw,
-        "api_message": _readable(payload.get("failureReason") or payload.get("rejectionReason")),
-        "updated_at": _now(),
-    }
-    await db.payments.update_one({"deposit_id": deposit_id}, {"$set": update})
+    # Passage atomique vers l'état final : si deux notifications arrivent en
+    # même temps, une seule "gagne" et applique les effets.
+    update["status"] = new_status
+    result = await db.payments.update_one(
+        {"deposit_id": deposit_id, "status": {"$nin": ["completed", "failed"]}}, {"$set": update}
+    )
+    if not result.modified_count:
+        return {"ok": True, "applied": False}  # déjà traité (idempotence)
 
     if new_status == "completed" and payment.get("subscription_id"):
         subscription = await db.subscriptions.find_one({"id": payment["subscription_id"]})
@@ -371,7 +421,7 @@ async def _apply_webhook(payload: Dict[str, Any]) -> Dict[str, Any]:
             expires_at = (datetime.now(timezone.utc) + timedelta(days=duration_days)).isoformat()
             await db.subscriptions.update_one(
                 {"id": subscription["id"]},
-                {"$set": {"status": "active", "started_at": _now(), "expires_at": expires_at}},
+                {"$set": {"status": "active", "started_at": _now(), "expires_at": expires_at, "payment_id": deposit_id}},
             )
     elif new_status == "completed" and payment.get("purpose") == "wallet_recharge":
         from models import WalletTransaction
@@ -389,12 +439,32 @@ async def _apply_webhook(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 @router.post("/webhooks/deposits/{secret}", include_in_schema=False)
 async def webhook_deposits(secret: str, request: Request):
+    """Notification de PawaPay. Le secret dans l'URL filtre les appels, mais
+    on ne fait JAMAIS confiance au contenu reçu : le statut est redemandé à
+    PawaPay avant d'activer quoi que ce soit (une notification forgée par
+    quelqu'un qui connaîtrait le secret n'a donc aucun effet)."""
     s = get_settings()
     expected = (s.pawapay_callback_secret or "").strip()
-    if not expected or secret != expected:
+    if not expected or not secrets.compare_digest(secret, expected):
         raise HTTPException(status_code=403, detail="secret de callback invalide")
     try:
         payload = await request.json()
     except Exception:
         raise HTTPException(status_code=400, detail="payload invalide")
-    return await _apply_webhook(payload)
+
+    deposit_id = payload.get("depositId") or payload.get("deposit_id")
+    if not deposit_id:
+        return {"ok": False, "reason": "depositId manquant"}
+    payment = await db.payments.find_one({"deposit_id": deposit_id}, {"_id": 0})
+    if not payment:
+        await db.webhook_logs.insert_one({
+            "id": _uuid(), "topic": "pawapay_orphan", "payload": payload, "created_at": _now(),
+        })
+        return {"ok": False, "reason": "paiement inconnu (orphelin loggé)"}
+
+    entry = await _fetch_deposit(deposit_id)
+    if not entry:
+        # PawaPay injoignable : erreur 503 pour que PawaPay renvoie la
+        # notification plus tard (la page de retour peut aussi rattraper).
+        raise HTTPException(status_code=503, detail="vérification PawaPay impossible, réessayer")
+    return await _apply_verified_status(payment, entry)
