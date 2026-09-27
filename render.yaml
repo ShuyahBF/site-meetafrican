@@ -141,3 +141,7 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
+      # ... autres configurations ...
+    domains:
+      - beauthentik.net
+      - ://beauthentik.net
