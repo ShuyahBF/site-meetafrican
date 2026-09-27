@@ -105,22 +105,6 @@ const SECTIONS = [
     ),
   },
   {
-    id: "prestataires",
-    title: "Prestataires et traitements automatisés",
-    body: (
-      <>
-        <p>Vos données sont traitées par des prestataires techniques, uniquement pour faire fonctionner le service :</p>
-        <ul>
-          <li><strong>Hébergement</strong> du site et de l'API (Render), de la base de données (MongoDB Atlas) et des fichiers (Cloudflare R2).</li>
-          <li><strong>Analyse automatique</strong> des pièces d'identité et des photos par un service d'intelligence artificielle (Claude, d'Anthropic), avec revue humaine en cas de doute. Le résultat (approuvé, refusé, à revoir) est conservé avec votre dossier.</li>
-          <li><strong>Paiements</strong> Mobile Money (Orange Money, Moov Money, Telecel Money, Sank Money) traités par PawaPay.</li>
-          <li><strong>Polices de caractères</strong> chargées depuis Google Fonts (qui reçoit à cette occasion votre adresse IP).</li>
-        </ul>
-        <p>Certains de ces prestataires sont situés hors d'Afrique (notamment aux États-Unis et en Europe) : vos données peuvent donc y être transférées, dans le cadre strict de ces prestations.</p>
-      </>
-    ),
-  },
-  {
     id: "securite",
     title: "Sécurité",
     body: (

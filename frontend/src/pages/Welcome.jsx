@@ -386,8 +386,6 @@ export default function Welcome() {
           </span>
           <span>© {new Date().getFullYear()} beAuthentik — Rencontres authentiques</span>
           <div className="flex flex-wrap justify-center gap-4">
-            <Link to="/cgu" className="hover:text-ink">Conditions d'utilisation</Link>
-            <Link to="/confidentialite" className="hover:text-ink">Confidentialité</Link>
             <Link to="/connexion" className="hover:text-ink">Connexion</Link>
             <Link to="/inscription" className="hover:text-ink">Inscription</Link>
           </div>

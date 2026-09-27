@@ -468,3 +468,51 @@ async def webhook_deposits(secret: str, request: Request):
         # notification plus tard (la page de retour peut aussi rattraper).
         raise HTTPException(status_code=503, detail="vérification PawaPay impossible, réessayer")
     return await _apply_verified_status(payment, entry)
+
+
+# ---------------------------------------------------------------------------
+# Rapprochement automatique (sans callback)
+# ---------------------------------------------------------------------------
+# Le compte PawaPay est partagé avec sawalismartsystems.com : son unique URL
+# de callback pointe vers Sawali, beAuthentik ne reçoit donc pas les
+# notifications. On interroge nous-mêmes PawaPay, à intervalle régulier,
+# pour chaque paiement encore en attente : l'abonnement est activé (ou le
+# portefeuille crédité) même si le membre ne revient jamais sur le site.
+
+RECONCILE_INTERVAL_SECONDS = 60      # fréquence de la vérification
+RECONCILE_MAX_AGE_HOURS = 48         # au-delà, un paiement en attente est abandonné
+
+
+async def reconcile_pending_payments() -> int:
+    """Une passe de rapprochement. Renvoie le nombre de paiements finalisés
+    (payés ou en échec) pendant cette passe."""
+    from datetime import timedelta
+    oldest = (datetime.now(timezone.utc) - timedelta(hours=RECONCILE_MAX_AGE_HOURS)).isoformat()
+    pending = await db.payments.find(
+        # "pending" = le membre a été redirigé vers la page de paiement PawaPay
+        {"status": "pending", "created_at": {"$gte": oldest}}, {"_id": 0}
+    ).to_list(200)
+    finalized = 0
+    for payment in pending:
+        entry = await _fetch_deposit(payment["deposit_id"])
+        if not entry:
+            continue  # PawaPay injoignable ou dépôt pas encore créé : prochaine passe
+        result = await _apply_verified_status(payment, entry)
+        if result.get("applied"):
+            finalized += 1
+    return finalized
+
+
+async def reconcile_loop() -> None:
+    """Boucle de fond démarrée au lancement du serveur (server.py). Une
+    erreur ponctuelle ne doit jamais arrêter la boucle."""
+    import asyncio
+    import logging
+    logger = logging.getLogger(__name__)
+    while True:
+        try:
+            if _active_token():
+                await reconcile_pending_payments()
+        except Exception:  # noqa: BLE001
+            logger.exception("Erreur pendant le rapprochement des paiements PawaPay")
+        await asyncio.sleep(RECONCILE_INTERVAL_SECONDS)

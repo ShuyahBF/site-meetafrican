@@ -481,3 +481,28 @@ def test_payment_amount_mismatch_and_refresh_activation(client, make_user, monke
     r = client.get(f"/api/payments/pawapay/{deposit_id}", params={"refresh": True}, headers=headers).json()
     assert r["status"] == "completed"
     assert client.portal.call(lambda: db.subscriptions.find_one({"id": sub_id}))["status"] == "active"
+
+
+def test_reconcile_activates_pending_payment_without_callback(client, make_user, monkeypatch):
+    """Compte PawaPay partagé (callback chez Sawali) : la passe de
+    rapprochement active l'abonnement sans aucune notification reçue."""
+    from datetime import datetime, timezone
+
+    from db import db
+    import routes.payments_pawapay as pp
+
+    deposit_id, sub_id, _ = _pending_subscription_payment(client, make_user, amount=5000)
+    # Paiement "pending" (membre redirigé vers PawaPay), créé à l'instant
+    client.portal.call(lambda: db.payments.update_one(
+        {"deposit_id": deposit_id},
+        {"$set": {"status": "pending", "created_at": datetime.now(timezone.utc).isoformat()}},
+    ))
+
+    async def completed(_):
+        return {"depositId": deposit_id, "status": "COMPLETED", "amount": "5000"}
+    monkeypatch.setattr(pp, "_fetch_deposit", completed)
+
+    assert client.portal.call(pp.reconcile_pending_payments) == 1
+    assert client.portal.call(lambda: db.subscriptions.find_one({"id": sub_id}))["status"] == "active"
+    # Passe suivante : plus rien en attente, rien n'est appliqué deux fois
+    assert client.portal.call(pp.reconcile_pending_payments) == 0
