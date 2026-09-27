@@ -24,9 +24,10 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expires_minutes: int = 60 * 24 * 7  # 7 jours
 
-    # CORS — une ou plusieurs origines séparées par des virgules (utile pour
-    # accepter à la fois l'URL Render (*.onrender.com) et un domaine custom
-    # une fois branché, sans devoir choisir entre les deux).
+    # CORS — une ou plusieurs origines séparées par des virgules, le domaine
+    # officiel EN PREMIER (il sert aussi d'URL publique dans les liens envoyés
+    # aux membres et pour le retour des paiements), ex. en production :
+    # FRONTEND_ORIGIN=https://beauthentik.net,https://www.beauthentik.net
     frontend_origin: str = "http://localhost:5173"
 
     @property

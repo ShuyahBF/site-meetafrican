@@ -260,3 +260,18 @@ def test_referral_link_uses_first_public_origin(client, make_user, monkeypatch):
     _, h, _ = make_user()
     link = client.get("/api/me/referrals", headers=h).json()["referral_link"]
     assert link.startswith("https://beauthentik.net/inscription?ref=")
+
+
+def test_payment_return_url_always_on_public_site(monkeypatch):
+    """Retour après paiement : toujours une page du site public, et une
+    adresse fournie par le navigateur n'est acceptée que sur un domaine
+    autorisé (pas de redirection vers un site tiers)."""
+    from config import get_settings
+    from routes.payments_pawapay import _return_url
+
+    monkeypatch.setattr(get_settings(), "frontend_origin", "https://beauthentik.net,https://www.beauthentik.net")
+    assert _return_url(None, "abonnement", "dep1") == "https://beauthentik.net/abonnement?paiement=dep1"
+    assert _return_url("https://www.beauthentik.net/portefeuille?x=1", "portefeuille", "d") == "https://www.beauthentik.net/portefeuille?x=1"
+    # Domaine étranger ou simple préfixe trompeur -> ignoré
+    assert _return_url("https://evil.example/phish", "abonnement", "d2").startswith("https://beauthentik.net/")
+    assert _return_url("https://beauthentik.net.evil.example/x", "abonnement", "d3").startswith("https://beauthentik.net/")

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import PaymentReturnBanner from "@/components/PaymentReturnBanner";
 import { apiClient, extractErrorMessage } from "@/lib/api";
 import BottomNav from "@/components/BottomNav";
 
@@ -57,6 +58,9 @@ export default function Wallet() {
         </Link>
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">Mon portefeuille</h1>
       </header>
+
+      {/* Retour de la page de paiement PawaPay (?paiement=<id>) : le solde est rechargé une fois confirmé */}
+      <PaymentReturnBanner onCompleted={load} />
 
       <main className="flex-1 px-4 pb-6">
         <div className="rounded-2xl bg-primary p-5 text-white shadow-lg">

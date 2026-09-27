@@ -35,6 +35,19 @@ MeetAfrican — site de rencontre pour hommes et femmes africains.
 - **Charte** : fond **blanc** pour toutes les fenêtres, dégradé signature
   rose → orange, micro-animations (voir `frontend/tailwind.config.js`).
 
+## Adresses publiques
+
+| Rôle | Adresse |
+|------|---------|
+| Site | https://beauthentik.net (et https://www.beauthentik.net) |
+| API  | https://api.beauthentik.net/api |
+| Webhook PawaPay (à déclarer chez PawaPay) | https://api.beauthentik.net/api/payments/pawapay/webhooks/deposits/`<PAWAPAY_CALLBACK_SECRET>` |
+
+Toutes les URL visibles par les membres (liens de parrainage, retour après
+paiement, liens de partage des Moments) utilisent `beauthentik.net`. DNS chez
+Cloudflare : `beauthentik.net`, `www` et `api` pointent vers les services
+Render déclarés dans `render.yaml` (clé `domains`).
+
 ## Stack
 
 - **Backend** : FastAPI (Python) + MongoDB (Motor), JWT.
@@ -115,7 +128,7 @@ jamais utiliser en production**.
 1. Dashboard Cloudflare → **R2** → créer deux buckets : `meetafrican-photos` et
    `meetafrican-documents`.
 2. Sur `meetafrican-photos` : Settings → Public access → activer un accès public
-   (domaine personnalisé recommandé, ex. `photos.meetafrican.com` ; l'URL
+   (domaine personnalisé recommandé, ex. `photos.beauthentik.net` ; l'URL
    `r2.dev` fournie par défaut convient pour tester). Renseigner cette URL dans
    `R2_PUBLIC_PHOTOS_BASE_URL`.
 3. `meetafrican-documents` reste **privé** — ne rien activer dessus.
