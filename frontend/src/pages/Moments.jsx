@@ -18,6 +18,42 @@ const TABS = [
 ];
 const PAGE_SIZE = 8;
 
+// Sous-onglets de "Près de moi" : par ville (profil) ou par position réelle.
+const NEAR_MODES = [
+  { key: "ville", label: "Ma ville", icon: "location_city" },
+  { key: "gps", label: "Autour de moi", icon: "my_location" },
+];
+const NEAR_STORAGE_KEY = "moments.near";
+
+/** Mode "Près de moi" mémorisé sur cet appareil (confort seulement). */
+function readNearMode() {
+  try {
+    return localStorage.getItem(NEAR_STORAGE_KEY) === "gps" ? "gps" : "ville";
+  } catch {
+    return "ville";
+  }
+}
+
+/** Demande la position au navigateur (fenêtre d'autorisation) et l'envoie
+ *  au serveur, qui l'arrondit à ~1 km. Renvoie "ok", "denied" ou "unsupported". */
+function shareMyPosition() {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) return resolve("unsupported");
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        try {
+          await apiClient.put("/me/location", { lat: coords.latitude, lng: coords.longitude });
+          resolve("ok");
+        } catch {
+          resolve("denied");
+        }
+      },
+      () => resolve("denied"),
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 10 * 60 * 1000 },
+    );
+  });
+}
+
 /**
  * Fil vidéo vertical plein écran "Moments".
  * - Défilement "aimanté" d'une vidéo à l'autre (CSS scroll-snap), au doigt,
@@ -36,6 +72,10 @@ export default function Moments() {
   const tag = searchParams.get("tag");
 
   const [tab, setTab] = useState("pour-toi");
+  const [near, setNear] = useState(readNearMode);
+  // Géolocalisation (mode "Autour de moi") : idle | locating | ok | denied | unsupported
+  const [gpsStatus, setGpsStatus] = useState("idle");
+  const gpsMode = tab === "pres-de-moi" && near === "gps" && !tag;
   const [items, setItems] = useState([]);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -59,10 +99,44 @@ export default function Moments() {
   const fetchPage = useCallback(
     (skip) =>
       apiClient.get("/videos/feed", {
-        params: { tab: tag ? "pour-toi" : tab, tag: tag || undefined, skip, limit: PAGE_SIZE },
+        params: {
+          tab: tag ? "pour-toi" : tab,
+          near: tab === "pres-de-moi" ? near : undefined,
+          tag: tag || undefined,
+          skip,
+          limit: PAGE_SIZE,
+        },
       }),
-    [tab, tag],
+    [tab, tag, near],
   );
+
+  // Mode "Autour de moi" : la position est OBLIGATOIRE. On la demande une
+  // fois par visite (le navigateur affiche sa fenêtre d'autorisation).
+  const locate = useCallback(async () => {
+    setGpsStatus("locating");
+    setGpsStatus(await shareMyPosition());
+  }, []);
+  useEffect(() => {
+    if (gpsMode && gpsStatus === "idle") locate();
+  }, [gpsMode, gpsStatus, locate]);
+
+  const chooseNear = (mode) => {
+    setNear(mode);
+    try {
+      localStorage.setItem(NEAR_STORAGE_KEY, mode);
+    } catch {
+      // stockage indisponible (navigation privée) : sans importance
+    }
+  };
+
+  const stopSharing = async () => {
+    await apiClient.delete("/me/location").catch(() => {});
+    setGpsStatus("stopped");
+    showToast("Position supprimée 📍");
+  };
+
+  // En mode "Autour de moi", le fil n'est chargé qu'une fois la position partagée.
+  const waitingForGps = gpsMode && gpsStatus !== "ok";
 
   // Ajoute une page reçue au fil (sans doublon : une vidéo partagée ouverte
   // en premier peut aussi revenir dans le fil).
@@ -80,11 +154,16 @@ export default function Moments() {
   // change. Une vidéo partagée (/moments/:videoId) passe en tête du fil.
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
     setItems([]);
     setActiveIndex(0);
     feedCountRef.current = 0;
     containerRef.current?.scrollTo({ top: 0 });
+    if (waitingForGps) {
+      setLoading(false);
+      setHasMore(false);
+      return;
+    }
+    setLoading(true);
     (async () => {
       let first = [];
       if (videoId) {
@@ -107,7 +186,7 @@ export default function Moments() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchPage, videoId]);
+  }, [fetchPage, videoId, waitingForGps]);
 
   // Page suivante (défilement infini).
   const loadMore = useCallback(async () => {
@@ -258,6 +337,31 @@ export default function Moments() {
           )}
         </header>
 
+        {/* "Près de moi" : choix Ma ville / Autour de moi */}
+        {tab === "pres-de-moi" && !tag && (
+          <div className="absolute inset-x-0 top-14 z-20 flex flex-col items-center gap-1.5">
+            <div className="glass flex rounded-full p-1">
+              {NEAR_MODES.map((m) => (
+                <button
+                  key={m.key}
+                  onClick={() => chooseNear(m.key)}
+                  className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-extrabold transition ${
+                    near === m.key ? "bg-white text-ink" : "text-white/80"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-sm">{m.icon}</span>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            {gpsMode && gpsStatus === "ok" && (
+              <button onClick={stopSharing} className="text-[11px] font-semibold text-white/70 underline drop-shadow">
+                Ne plus partager ma position
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Le fil : une vidéo par "page", défilement aimanté */}
         <div ref={containerRef} className="no-scrollbar h-full snap-y snap-mandatory overflow-y-scroll">
           {items.map((video, index) => (
@@ -283,7 +387,11 @@ export default function Moments() {
             </div>
           ))}
 
-          {!loading && items.length === 0 && <EmptyFeed tab={tab} tag={tag} hint={hint} />}
+          {waitingForGps ? (
+            <GpsRequired status={gpsStatus} onRetry={locate} onUseCity={() => chooseNear("ville")} />
+          ) : (
+            !loading && items.length === 0 && <EmptyFeed tab={tab} tag={tag} hint={hint} />
+          )}
           {loading && items.length === 0 && (
             <div className="flex h-full items-center justify-center">
               <span className="h-10 w-10 animate-spin rounded-full border-4 border-white/20 border-t-primary" />
@@ -325,6 +433,35 @@ export default function Moments() {
         <MatchCelebration otherUser={match.otherUser} conversationId={match.conversationId} onClose={() => setMatch(null)} />
       )}
       <Toast message={toast} />
+    </div>
+  );
+}
+
+/** Mode "Autour de moi" sans position : la géolocalisation est exigée. */
+function GpsRequired({ status, onRetry, onUseCity }) {
+  const locating = status === "locating" || status === "idle";
+  const text = locating
+    ? "Autorisez l'accès à votre position dans la fenêtre du navigateur."
+    : status === "unsupported"
+    ? "Votre navigateur ne permet pas la géolocalisation. Utilisez « Ma ville »."
+    : status === "stopped"
+    ? "Vous ne partagez plus votre position. Réactivez-la pour voir les membres autour de vous."
+    : "La géolocalisation est nécessaire pour ce mode. Autorisez-la pour ce site dans les réglages de votre navigateur (icône 🔒 à gauche de l'adresse), puis réessayez.";
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-3 px-8 text-center">
+      <span className="text-6xl">{locating ? "🛰️" : "📍"}</span>
+      <p className="text-xl font-extrabold text-white">{locating ? "Localisation en cours…" : "Activez votre position"}</p>
+      <p className="max-w-xs text-sm text-white/70">{text}</p>
+      <p className="max-w-xs text-xs text-white/50">
+        Votre position est arrondie à environ 1 km et n'est jamais montrée : les autres membres voient seulement une distance approximative.
+      </p>
+      {!locating && status !== "unsupported" && (
+        <button onClick={onRetry} className="btn-primary mt-2">
+          <span className="material-symbols-outlined text-lg">my_location</span>
+          Activer ma position
+        </button>
+      )}
+      <button onClick={onUseCity} className="text-sm font-bold text-white/80 underline">Voir plutôt ma ville</button>
     </div>
   );
 }

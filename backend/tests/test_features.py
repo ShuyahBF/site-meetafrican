@@ -175,8 +175,8 @@ def test_video_blurred_for_all_clear_only_for_accepted_verified(client, make_use
 
 
 def test_feed_like_comment_view_report(client, make_user):
-    author_id, author, _ = make_user(gender="femme", verified=True, country="Mali")
-    _, viewer, _ = make_user(gender="homme", country="Mali")
+    author_id, author, _ = make_user(gender="femme", verified=True, country="Mali", city="Bamako")
+    _, viewer, _ = make_user(gender="homme", country="Mali", city=" bamako ")
     video_id = _publish_ready(client, author, author_id, caption="Bamako by night #bamako")["id"]
 
     feed = client.get("/api/videos/feed", headers=viewer).json()
@@ -535,3 +535,57 @@ def test_payment_page_shows_beauthentik_branding(client, make_user, monkeypatch)
     assert sent["customerMessage"] == "beAuthentik"
     assert "beAuthentik" in sent["reason"] and len(sent["reason"]) <= 50
     assert sent["language"] == "FR"
+
+
+
+def test_near_me_by_city_and_by_gps(client, make_user):
+    """"Près de moi" : par ville (profil) ou par géolocalisation (obligatoire
+    pour ce mode, distance arrondie, position jamais exposée)."""
+    a_id, a, _ = make_user(gender="femme", verified=True, country="Burkina Faso", city="Ouagadougou")
+    b_id, b, _ = make_user(gender="femme", verified=True, country="Burkina Faso", city="Bobo-Dioulasso")
+    _, viewer, _ = make_user(gender="homme", country="Burkina Faso", city="Ouagadougou")
+    va = _publish_ready(client, a, a_id, caption="Ouaga")["id"]
+    vb = _publish_ready(client, b, b_id, caption="Bobo")["id"]
+    feed = lambda near: client.get("/api/videos/feed", params={"tab": "pres-de-moi", "near": near}, headers=viewer).json()
+
+    # Ville : seulement Ouagadougou
+    ids = [v["id"] for v in feed("ville")["items"]]
+    assert va in ids and vb not in ids
+
+    # GPS : exigé tant que la position n'est pas partagée
+    assert feed("gps")["location_required"] is True
+
+    # Positions : A à ~5 km du visiteur, B à Bobo (~300 km, hors rayon)
+    assert client.put("/api/me/location", json={"lat": 12.3714, "lng": -1.5197}, headers=viewer).status_code == 200
+    client.put("/api/me/location", json={"lat": 12.41, "lng": -1.49}, headers=a)
+    client.put("/api/me/location", json={"lat": 11.1771, "lng": -4.2979}, headers=b)
+    items = feed("gps")["items"]
+    assert [v["id"] for v in items] == [va]
+    assert items[0]["distance_km"] in (5, 6)  # ~5,5 km entre positions arrondies
+    assert "location" not in items[0]["author"]
+
+    # Position arrondie à ~1 km en base, et effaçable
+    from db import db
+    doc = client.portal.call(lambda: db.users.find_one({"id": a_id}))
+    assert doc["location"] == {"lat": 12.41, "lng": -1.49}
+    client.delete("/api/me/location", headers=viewer)
+    assert feed("gps")["location_required"] is True
+
+
+def test_face_blur_falls_back_to_full_blur_without_face():
+    """Sans visage détecté : repli sûr (photo entièrement floutée)."""
+    import io
+
+    import numpy as np
+    from PIL import Image
+
+    from face_blur import blur_faces_in_photo, detect_faces
+    from image_processing import apply_face_mask
+
+    blank = np.full((400, 300, 3), 200, np.uint8)
+    assert detect_faces(blank) == []
+    assert blur_faces_in_photo(blank) is None
+    buf = io.BytesIO()
+    Image.fromarray(blank).save(buf, "JPEG")
+    masked = Image.open(io.BytesIO(apply_face_mask(buf.getvalue())))
+    assert masked.size == (300, 400)

@@ -282,7 +282,7 @@ export default function Profile() {
           </div>
           <VideoGrid videos={videos} emptyText="Publiez votre premier Moment pour vous faire remarquer ✨" />
           <p className="mt-2 text-xs text-slate-400">
-            🔒 Vos vidéos sont floutées pour tout le monde. Seuls vos matchs et les membres vérifiés que vous
+            🔒 Sur vos vidéos, votre visage est flouté pour tout le monde (le reste reste visible). Seuls vos matchs et les membres vérifiés que vous
             acceptez les voient en clair.
           </p>
         </section>

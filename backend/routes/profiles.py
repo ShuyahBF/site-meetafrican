@@ -124,6 +124,34 @@ async def update_my_profile(payload: ProfileUpdate, user: dict = Depends(get_cur
 
 
 # ---------------------------------------------------------------------------
+# Position (onglet "Près de moi" > "Autour de moi")
+# ---------------------------------------------------------------------------
+# Confidentialité : la position est ARRONDIE à 2 décimales (~1 km) avant
+# d'être enregistrée, n'est jamais renvoyée aux autres membres (seule une
+# distance approximative en km est affichée) et peut être effacée à tout
+# moment par le membre (DELETE).
+
+class LocationUpdate(BaseModel):
+    lat: float = Field(..., ge=-90, le=90)
+    lng: float = Field(..., ge=-180, le=180)
+
+
+@router.put("/me/location")
+async def update_my_location(payload: LocationUpdate, user: dict = Depends(get_current_user)):
+    await db.users.update_one({"id": user["id"]}, {"$set": {
+        "location": {"lat": round(payload.lat, 2), "lng": round(payload.lng, 2)},
+        "location_updated_at": _now(),
+    }})
+    return {"ok": True}
+
+
+@router.delete("/me/location")
+async def delete_my_location(user: dict = Depends(get_current_user)):
+    await db.users.update_one({"id": user["id"]}, {"$unset": {"location": "", "location_updated_at": ""}})
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
 # Fiche publique d'un membre
 # ---------------------------------------------------------------------------
 

@@ -104,6 +104,9 @@ class Photo(BaseModel):
     # même temps que le filigrane sur `url`, au moment de l'approbation —
     # absente tant que la photo n'est pas encore approuvée.
     masked_url: Optional[str] = None
+    # Version de l'algorithme de masquage ayant produit masked_url (les
+    # anciennes versions sont régénérées par media_migration.py).
+    mask_version: Optional[str] = None
     status: PhotoStatus = PhotoStatus.pending
     is_primary: bool = False
     moderation_notes: Optional[str] = None

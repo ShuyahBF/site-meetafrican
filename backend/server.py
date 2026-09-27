@@ -117,3 +117,7 @@ async def on_startup():
     # Boucle de fond : vérifie chaque minute auprès de PawaPay les paiements
     # en attente (le callback du compte PawaPay partagé pointe vers Sawali).
     asyncio.create_task(payments_pawapay.reconcile_loop())
+    # Tâche de fond : repasse les photos masquées et les vidéos publiques
+    # déjà publiées au floutage "visage seul" (s'arrête quand tout est fait).
+    from media_migration import migration_loop
+    asyncio.create_task(migration_loop())

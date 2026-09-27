@@ -10,6 +10,8 @@ dérivées (voir image_processing.py) :
 """
 from __future__ import annotations
 
+import asyncio
+
 from datetime import datetime, timezone
 from typing import List, Tuple
 
@@ -21,7 +23,7 @@ from pydantic import BaseModel
 from ai_moderation import analyze_image
 from auth import get_current_admin, get_current_user
 from db import db
-from image_processing import apply_face_mask, apply_watermark
+from image_processing import MASK_VERSION, apply_face_mask, apply_watermark
 from models import DEFAULT_PHOTO_MODERATION_PROMPT, ModerationSettings, Photo, PhotoStatus
 from storage import save_photo
 
@@ -45,7 +47,9 @@ async def _generate_approved_variants(original_url: str) -> Tuple[str, str]:
         r.raise_for_status()
         original_bytes = r.content
     watermarked_url = await save_photo(apply_watermark(original_bytes), "image/jpeg")
-    masked_url = await save_photo(apply_face_mask(original_bytes), "image/jpeg")
+    # Détection de visage : calcul de quelques centaines de ms, hors de la
+    # boucle asynchrone pour ne pas bloquer les autres requêtes.
+    masked_url = await save_photo(await asyncio.to_thread(apply_face_mask, original_bytes), "image/jpeg")
     return watermarked_url, masked_url
 
 
@@ -66,6 +70,7 @@ async def add_photo(payload: PhotoCreate, user: dict = Depends(get_current_user)
         if result.decision == "approved":
             photo.status = PhotoStatus.approved
             photo.url, photo.masked_url = await _generate_approved_variants(payload.url)
+            photo.mask_version = MASK_VERSION
         elif result.decision == "rejected":
             photo.status = PhotoStatus.rejected
         else:
@@ -127,6 +132,7 @@ async def review_photo(user_id: str, photo_id: str, approve: bool, _: dict = Dep
         watermarked_url, masked_url = await _generate_approved_variants(photo_doc["url"])
         update["photos.$.url"] = watermarked_url
         update["photos.$.masked_url"] = masked_url
+        update["photos.$.mask_version"] = MASK_VERSION
     else:
         update["photos.$.status"] = PhotoStatus.rejected.value
 
