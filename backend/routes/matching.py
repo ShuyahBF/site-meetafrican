@@ -68,6 +68,8 @@ async def discover(limit: int = 20, user: dict = Depends(get_current_user)):
             "gender": _opposite(user["gender"]),
             "is_active": True,
             "photos.status": PhotoStatus.approved.value,
+            # Admin et modérateurs ne sont jamais proposés aux membres.
+            "role": {"$nin": ["admin", "moderator"]},
         },
         {"_id": 0},
     ).limit(limit)

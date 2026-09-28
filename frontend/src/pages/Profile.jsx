@@ -58,6 +58,8 @@ export default function Profile() {
   const [error, setError] = useState("");
   const [toast, showToast] = useToast();
   const photoInputRef = useRef(null);
+  // Appareil photo (selfie) : sur mobile, ouvre directement la caméra frontale.
+  const cameraInputRef = useRef(null);
   const docInputRef = useRef(null);
 
   useEffect(() => {
@@ -221,10 +223,20 @@ export default function Profile() {
               <span className="material-symbols-outlined">add_photo_alternate</span>
               <span className="text-xs font-semibold">{uploadingPhoto ? "Envoi…" : "Ajouter"}</span>
             </button>
+            <button
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              className="flex aspect-[3/4] flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 transition hover:border-primary hover:text-primary"
+            >
+              <span className="material-symbols-outlined">photo_camera</span>
+              <span className="text-xs font-semibold">Prendre</span>
+            </button>
             <input ref={photoInputRef} type="file" accept="image/*" hidden onChange={addPhoto} />
+            <input ref={cameraInputRef} type="file" accept="image/*" capture="user" hidden onChange={addPhoto} />
           </div>
           <p className="mt-2 text-xs text-slate-400">
-            Chaque photo est analysée avant publication ; en cas de doute, une modération humaine prend le relais.
+            Chaque photo est contrôlée par IA avant publication : votre visage doit être visible, tenue correcte, rien de
+            trop suggestif. En cas de doute, un modérateur humain décide.
           </p>
         </section>
 

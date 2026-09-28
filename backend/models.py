@@ -411,20 +411,55 @@ DEFAULT_ID_VERIFICATION_PROMPT = (
 )
 
 DEFAULT_PHOTO_MODERATION_PROMPT = (
-    "Tu es un modérateur de contenu pour beAuthentik, un site de rencontre "
-    "africain. On te montre une photo qu'un utilisateur veut ajouter à son "
-    "album de profil.\n\n"
-    "Rejette (rejected) les photos qui contiennent : nudité ou contenu "
-    "sexuel explicite, violence, symboles haineux, mineurs, informations de "
-    "contact (numéro de téléphone/réseaux sociaux affichés sur l'image), "
-    "publicité manifeste, ou qui sont clairement une image volée/stock/"
-    "célébrité plutôt qu'une photo personnelle.\n"
-    "Approuve (approved) les photos de personnes correctes, habillées, "
-    "conformes à un usage de profil de rencontre.\n"
-    "Si tu n'es pas sûr (photo ambiguë, de groupe, de dos, artistique...), "
-    "réponds needs_review pour une revue humaine plutôt que de deviner.\n\n"
+    "Tu es le modérateur des photos de profil de beAuthentik, un site de "
+    "rencontre sérieux pour personnes africaines authentiques. Un membre "
+    "vient de prendre ou de charger cette photo pour son profil.\n\n"
+    "REJETTE (rejected) la photo si l'une de ces conditions est vraie :\n"
+    "1. Aucun visage humain n'est clairement visible (paysage, objet, "
+    "animal, dessin, mème, capture d'écran, texte, silhouette de dos, visage "
+    "caché ou coupé).\n"
+    "2. Nudité, même partielle : sexe, fesses, seins ou tétons visibles, "
+    "sous-vêtements, lingerie, torse nu mis en scène, maillot de bain hors "
+    "contexte de plage, personne déshabillée ou en serviette.\n"
+    "3. Photo trop sexy ou provocante : pose suggestive, cadrage centré sur "
+    "le décolleté, les fesses, l'entrejambe ou le corps plutôt que sur la "
+    "personne, geste ou expression à caractère sexuel.\n"
+    "4. Violence, arme, drogue, symbole haineux, contenu choquant.\n"
+    "5. Personne qui semble mineure (moins de 18 ans), ou enfant au premier plan.\n"
+    "6. Coordonnées affichées (téléphone, réseaux sociaux, QR code), "
+    "publicité, logo commercial dominant.\n"
+    "7. Image manifestement non personnelle : célébrité, photo de banque "
+    "d'images, image générée par IA, filtre qui déforme fortement le visage.\n\n"
+    "APPROUVE (approved) uniquement une photo nette d'une personne adulte, "
+    "habillée correctement, dont le visage est visible, adaptée à un profil "
+    "de rencontre respectueux.\n"
+    "En cas de doute (photo de groupe, visage peu visible, tenue limite, "
+    "qualité médiocre…), réponds needs_review : un modérateur humain "
+    "tranchera. Ne devine jamais.\n\n"
     "Réponds STRICTEMENT en JSON, rien d'autre : "
     '{"decision": "approved"|"rejected"|"needs_review", "reason": "<courte explication en français>"}'
+)
+
+# Anciennes versions du prompt par défaut : si l'admin n'a pas personnalisé
+# le prompt (valeur identique à une ancienne version), la nouvelle version
+# s'applique automatiquement (voir routes/photos.py).
+LEGACY_PHOTO_MODERATION_PROMPTS = (
+    (
+        "Tu es un modérateur de contenu pour beAuthentik, un site de rencontre "
+        "africain. On te montre une photo qu'un utilisateur veut ajouter à son "
+        "album de profil.\n\n"
+        "Rejette (rejected) les photos qui contiennent : nudité ou contenu "
+        "sexuel explicite, violence, symboles haineux, mineurs, informations de "
+        "contact (numéro de téléphone/réseaux sociaux affichés sur l'image), "
+        "publicité manifeste, ou qui sont clairement une image volée/stock/"
+        "célébrité plutôt qu'une photo personnelle.\n"
+        "Approuve (approved) les photos de personnes correctes, habillées, "
+        "conformes à un usage de profil de rencontre.\n"
+        "Si tu n'es pas sûr (photo ambiguë, de groupe, de dos, artistique...), "
+        "réponds needs_review pour une revue humaine plutôt que de deviner.\n\n"
+        "Réponds STRICTEMENT en JSON, rien d'autre : "
+        '{"decision": "approved"|"rejected"|"needs_review", "reason": "<courte explication en français>"}'
+    ),
 )
 
 
@@ -445,6 +480,12 @@ class ModerationSettings(BaseModel):
     ai_auto_enabled: bool = True
     id_verification_prompt: str = DEFAULT_ID_VERIFICATION_PROMPT
     photo_moderation_prompt: str = DEFAULT_PHOTO_MODERATION_PROMPT
+
+    @field_validator("photo_moderation_prompt", mode="before")
+    @classmethod
+    def _upgrade_legacy_prompt(cls, value):
+        # Prompt jamais personnalisé par l'admin -> dernière version par défaut.
+        return DEFAULT_PHOTO_MODERATION_PROMPT if value in LEGACY_PHOTO_MODERATION_PROMPTS else value
 
 
 class IdentityVerification(BaseModel):

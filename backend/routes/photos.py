@@ -53,6 +53,25 @@ async def _generate_approved_variants(original_url: str) -> Tuple[str, str]:
     return watermarked_url, masked_url
 
 
+async def _has_human_face(url: str) -> bool:
+    """Au moins un visage détecté sur la photo (détecteur YuNet, face_blur.py).
+    En cas d'erreur technique, on répond False : la photo part en revue
+    humaine plutôt que d'être approuvée sans contrôle."""
+    try:
+        import numpy as np
+        from face_blur import detect_faces
+        from image_processing import _load_rgb
+
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.get(url)
+            r.raise_for_status()
+        rgb = np.asarray(_load_rgb(r.content))
+        return bool(await asyncio.to_thread(lambda: detect_faces(rgb[:, :, ::-1].copy())))
+    except Exception as exc:  # noqa: BLE001
+        print(f"[photos] détection de visage impossible : {exc!r}")
+        return False
+
+
 class PhotoCreate(BaseModel):
     url: str
     is_primary: bool = False
@@ -67,7 +86,12 @@ async def add_photo(payload: PhotoCreate, user: dict = Depends(get_current_user)
         result = await analyze_image(payload.url, settings.photo_moderation_prompt or DEFAULT_PHOTO_MODERATION_PROMPT)
         photo.moderation_notes = result.reason
         photo.moderated_at = _now()
-        if result.decision == "approved":
+        if result.decision == "approved" and not await _has_human_face(payload.url):
+            # Double contrôle : l'IA a approuvé mais le détecteur ne trouve
+            # aucun visage -> un modérateur humain tranche.
+            photo.status = PhotoStatus.needs_review
+            photo.moderation_notes = f"{result.reason} — aucun visage détecté automatiquement, à vérifier"
+        elif result.decision == "approved":
             photo.status = PhotoStatus.approved
             photo.url, photo.masked_url = await _generate_approved_variants(payload.url)
             photo.mask_version = MASK_VERSION

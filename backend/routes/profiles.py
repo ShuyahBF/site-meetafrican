@@ -160,7 +160,10 @@ async def public_profile(user_id: str, viewer: dict = Depends(get_current_user))
     """Fiche d'un autre membre + état de la relation avec le visiteur
     (déjà liké ? match ? conversation ouverte ?), pour que la page puisse
     proposer la bonne action (J'aime / Envoyer un message)."""
-    doc = await db.users.find_one({"id": user_id, "is_active": True}, {"_id": 0})
+    # Fiche introuvable pour les comptes du back-office (admin, modérateurs),
+    # sauf pour l'équipe elle-même.
+    hidden_staff = {} if viewer.get("role") in ("admin", "moderator") else {"role": {"$nin": ["admin", "moderator"]}}
+    doc = await db.users.find_one({"id": user_id, "is_active": True, **hidden_staff}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Profil introuvable")
 

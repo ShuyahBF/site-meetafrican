@@ -589,3 +589,30 @@ def test_face_blur_falls_back_to_full_blur_without_face():
     Image.fromarray(blank).save(buf, "JPEG")
     masked = Image.open(io.BytesIO(apply_face_mask(buf.getvalue())))
     assert masked.size == (300, 400)
+
+
+def test_moderators_team_and_staff_hidden(client, make_user):
+    """L'admin désigne des modérateurs ; les comptes de l'équipe sont
+    invisibles des membres (découverte, fiche profil)."""
+    from db import db
+
+    admin_id, admin, _ = make_user(gender="homme")
+    client.portal.call(lambda: db.users.update_one({"id": admin_id}, {"$set": {"role": "admin"}}))
+    mod_id, mod, _ = make_user(gender="femme")
+    _, member, _ = make_user(gender="homme")
+    email = client.portal.call(lambda: db.users.find_one({"id": mod_id}))["email"]
+
+    # Seul l'admin principal gère l'équipe
+    assert client.post("/api/admin/team", json={"email": email}, headers=member).status_code == 403
+    assert client.post("/api/admin/team", json={"email": email.upper()}, headers=admin).json()["role"] == "moderator"
+    assert client.get("/api/admin/team", headers=mod).status_code == 403
+    assert {u["id"] for u in client.get("/api/admin/team", headers=admin).json()} >= {admin_id, mod_id}
+
+    # Invisible pour un membre : fiche 404, jamais dans la découverte
+    assert client.get(f"/api/users/{mod_id}", headers=member).status_code == 404
+    client.portal.call(lambda: db.users.update_one({"id": mod_id}, {"$set": {"photos": [{"id": "p", "url": "u", "status": "approved"}]}}))
+    assert mod_id not in [p["id"] for p in client.get("/api/discover", headers=member).json()]
+
+    # Retrait : redevient un membre normal
+    assert client.delete(f"/api/admin/team/{mod_id}", headers=admin).status_code == 200
+    assert client.get(f"/api/users/{mod_id}", headers=member).status_code == 200

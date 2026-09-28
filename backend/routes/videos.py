@@ -351,7 +351,8 @@ async def video_feed(
     else:
         # "Pour toi" et "Près de moi" : profils du genre recherché, actifs.
         wanted_gender = "femme" if user.get("gender") == "homme" else "homme"
-        author_query: dict = {"gender": wanted_gender, "is_active": True}
+        # Admin et modérateurs ne sont jamais visibles des membres.
+        author_query: dict = {"gender": wanted_gender, "is_active": True, "role": {"$nin": ["admin", "moderator"]}}
         distances: dict = {}
         if tab == "pres-de-moi" and near == "ville":
             city = (user.get("city") or "").strip()

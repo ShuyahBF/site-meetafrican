@@ -6,11 +6,13 @@ routes/verification.py (/admin/settings/moderation), à côté des prompts
 système qu'elle contrôle."""
 from __future__ import annotations
 
+import re
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, EmailStr
 
-from auth import get_current_admin
+from auth import get_current_admin, get_current_super_admin
 from db import db
 from models import ReferralPointsSettings, SiteAppearance, SubscriptionPlan
 
@@ -67,3 +69,44 @@ async def update_plan(plan_id: str, payload: SubscriptionPlan, _: dict = Depends
     doc["id"] = plan_id
     await db.subscription_plans.update_one({"id": plan_id}, {"$set": doc})
     return doc
+
+
+# ---------------------------------------------------------------------------
+# Équipe de modération
+# ---------------------------------------------------------------------------
+# L'administrateur désigne des modérateurs parmi les comptes existants (par
+# email). Un modérateur accède au back-office (photos à revoir, vidéos,
+# vérifications, signalements…) mais ne peut pas gérer l'équipe. Les comptes
+# de l'équipe ne sont jamais visibles des membres (découverte, Moments,
+# recherche, fiches profil, compteurs publics).
+
+_TEAM_FIELDS = {"_id": 0, "id": 1, "full_name": 1, "email": 1, "role": 1, "last_seen_at": 1}
+
+
+@router.get("/team")
+async def list_team(_: dict = Depends(get_current_super_admin)):
+    return await db.users.find({"role": {"$in": ["admin", "moderator"]}}, _TEAM_FIELDS).sort("full_name", 1).to_list(200)
+
+
+class ModeratorAdd(BaseModel):
+    email: EmailStr
+
+
+@router.post("/team")
+async def add_moderator(payload: ModeratorAdd, _: dict = Depends(get_current_super_admin)):
+    # Email comparé sans tenir compte des majuscules.
+    user = await db.users.find_one({"email": {"$regex": f"^{re.escape(payload.email)}$", "$options": "i"}}, _TEAM_FIELDS)
+    if not user:
+        raise HTTPException(status_code=404, detail="Aucun compte avec cet email : la personne doit d'abord s'inscrire")
+    if user.get("role") == "admin":
+        raise HTTPException(status_code=400, detail="Ce compte est déjà administrateur")
+    await db.users.update_one({"id": user["id"]}, {"$set": {"role": "moderator"}})
+    return {**user, "role": "moderator"}
+
+
+@router.delete("/team/{user_id}")
+async def remove_moderator(user_id: str, _: dict = Depends(get_current_super_admin)):
+    result = await db.users.update_one({"id": user_id, "role": "moderator"}, {"$set": {"role": "user"}})
+    if not result.matched_count:
+        raise HTTPException(status_code=404, detail="Modérateur introuvable")
+    return {"ok": True}
