@@ -19,6 +19,7 @@ from routes import (
     interactions,
     matching,
     account_extras,
+    admin_timeline,
     community,
     payments_pawapay,
     tracking,
@@ -75,6 +76,7 @@ api.include_router(phone_verification.router)
 api.include_router(account_extras.router)
 api.include_router(community.router)
 api.include_router(tracking.router)
+api.include_router(admin_timeline.router)
 api.include_router(test_data.router)
 
 

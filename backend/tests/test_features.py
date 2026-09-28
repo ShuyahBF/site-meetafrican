@@ -860,3 +860,36 @@ def test_sms_primary_provider_setting(client, make_user, monkeypatch):
     # OVH principal (même pour un +226), en échec -> Orange en repli
     assert asyncio.run(o.send_sms_code("22670123456", "123456", "ovh")) == (True, None)
     assert calls == ["ovh", "orange"]
+
+
+def test_admin_timeline_and_member_file(client, make_user):
+    """Chronologie admin (du plus récent au plus ancien, avec les noms) et
+    fiche membre consultée en invisible."""
+    from db import db
+
+    admin_id, admin, _ = make_user()
+    client.portal.call(lambda: db.users.update_one({"id": admin_id}, {"$set": {"role": "moderator"}}))
+    member_id, member, _ = make_user(gender="femme")
+    reporter_id, reporter, _ = make_user(gender="homme")
+    client.post("/api/testimonials", json={"text": "Une expérience vraiment authentique, bravo !", "rating": 4}, headers=member)
+    client.post("/api/me/reports", json={"reported_user_id": member_id, "reason": "fake_profile"}, headers=reporter)
+
+    assert client.get("/api/admin/timeline", headers=member).status_code == 403
+    items = client.get("/api/admin/timeline", headers=admin).json()["items"]
+    dates = [i["at"] for i in items]
+    assert dates == sorted(dates, reverse=True)
+    types = {i["type"] for i in items}
+    assert {"inscription", "temoignage", "signalement"} <= types
+    report = next(i for i in items if i["type"] == "signalement")
+    assert report["user"]["id"] == member_id and report["details"]["par"]  # noms résolus
+
+    # Filtre par membre
+    only = client.get("/api/admin/timeline", params={"user_id": member_id}, headers=admin).json()["items"]
+    assert only and all(i["user_id"] == member_id for i in only)
+
+    # Fiche membre : lecture seule, en invisible (aucune visite enregistrée)
+    file = client.get(f"/api/admin/members/{member_id}", headers=admin).json()
+    assert file["user"]["id"] == member_id and "password_hash" not in file["user"]
+    assert file["reports_received"][0]["reporter_name"]
+    client.get(f"/api/users/{member_id}", headers=admin)
+    assert client.get("/api/me/visitors", headers=member).json()["profile_visits"] == []

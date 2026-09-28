@@ -35,6 +35,8 @@ import AdminTeam from "@/pages/admin/AdminTeam";
 import AdminVerificationLog from "@/pages/admin/AdminVerificationLog";
 import AdminSupport from "@/pages/admin/AdminSupport";
 import AdminCommunity from "@/pages/admin/AdminCommunity";
+import AdminTimeline from "@/pages/admin/AdminTimeline";
+import AdminMember from "@/pages/admin/AdminMember";
 // Actions du bouton ✚ / menu « … » et réglages du compte
 import Testimonials from "@/pages/extras/Testimonials";
 import Support from "@/pages/extras/Support";
@@ -104,6 +106,8 @@ export default function App() {
             <Route path="journal-verifications" element={<AdminVerificationLog />} />
             <Route path="support" element={<AdminSupport />} />
             <Route path="communaute" element={<AdminCommunity />} />
+            <Route path="chronologie" element={<AdminTimeline />} />
+            <Route path="membres/:userId" element={<AdminMember />} />
           </Route>
 
           {/* Route cachée (non liée dans la navigation du site) : accessible
