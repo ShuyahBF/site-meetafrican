@@ -625,7 +625,7 @@ def test_phone_and_whatsapp_otp_verification(client, make_user, monkeypatch):
 
     sent = {}
 
-    async def fake_send(msisdn, code):
+    async def fake_send(msisdn, code, *_primary):
         sent["msisdn"], sent["code"] = msisdn, code
         return True, None
     monkeypatch.setattr(pv, "send_whatsapp_code", fake_send)
@@ -830,3 +830,33 @@ def test_me_suivre_live_tracking(client, make_user):
 
     assert client.post(f"/api/tracking/sessions/{s['id']}/stop", headers=owner).status_code == 200
     assert client.post(f"/api/tracking/sessions/{s['id']}/points", json={"lat": 12.4, "lng": -1.5}, headers=owner).status_code == 410
+
+
+def test_sms_primary_provider_setting(client, make_user, monkeypatch):
+    """L'admin choisit le fournisseur SMS principal ; l'autre part en repli."""
+    import asyncio
+
+    import otp_senders as o
+    from db import db
+
+    admin_id, admin, _ = make_user()
+    client.portal.call(lambda: db.users.update_one({"id": admin_id}, {"$set": {"role": "admin"}}))
+    _, member, _ = make_user()
+    assert client.put("/api/admin/settings/sms", json={"primary": "ovh"}, headers=member).status_code == 403
+    assert client.put("/api/admin/settings/sms", json={"primary": "ovh"}, headers=admin).json()["primary"] == "ovh"
+    assert client.get("/api/admin/settings/sms", headers=admin).json()["primary"] == "ovh"
+
+    calls = []
+
+    def fake(name, ok):
+        async def _send(msisdn, code):
+            calls.append(name)
+            return ok
+        return _send
+    monkeypatch.setattr(o, "orange_configured", lambda: True)
+    monkeypatch.setattr(o, "ovh_configured", lambda: True)
+    monkeypatch.setattr(o, "_send_sms_orange", fake("orange", True))
+    monkeypatch.setattr(o, "_send_sms_ovh", fake("ovh", False))
+    # OVH principal (même pour un +226), en échec -> Orange en repli
+    assert asyncio.run(o.send_sms_code("22670123456", "123456", "ovh")) == (True, None)
+    assert calls == ["ovh", "orange"]

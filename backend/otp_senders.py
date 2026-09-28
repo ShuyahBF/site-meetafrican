@@ -136,11 +136,15 @@ async def _orange_access_token(client: httpx.AsyncClient, force: bool = False) -
 SMS_TEXT = "beAuthentik : votre code de verification est {code}. Valable 10 min. Ne le communiquez a personne."
 
 
-async def send_sms_code(msisdn: str, code: str) -> Tuple[bool, Optional[str]]:
-    """Envoie le code par SMS en essayant les fournisseurs configurés dans
-    l'ordre adapté au pays du numéro (secours automatique si le 1er échoue)."""
+SMS_PROVIDERS = ("orange", "ovh")
+
+
+async def send_sms_code(msisdn: str, code: str, primary: str = "auto") -> Tuple[bool, Optional[str]]:
+    """Envoie le code par SMS. `primary` = fournisseur principal choisi par
+    l'admin ("orange" ou "ovh") ; l'autre sert de repli s'il échoue.
+    "auto" : Orange d'abord pour un numéro +226, OVH d'abord ailleurs."""
     providers = [("orange", orange_configured(), _send_sms_orange), ("ovh", ovh_configured(), _send_sms_ovh)]
-    if not msisdn.startswith("226"):
+    if primary == "ovh" or (primary not in SMS_PROVIDERS and not msisdn.startswith("226")):
         providers.reverse()
     active = [(name, fn) for name, ok, fn in providers if ok]
     if not active:
