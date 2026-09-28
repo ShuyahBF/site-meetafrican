@@ -54,8 +54,10 @@ services:
         value: https://beauthentik.net,https://www.beauthentik.net
 
       # --- PawaPay (Mobile Money) ---
+      # "sync: false" : valeur saisie dans le tableau de bord Render (production),
+      # jamais écrasée par une resynchronisation du Blueprint.
       - key: PAWAPAY_ENVIRONMENT
-        value: sandbox
+        sync: false
       - key: PAWAPAY_API_TOKEN_SANDBOX
         sync: false
       - key: PAWAPAY_API_TOKEN_PRODUCTION
@@ -64,6 +66,28 @@ services:
         generateValue: true
       - key: PAWAPAY_DEFAULT_COUNTRY
         value: BFA
+
+      # --- Vérification des numéros par code OTP (voir otp_senders.py) ---
+      # WhatsApp Cloud API (Meta) : mêmes valeurs que sawalismartsystems.com
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_OTP_TEMPLATE
+        sync: false
+      - key: WHATSAPP_OTP_TEMPLATE_LANG
+        value: fr
+      # Orange SMS API (developer.orange.com)
+      - key: ORANGE_SMS_CLIENT_ID
+        sync: false
+      - key: ORANGE_SMS_CLIENT_SECRET
+        sync: false
+      - key: ORANGE_SMS_SENDER_MSISDN
+        sync: false
+      - key: ORANGE_SMS_SENDER_NAME
+        sync: false
+      - key: DEFAULT_PHONE_COUNTRY_CODE
+        value: "226"
 
       # --- Stockage Cloudflare R2 (obligatoire en production : le mode
       # "local" perd les fichiers à chaque redéploiement sur Render) ---

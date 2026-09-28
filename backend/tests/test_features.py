@@ -616,3 +616,46 @@ def test_moderators_team_and_staff_hidden(client, make_user):
     # Retrait : redevient un membre normal
     assert client.delete(f"/api/admin/team/{mod_id}", headers=admin).status_code == 200
     assert client.get(f"/api/users/{mod_id}", headers=member).status_code == 200
+
+
+def test_phone_and_whatsapp_otp_verification(client, make_user, monkeypatch):
+    """Code OTP par WhatsApp / SMS : envoi, erreurs, validation, badges,
+    anti-abus (délai entre envois) et unicité du numéro."""
+    import routes.phone_verification as pv
+
+    sent = {}
+
+    async def fake_send(msisdn, code):
+        sent["msisdn"], sent["code"] = msisdn, code
+        return True, None
+    monkeypatch.setattr(pv, "send_whatsapp_code", fake_send)
+    monkeypatch.setattr(pv, "send_sms_code", fake_send)
+
+    user_id, headers, _ = make_user()
+    other_id, other, _ = make_user()
+
+    # Numéro local à 8 chiffres -> indicatif 226 ajouté
+    r = client.post("/api/me/numbers/otp/request", json={"channel": "whatsapp", "number": "70 12 34 56"}, headers=headers)
+    assert r.status_code == 200, r.text
+    assert sent["msisdn"] == "22670123456"
+    # Nouvel envoi immédiat refusé (délai de 60 s)
+    assert client.post("/api/me/numbers/otp/request", json={"channel": "whatsapp", "number": "70123456"}, headers=headers).status_code == 429
+
+    # Mauvais code : 400 (pas 401), puis bon code
+    wrong = "000000" if sent["code"] != "000000" else "111111"
+    assert client.post("/api/me/numbers/otp/verify", json={"channel": "whatsapp", "code": wrong}, headers=headers).status_code == 400
+    r = client.post("/api/me/numbers/otp/verify", json={"channel": "whatsapp", "code": sent["code"]}, headers=headers)
+    assert r.status_code == 200 and r.json()["whatsapp_verified"] is True
+    numbers = client.get("/api/me/numbers", headers=headers).json()
+    assert numbers["whatsapp"] == "+22670123456" and numbers["whatsapp_verified"] is True
+
+    # Badge visible par les autres, jamais le numéro
+    profile = client.get(f"/api/users/{user_id}", headers=other).json()
+    assert "+22670123456" not in str(profile)
+
+    # Le même numéro ne peut pas être vérifié sur un autre compte
+    assert client.post("/api/me/numbers/otp/request", json={"channel": "whatsapp", "number": "+226 70 12 34 56"}, headers=other).status_code == 409
+
+    # SMS : même parcours, numéro de téléphone vérifié
+    client.post("/api/me/numbers/otp/request", json={"channel": "sms", "number": "+22676000000"}, headers=headers)
+    assert client.post("/api/me/numbers/otp/verify", json={"channel": "sms", "code": sent["code"]}, headers=headers).json()["phone_verified"] is True

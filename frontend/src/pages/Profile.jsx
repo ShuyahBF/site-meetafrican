@@ -7,6 +7,7 @@ import { useProfileOptions } from "@/hooks/useProfileOptions";
 import BottomNav from "@/components/BottomNav";
 import ProfilePhoto from "@/components/ProfilePhoto";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import NumberVerification from "@/components/NumberVerification";
 import VideoGrid from "@/components/VideoGrid";
 import VideoAccessRequests from "@/components/VideoAccessRequests";
 import Toast, { useToast } from "@/components/Toast";
@@ -330,6 +331,9 @@ export default function Profile() {
         </section>
 
         {/* Compte */}
+        {/* Numéros WhatsApp / téléphone vérifiés par code OTP */}
+        <NumberVerification />
+
         <section className="mt-8">
           <h2 className="section-title">Mon compte</h2>
           <div className="card divide-y divide-slate-100">

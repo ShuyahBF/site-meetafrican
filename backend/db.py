@@ -61,6 +61,10 @@ async def ensure_indexes() -> None:
     # Compteur de visites : une visite par IP et par jour.
     await db.site_visits.create_index([("day", 1), ("ip", 1)], unique=True)
     await db.site_visits.create_index("created_at_dt", expireAfterSeconds=31 * 24 * 3600)
+    # Codes OTP (vérification des numéros) : un code en cours par membre et
+    # par canal, effacé automatiquement à son expiration.
+    await db.otp_codes.create_index([("user_id", 1), ("channel", 1)], unique=True)
+    await db.otp_codes.create_index("expires_at_dt", expireAfterSeconds=0)
     # Données de test (marquées is_test_data=True), cf. test_data.py
     await db.users.create_index("is_test_data", sparse=True)
     # Comptage des messages non lus (badge "Messages")

@@ -19,6 +19,7 @@ from routes import (
     interactions,
     matching,
     payments_pawapay,
+    phone_verification,
     photos,
     profiles,
     ratings,
@@ -67,6 +68,7 @@ api.include_router(referrals.router)
 api.include_router(interactions.router)
 api.include_router(vidal.router)
 api.include_router(stats.router)
+api.include_router(phone_verification.router)
 api.include_router(test_data.router)
 
 

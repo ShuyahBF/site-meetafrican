@@ -50,6 +50,20 @@ class Settings(BaseSettings):
     pawapay_callback_secret: Optional[str] = None
     pawapay_default_country: str = "BFA"
 
+    # Vérification des numéros par code OTP (voir otp_senders.py)
+    # WhatsApp Cloud API (Meta) — mêmes identifiants que sawalismartsystems.com
+    whatsapp_access_token: Optional[str] = None
+    whatsapp_phone_number_id: Optional[str] = None
+    whatsapp_otp_template: Optional[str] = None  # modèle Meta, 1 variable = le code
+    whatsapp_otp_template_lang: str = "fr"
+    # Orange SMS API (OAuth2 client_credentials, https://developer.orange.com)
+    orange_sms_client_id: Optional[str] = None
+    orange_sms_client_secret: Optional[str] = None
+    orange_sms_sender_msisdn: Optional[str] = None  # numéro émetteur enregistré chez Orange, ex. +22600000000
+    orange_sms_sender_name: Optional[str] = None  # nom d'émetteur optionnel (si activé par Orange)
+    # Indicatif ajouté aux numéros saisis sans indicatif (8 chiffres au Burkina Faso)
+    default_phone_country_code: str = "226"
+
     # Object storage (photos, pièces d'identité)
     # storage_backend="local" : disque local, pratique en dev/test, jamais en
     # production (perdu à chaque redéploiement). storage_backend="r2" :
