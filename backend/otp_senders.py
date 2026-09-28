@@ -11,13 +11,18 @@ d'environnement (config.py) au lieu de la base.
     écrit au numéro dans les dernières 24 h — en catégorie
     "Authentication" (corps + bouton "copier le code"), puis "Utility"
     (corps seul) ; en dernier recours, un simple message texte.
-  - SMS : Orange SMS API (jeton OAuth2 "client_credentials" mis en cache).
+  - SMS : Orange SMS API (jeton OAuth2 "client_credentials" mis en cache)
+    et OVH SMS (API officielle signée HMAC-SHA1, server.py `_sms_send_ovh`).
+    Numéro burkinabè (+226) : Orange d'abord, OVH en secours ; autres pays :
+    OVH d'abord, Orange en secours.
 
 Chaque fonction renvoie (ok, message_erreur_lisible).
 """
 from __future__ import annotations
 
 import base64
+import hashlib
+import json
 import urllib.parse
 from datetime import datetime, timezone
 from typing import Dict, Optional, Tuple
@@ -41,9 +46,19 @@ def whatsapp_configured() -> bool:
     return bool(s.whatsapp_access_token and s.whatsapp_phone_number_id)
 
 
-def sms_configured() -> bool:
+def orange_configured() -> bool:
     s = get_settings()
     return bool(s.orange_sms_client_id and s.orange_sms_client_secret and s.orange_sms_sender_msisdn)
+
+
+def ovh_configured() -> bool:
+    s = get_settings()
+    return bool(s.ovh_sms_application_key and s.ovh_sms_application_secret
+                and s.ovh_sms_consumer_key and s.ovh_sms_service_name)
+
+
+def sms_configured() -> bool:
+    return orange_configured() or ovh_configured()
 
 
 # ---------------------------------------------------------------------------
@@ -118,24 +133,77 @@ async def _orange_access_token(client: httpx.AsyncClient, force: bool = False) -
     return doc["access_token"]
 
 
-async def send_sms_code(msisdn: str, code: str) -> Tuple[bool, Optional[str]]:
-    s = get_settings()
-    if not sms_configured():
+SMS_TEXT = "beAuthentik : votre code de verification est {code}. Valable 10 min. Ne le communiquez a personne."
+
+
+SMS_PROVIDERS = ("orange", "ovh")
+
+
+async def send_sms_code(msisdn: str, code: str, primary: str = "auto") -> Tuple[bool, Optional[str]]:
+    """Envoie le code par SMS. `primary` = fournisseur principal choisi par
+    l'admin ("orange" ou "ovh") ; l'autre sert de repli s'il échoue.
+    "auto" : Orange d'abord pour un numéro +226, OVH d'abord ailleurs."""
+    providers = [("orange", orange_configured(), _send_sms_orange), ("ovh", ovh_configured(), _send_sms_ovh)]
+    if primary == "ovh" or (primary not in SMS_PROVIDERS and not msisdn.startswith("226")):
+        providers.reverse()
+    active = [(name, fn) for name, ok, fn in providers if ok]
+    if not active:
         return False, "L'envoi de SMS n'est pas encore configuré sur le serveur"
+    for name, fn in active:
+        if await fn(msisdn, code):
+            return True, None
+    return False, "Envoi du SMS impossible pour le moment. Réessayez plus tard ou choisissez WhatsApp."
+
+
+async def _send_sms_ovh(msisdn: str, code: str) -> bool:
+    """OVH SMS : requête signée "$1$" + SHA1(secret+consumer+méthode+url+corps+horodatage)."""
+    s = get_settings()
+    host = "https://ca.api.ovh.com/1.0" if (s.ovh_sms_endpoint or "").lower() == "ovh-ca" else "https://eu.api.ovh.com/1.0"
+    url = f"{host}/sms/{s.ovh_sms_service_name}/jobs"
+    body = json.dumps({
+        "charset": "UTF-8", "class": "phoneDisplay", "coding": "8bit",
+        "message": SMS_TEXT.format(code=code), "noStopClause": True, "priority": "high",
+        "receivers": [f"+{msisdn}"], "senderForResponse": False,
+        "sender": s.ovh_sms_sender or "beAuthentik", "validityPeriod": 30,
+    })
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            # Horloge du serveur OVH (la signature exige son horodatage)
+            tr = await client.get(f"{host}/auth/time")
+            ts = tr.text.strip() if tr.status_code == 200 else str(int(datetime.now(timezone.utc).timestamp()))
+            to_sign = "+".join([s.ovh_sms_application_secret, s.ovh_sms_consumer_key, "POST", url, body, ts])
+            r = await client.post(url, content=body, headers={
+                "X-Ovh-Application": s.ovh_sms_application_key,
+                "X-Ovh-Consumer": s.ovh_sms_consumer_key,
+                "X-Ovh-Timestamp": ts,
+                "X-Ovh-Signature": "$1$" + hashlib.sha1(to_sign.encode()).hexdigest(),
+                "Content-Type": "application/json",
+            })
+        doc = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
+        if r.status_code < 300 and not (doc.get("invalidReceivers") and not doc.get("validReceivers")):
+            return True
+        print(f"[otp] échec SMS OVH vers {msisdn[:5]}… : HTTP {r.status_code} {r.text[:200]}")
+    except (httpx.HTTPError, ValueError) as exc:
+        print(f"[otp] échec SMS OVH vers {msisdn[:5]}… : {exc!r}")
+    return False
+
+
+async def _send_sms_orange(msisdn: str, code: str) -> bool:
+    s = get_settings()
     sender = s.orange_sms_sender_msisdn.strip()
     sender = sender if sender.startswith("+") else f"+{sender}"
     url = ORANGE_SMS_URL.format(sender=urllib.parse.quote(f"tel:{sender}", safe=""))
     request = {
         "address": f"tel:+{msisdn}",
         "senderAddress": f"tel:{sender}",
-        "outboundSMSTextMessage": {"message": f"beAuthentik : votre code de verification est {code}. Valable 10 min. Ne le communiquez a personne."},
+        "outboundSMSTextMessage": {"message": SMS_TEXT.format(code=code)},
     }
     if s.orange_sms_sender_name:
         request["senderName"] = s.orange_sms_sender_name
     async with httpx.AsyncClient(timeout=20) as client:
         token = await _orange_access_token(client)
         if not token:
-            return False, "Service SMS momentanément indisponible"
+            return False
         for attempt in range(2):
             r = await client.post(url, json={"outboundSMSMessageRequest": request},
                                   headers={"Authorization": f"Bearer {token}", "Accept": "application/json"})
@@ -145,7 +213,7 @@ async def send_sms_code(msisdn: str, code: str) -> Tuple[bool, Optional[str]]:
                     break
                 continue
             if 200 <= r.status_code < 300:
-                return True, None
+                return True
             break
     print(f"[otp] échec SMS Orange vers {msisdn[:5]}… : HTTP {r.status_code} {r.text[:200]}")
-    return False, "Envoi du SMS impossible pour le moment. Réessayez plus tard ou choisissez WhatsApp."
+    return False

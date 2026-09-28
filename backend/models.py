@@ -555,6 +555,14 @@ class Message(BaseModel):
     conversation_id: str
     sender_id: str
     text: str = Field(..., min_length=1, max_length=2000)
+    # Note vocale (kind="voice") : fichier audio PRIVÉ, lu via une URL
+    # temporaire (audio_url, générée à la lecture), + transcription écrite
+    # facultative (faite dans le navigateur de l'expéditeur).
+    kind: str = "text"  # text | voice
+    audio_key: Optional[str] = None
+    audio_url: Optional[str] = None
+    audio_duration: Optional[float] = None
+    transcript: Optional[str] = None
     created_at: str = Field(default_factory=_now)
     # Accusé de lecture : date à laquelle le destinataire a vu le message
     # (None tant qu'il ne l'a pas lu). Mis à jour par l'événement WebSocket

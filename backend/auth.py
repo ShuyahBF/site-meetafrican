@@ -62,7 +62,11 @@ def _touch_last_seen(user: dict) -> None:
     """Marque l'utilisateur comme actif "maintenant", en tâche de fond pour
     ne pas ralentir la requête en cours. Throttle à 60s (au lieu d'écrire à
     chaque requête authentifiée) : largement suffisant vu le seuil "en
-    ligne" de 5 minutes (models.ONLINE_THRESHOLD_SECONDS)."""
+    ligne" de 5 minutes (models.ONLINE_THRESHOLD_SECONDS).
+    Mode invisible (réglages du compte) : rien n'est enregistré, le membre
+    n'apparaît jamais "en ligne"."""
+    if (user.get("settings") or {}).get("invisible_mode"):
+        return
     last_seen_at = user.get("last_seen_at")
     now = datetime.now(timezone.utc)
     if last_seen_at:

@@ -379,6 +379,11 @@ export default function Profile() {
             <AccountRow to="/portefeuille" icon="account_balance_wallet" label="Portefeuille" />
             <AccountRow to="/parrainage" icon="stars" label="Points de parrainage" value={user.points ?? 0} />
             <AccountRow to="/matchs" icon="local_fire_department" label="Mes matchs" />
+            <AccountRow to="/visiteurs" icon="visibility" label="Qui m'a vu" />
+            <AccountRow to="/me-suivre" icon="share_location" label="Me suivre (sécurité)" />
+            <AccountRow to="/reglages" icon="settings" label="Réglages (vocal, mode invisible)" />
+            <AccountRow to="/support" icon="support_agent" label="Écrire au support" />
+            <AccountRow to="/temoignages" icon="format_quote" label="Témoignages" />
           </div>
           <button onClick={logout} className="mt-4 w-full py-3 text-sm font-bold text-slate-400 hover:text-red-500">
             Se déconnecter

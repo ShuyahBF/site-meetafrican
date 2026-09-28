@@ -28,11 +28,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from pymongo.errors import DuplicateKeyError
 
-from auth import get_current_user
+from auth import get_current_admin, get_current_super_admin, get_current_user
 from config import get_settings
 from db import db
 from verification_log import log_verification
-from otp_senders import send_sms_code, send_whatsapp_code, sms_configured, whatsapp_configured
+from otp_senders import (
+    orange_configured, ovh_configured, send_sms_code, send_whatsapp_code, sms_configured, whatsapp_configured,
+)
 
 router = APIRouter(tags=["Vérification des numéros"])
 
@@ -83,6 +85,27 @@ async def _number_taken(user_id: str, channel: str, msisdn: str) -> bool:
     return await db.users.find_one(query, {"_id": 0, "id": 1}) is not None
 
 
+async def sms_primary_provider() -> str:
+    doc = await db.settings.find_one({"id": "sms"}, {"_id": 0}) or {}
+    return doc.get("primary", "auto")
+
+
+class SmsSettings(BaseModel):
+    primary: Literal["auto", "orange", "ovh"] = "auto"
+
+
+@router.get("/admin/settings/sms")
+async def get_sms_settings(_: dict = Depends(get_current_admin)):
+    return {"primary": await sms_primary_provider(),
+            "configured": {"orange": orange_configured(), "ovh": ovh_configured()}}
+
+
+@router.put("/admin/settings/sms")
+async def update_sms_settings(payload: SmsSettings, _: dict = Depends(get_current_super_admin)):
+    await db.settings.update_one({"id": "sms"}, {"$set": {"id": "sms", "primary": payload.primary}}, upsert=True)
+    return {"primary": payload.primary, "configured": {"orange": orange_configured(), "ovh": ovh_configured()}}
+
+
 @router.get("/me/numbers")
 async def my_numbers(user: dict = Depends(get_current_user)):
     return {
@@ -122,8 +145,11 @@ async def request_code(payload: OtpRequest, user: dict = Depends(get_current_use
                 raise HTTPException(status_code=429, detail="Trop de codes demandés : réessayez dans une heure")
 
     code = f"{secrets.randbelow(1_000_000):06d}"
-    sender = send_whatsapp_code if payload.channel == "whatsapp" else send_sms_code
-    ok, error = await sender(msisdn, code)
+    if payload.channel == "whatsapp":
+        ok, error = await send_whatsapp_code(msisdn, code)
+    else:
+        # Fournisseur SMS principal choisi dans Admin > Paramètres (l'autre en repli)
+        ok, error = await send_sms_code(msisdn, code, await sms_primary_provider())
     masked = f"+{msisdn[:5]}•••{msisdn[-2:]}"
     await log_verification(_KIND[payload.channel], "code_sent" if ok else "code_send_failed", user["id"],
                            actor="systeme", details={"number": masked, **({} if ok else {"error": error})})

@@ -68,6 +68,18 @@ async def ensure_indexes() -> None:
     # Journal horodaté des vérifications (consultation par membre et par date)
     await db.verification_events.create_index([("user_id", 1), ("at", -1)])
     await db.verification_events.create_index("at")
+    # Historique des visites de profil (une ligne par visiteur/profil/jour)
+    await db.profile_visits.create_index([("visitor_id", 1), ("target_id", 1), ("day", 1)], unique=True)
+    await db.profile_visits.create_index([("target_id", 1), ("last_at", -1)])
+    # « Me suivre » : positions effacées automatiquement après 30 jours
+    await db.tracking_points.create_index([("session_id", 1), ("at", 1)])
+    await db.tracking_points.create_index("at_dt", expireAfterSeconds=30 * 24 * 3600)
+    await db.tracking_sessions.create_index([("owner_id", 1), ("status", 1)])
+    await db.tracking_sessions.create_index([("guardian_id", 1), ("started_at", -1)])
+    # Support et témoignages
+    await db.support_tickets.create_index([("user_id", 1), ("updated_at", -1)])
+    await db.support_tickets.create_index([("status", 1), ("updated_at", 1)])
+    await db.testimonials.create_index([("status", 1), ("created_at", -1)])
     # Données de test (marquées is_test_data=True), cf. test_data.py
     await db.users.create_index("is_test_data", sparse=True)
     # Comptage des messages non lus (badge "Messages")

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { apiClient } from "@/lib/api";
 
 const REPORT_REASONS = [
@@ -10,6 +11,12 @@ const REPORT_REASONS = [
 export default function UserActionsMenu({ targetUserId, targetName }) {
   const [open, setOpen] = useState(false);
   const [modal, setModal] = useState(null); // "rate" | "report" | null
+  const navigate = useNavigate();
+  const go = (to) => {
+    setOpen(false);
+    navigate(to);
+  };
+  const first = (targetName || "").split(" ")[0];
 
   return (
     <div className="relative">
@@ -18,7 +25,7 @@ export default function UserActionsMenu({ targetUserId, targetName }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-10 mt-1 w-40 rounded-xl bg-white py-1 shadow-lg dark:bg-background-dark dark:ring-1 dark:ring-white/10">
+        <div className="absolute right-0 top-full z-10 mt-1 w-56 rounded-xl bg-white py-1 shadow-lg dark:bg-background-dark dark:ring-1 dark:ring-white/10">
           <button
             onClick={() => { setModal("rate"); setOpen(false); }}
             className="block w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 dark:text-white dark:hover:bg-white/10"
@@ -30,6 +37,23 @@ export default function UserActionsMenu({ targetUserId, targetName }) {
             className="block w-full px-4 py-2 text-left text-sm text-red-500 hover:bg-slate-100 dark:hover:bg-white/10"
           >
             Signaler
+          </button>
+          <div className="my-1 border-t border-slate-100" />
+          {/* Sécurité : partager sa position en direct avec cette personne */}
+          <button
+            onClick={() => go(`/me-suivre?guardian=${targetUserId}&name=${encodeURIComponent(targetName || "")}`)}
+            className="block w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+          >
+            Me suivre (position en direct à {first})
+          </button>
+          <button onClick={() => go("/temoignages")} className="block w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100">
+            Témoignages
+          </button>
+          <button
+            onClick={() => go(`/support?about=${targetUserId}&name=${encodeURIComponent(targetName || "")}`)}
+            className="block w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+          >
+            Écrire au support
           </button>
         </div>
       )}

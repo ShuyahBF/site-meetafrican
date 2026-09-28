@@ -625,7 +625,7 @@ def test_phone_and_whatsapp_otp_verification(client, make_user, monkeypatch):
 
     sent = {}
 
-    async def fake_send(msisdn, code):
+    async def fake_send(msisdn, code, *_primary):
         sent["msisdn"], sent["code"] = msisdn, code
         return True, None
     monkeypatch.setattr(pv, "send_whatsapp_code", fake_send)
@@ -697,3 +697,166 @@ def test_group_photo_rejected_but_sent_to_human_review_with_timestamps(client, m
     assert {"submitted", "faces_counted", "auto_rejected_faces", "human_rejected"} <= set(actions)
     assert all(e["at"] for e in events["items"])
     assert next(e for e in events["items"] if e["action"] == "human_rejected")["actor_id"] == admin_id
+
+
+def test_sms_provider_order_and_fallback(monkeypatch):
+    """SMS : Orange d'abord pour +226 (OVH en secours), OVH d'abord ailleurs."""
+    import asyncio
+
+    import otp_senders as o
+
+    calls = []
+
+    def fake(name, ok):
+        async def _send(msisdn, code):
+            calls.append(name)
+            return ok
+        return _send
+    monkeypatch.setattr(o, "orange_configured", lambda: True)
+    monkeypatch.setattr(o, "ovh_configured", lambda: True)
+    monkeypatch.setattr(o, "_send_sms_orange", fake("orange", False))
+    monkeypatch.setattr(o, "_send_sms_ovh", fake("ovh", True))
+
+    assert asyncio.run(o.send_sms_code("22670123456", "123456")) == (True, None)
+    assert calls == ["orange", "ovh"]  # Orange en échec -> OVH en secours
+    calls.clear()
+    asyncio.run(o.send_sms_code("33612345678", "123456"))
+    assert calls == ["ovh"]
+
+
+def _matched_pair(client, make_user):
+    a_id, a, _ = make_user(gender="homme")
+    b_id, b, _ = make_user(gender="femme")
+    _swipe_like(client, a, b_id)
+    _swipe_like(client, b, a_id)
+    conv_id = client.get(f"/api/users/{b_id}", headers=a).json()["conversation_id"]
+    return a_id, a, b_id, b, conv_id
+
+
+def test_settings_invisible_mode_and_visitors(client, make_user):
+    """Mode invisible : pas "en ligne", visites non montrées ; sinon
+    l'historique horodaté "Qui a vu mon profil / mes Moments" est rempli."""
+    target_id, target, _ = make_user(gender="femme", verified=True)
+    visitor_id, visitor, _ = make_user(gender="homme")
+    ghost_id, ghost, _ = make_user(gender="homme")
+
+    assert client.get("/api/me/settings", headers=ghost).json()["invisible_mode"] is False
+    assert client.put("/api/me/settings", json={"invisible_mode": True}, headers=ghost).json()["invisible_mode"] is True
+
+    client.get(f"/api/users/{target_id}", headers=visitor)
+    client.get(f"/api/users/{target_id}", headers=ghost)
+    video_id = _publish_ready(client, target, target_id, caption="Salut")["id"]
+    client.post(f"/api/videos/{video_id}/view", headers=visitor)
+    client.post(f"/api/videos/{video_id}/view", headers=ghost)
+
+    history = client.get("/api/me/visitors", headers=target).json()
+    assert [v["visitor"]["id"] for v in history["profile_visits"]] == [visitor_id]
+    assert history["profile_visits"][0]["at"]
+    assert [v["viewer"]["id"] for v in history["moment_views"]] == [visitor_id]
+
+    # Le membre invisible n'apparaît jamais "en ligne"
+    ghost_profile = client.get(f"/api/users/{ghost_id}", headers=visitor).json()["profile"]
+    assert ghost_profile["is_online"] is False and ghost_profile["last_seen_at"] is None
+
+
+def test_voice_notes_respect_settings(client, make_user):
+    a_id, a, b_id, b, conv_id = _matched_pair(client, make_user)
+    audio = ("note.webm", b"\x1aE\xdf\xa3fake-opus", "audio/webm")
+
+    r = client.post(f"/api/conversations/{conv_id}/voice", files={"file": audio},
+                    data={"duration": "4.2", "transcript": "On se voit samedi ?"}, headers=a)
+    assert r.status_code == 201, r.text
+    assert r.json()["kind"] == "voice" and r.json()["audio_url"] and r.json()["transcript"] == "On se voit samedi ?"
+
+    # B désactive la transcription : il ne la voit plus
+    client.put("/api/me/settings", json={"voice_transcription": False}, headers=b)
+    msg = client.get(f"/api/conversations/{conv_id}/messages", headers=b).json()[-1]
+    assert msg["kind"] == "voice" and msg["transcript"] is None and msg["audio_url"]
+
+    # B refuse les notes vocales : A ne peut plus lui en envoyer
+    client.put("/api/me/settings", json={"voice_notes": False}, headers=b)
+    r = client.post(f"/api/conversations/{conv_id}/voice", files={"file": audio}, data={"duration": "2"}, headers=a)
+    assert r.status_code == 403
+
+
+def test_testimonials_and_support(client, make_user):
+    from db import db
+
+    user_id, user, _ = make_user()
+    admin_id, admin, _ = make_user()
+    client.portal.call(lambda: db.users.update_one({"id": admin_id}, {"$set": {"role": "moderator"}}))
+
+    # Témoignage : invisible tant qu'il n'est pas approuvé
+    t = client.post("/api/testimonials", json={"text": "J'ai rencontré quelqu'un de vrai ici, merci beAuthentik !", "rating": 5}, headers=user).json()
+    assert t["status"] == "pending" and all(x["id"] != t["id"] for x in client.get("/api/testimonials").json())
+    client.post(f"/api/admin/testimonials/{t['id']}/review", params={"approve": True}, headers=admin)
+    public = client.get("/api/testimonials").json()
+    assert any(x["id"] == t["id"] for x in public) and "user_id" not in public[0]
+
+    # Support : ticket, réponse de l'équipe horodatée, clôture
+    ticket = client.post("/api/support/tickets", json={"topic": "paiement", "subject": "Paiement non activé", "message": "J'ai payé mais rien."}, headers=user).json()
+    assert any(x["id"] == ticket["id"] for x in client.get("/api/admin/support/tickets", headers=admin).json())
+    reply = client.post(f"/api/support/tickets/{ticket['id']}/messages", json={"message": "C'est régularisé."}, headers=admin).json()
+    assert reply["from_staff"] is True and reply["at"]
+    mine = client.get("/api/me/support/tickets", headers=user).json()[0]
+    assert mine["status"] == "answered" and mine["unread_by_member"] is True and len(mine["messages"]) == 2
+    assert client.post(f"/api/admin/support/tickets/{ticket['id']}/close", headers=admin).status_code == 200
+
+
+def test_me_suivre_live_tracking(client, make_user):
+    """Suivi en temps réel : positions visibles du compte désigné et de
+    l'équipe, pas des autres ; arrêt par le propriétaire."""
+    from db import db
+
+    owner_id, owner, _ = make_user()
+    guardian_id, guardian, _ = make_user()
+    _, stranger, _ = make_user()
+    staff_id, staff, _ = make_user()
+    client.portal.call(lambda: db.users.update_one({"id": staff_id}, {"$set": {"role": "admin"}}))
+    guardian_email = client.portal.call(lambda: db.users.find_one({"id": guardian_id}))["email"]
+
+    s = client.post("/api/tracking/sessions", json={"guardian_email": guardian_email, "duration_minutes": 60,
+                                                   "note": "Rendez-vous au maquis"}, headers=owner).json()
+    assert s["status"] == "active" and s["guardian_id"] == guardian_id
+    assert client.post(f"/api/tracking/sessions/{s['id']}/points", json={"lat": 12.3714, "lng": -1.5197, "accuracy": 15}, headers=owner).json()["ok"]
+    # Un autre membre ne peut ni envoyer de position ni voir le suivi
+    assert client.post(f"/api/tracking/sessions/{s['id']}/points", json={"lat": 0, "lng": 0}, headers=guardian).status_code == 404
+    assert client.get(f"/api/tracking/sessions/{s['id']}", headers=stranger).status_code == 404
+
+    seen = client.get(f"/api/tracking/sessions/{s['id']}", headers=guardian).json()
+    assert seen["last_point"]["lat"] == 12.3714 and len(seen["points"]) == 1 and seen["points"][0]["at"]
+    assert client.get("/api/tracking/me", headers=guardian).json()["watching"][0]["id"] == s["id"]
+    assert any(x["id"] == s["id"] for x in client.get("/api/admin/tracking", headers=staff).json())
+
+    assert client.post(f"/api/tracking/sessions/{s['id']}/stop", headers=owner).status_code == 200
+    assert client.post(f"/api/tracking/sessions/{s['id']}/points", json={"lat": 12.4, "lng": -1.5}, headers=owner).status_code == 410
+
+
+def test_sms_primary_provider_setting(client, make_user, monkeypatch):
+    """L'admin choisit le fournisseur SMS principal ; l'autre part en repli."""
+    import asyncio
+
+    import otp_senders as o
+    from db import db
+
+    admin_id, admin, _ = make_user()
+    client.portal.call(lambda: db.users.update_one({"id": admin_id}, {"$set": {"role": "admin"}}))
+    _, member, _ = make_user()
+    assert client.put("/api/admin/settings/sms", json={"primary": "ovh"}, headers=member).status_code == 403
+    assert client.put("/api/admin/settings/sms", json={"primary": "ovh"}, headers=admin).json()["primary"] == "ovh"
+    assert client.get("/api/admin/settings/sms", headers=admin).json()["primary"] == "ovh"
+
+    calls = []
+
+    def fake(name, ok):
+        async def _send(msisdn, code):
+            calls.append(name)
+            return ok
+        return _send
+    monkeypatch.setattr(o, "orange_configured", lambda: True)
+    monkeypatch.setattr(o, "ovh_configured", lambda: True)
+    monkeypatch.setattr(o, "_send_sms_orange", fake("orange", True))
+    monkeypatch.setattr(o, "_send_sms_ovh", fake("ovh", False))
+    # OVH principal (même pour un +226), en échec -> Orange en repli
+    assert asyncio.run(o.send_sms_code("22670123456", "123456", "ovh")) == (True, None)
+    assert calls == ["ovh", "orange"]

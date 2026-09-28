@@ -15,6 +15,10 @@ const RETENTION = [
   ["Position (seulement si vous activez « Autour de moi »)", "Arrondie à environ 1 km, remplacée à chaque mise à jour, jamais montrée aux autres membres (seule une distance approximative l'est). Supprimée dès que vous cliquez sur « Ne plus partager ma position » ou avec le compte."],
   ["Numéros WhatsApp et téléphone vérifiés", "Tant que le compte existe. Jamais montrés aux autres membres : seul le badge « vérifié » est visible."],
   ["Codes de vérification envoyés par WhatsApp ou SMS", "Jamais conservés en clair ; effacés dès leur validation, ou automatiquement après 10 minutes."],
+  ["« Me suivre » : positions précises pendant un suivi que vous démarrez", "Visibles seulement du compte que vous désignez et de l'équipe beAuthentik, pendant la durée choisie ; effacées automatiquement 30 jours après leur envoi."],
+  ["Notes vocales et leur transcription écrite", "Fichier audio privé (lu via des liens temporaires) conservé comme les autres messages, tant que les comptes concernés existent."],
+  ["Visites de profils et vues de Moments", "Montrées au membre concerné (« Qui m'a vu »), sauf si le visiteur est en mode invisible ; conservées tant que les comptes existent."],
+  ["Demandes au support et témoignages", "Le temps de traiter la demande, puis tant que le compte existe. Un témoignage n'est publié qu'après relecture, avec votre prénom et votre ville seulement."],
   ["Journal horodaté des vérifications (photos, pièce d'identité, numéros : date, heure, décision, IP)", "Tant que le compte existe, comme preuve des contrôles effectués."],
   ["Journal d'activité (adresse IP, action réalisée, navigateur, date)", "12 mois, puis effacement automatique."],
   ["Adresse IP d'inscription et de dernière connexion", "Tant que le compte existe."],
@@ -42,7 +46,8 @@ const SECTIONS = [
         <li><strong>Compte</strong> : nom affiché, email ou téléphone, mot de passe (stocké sous forme chiffrée irréversible), genre, date de naissance.</li>
         <li><strong>Profil</strong> : photos, bio, ville, pays, profession, centres d'intérêt, type de relation recherchée, situation vis-à-vis des enfants.</li>
         <li><strong>Vérification</strong> : photo de votre pièce d'identité ; numéros WhatsApp et de téléphone confirmés par un code reçu par message.</li>
-        <li><strong>Contenus et échanges</strong> : vidéos, légendes, commentaires, messages, J'aime, swipes, matchs, cadeaux, signalements, notes.</li>
+        <li><strong>Contenus et échanges</strong> : vidéos, légendes, commentaires, messages écrits et vocaux (avec leur transcription si vous l'activez), J'aime, swipes, matchs, cadeaux, signalements, notes, témoignages, demandes au support.</li>
+        <li><strong>Sécurité</strong> : si vous activez « Me suivre », votre position précise pendant la durée choisie ; les visites de profils et vues de Moments (historique « Qui m'a vu »).</li>
         <li><strong>Paiements</strong> : formule, montant, date, référence et statut du paiement, numéro Mobile Money si vous le communiquez au prestataire.</li>
         <li><strong>Données techniques</strong> : adresse IP, navigateur, date et nature de chaque action (voir « Traçabilité » ci-dessous), date de dernière connexion.</li>
       </ul>

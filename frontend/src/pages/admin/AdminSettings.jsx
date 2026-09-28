@@ -14,7 +14,62 @@ export default function AdminSettings() {
       <AppearanceSection />
       <ReferralPointsSection />
       <ModerationSection />
+      <SmsSection />
     </div>
+  );
+}
+
+// Fournisseur SMS principal pour les codes de vérification (l'autre en repli)
+const SMS_CHOICES = [
+  { value: "auto", label: "Automatique : Orange pour les numéros +226, OVH pour les autres pays" },
+  { value: "orange", label: "Orange en principal, OVH en repli" },
+  { value: "ovh", label: "OVH en principal, Orange en repli" },
+];
+
+function SmsSection() {
+  const [data, setData] = useState(null);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    apiClient.get("/admin/settings/sms").then((r) => setData(r.data));
+  }, []);
+
+  // Enregistrement immédiat du choix (réservé à l'administrateur principal)
+  const choose = async (primary) => {
+    setSaved(false);
+    setError("");
+    try {
+      const r = await apiClient.put("/admin/settings/sms", { primary });
+      setData(r.data);
+      setSaved(true);
+    } catch {
+      setError("Réservé à l'administrateur principal");
+    }
+  };
+
+  if (!data) return null;
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-5">
+      <h2 className="font-bold">Envoi des SMS (codes de vérification)</h2>
+      <p className="mt-1 text-sm text-slate-500">
+        Choisissez le fournisseur principal ; si l'envoi échoue, l'autre prend le relais automatiquement.
+      </p>
+      <div className="mt-3 space-y-2">
+        {SMS_CHOICES.map((c) => (
+          <label key={c.value} className="flex items-center gap-2 text-sm">
+            <input type="radio" name="sms-primary" checked={data.primary === c.value} onChange={() => choose(c.value)} />
+            {c.label}
+          </label>
+        ))}
+      </div>
+      <p className="mt-3 text-xs text-slate-500">
+        Orange : {data.configured.orange ? "✅ configuré" : "❌ non configuré"} · OVH : {data.configured.ovh ? "✅ configuré" : "❌ non configuré"}
+        {" "}(identifiants à saisir sur Render)
+      </p>
+      {saved && <p className="mt-2 text-xs font-semibold text-emerald-600">Enregistré.</p>}
+      {error && <p className="mt-2 text-xs font-semibold text-rose-600">{error}</p>}
+    </section>
   );
 }
 

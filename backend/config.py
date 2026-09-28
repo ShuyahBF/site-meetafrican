@@ -61,6 +61,13 @@ class Settings(BaseSettings):
     orange_sms_client_secret: Optional[str] = None
     orange_sms_sender_msisdn: Optional[str] = None  # numéro émetteur enregistré chez Orange, ex. +22600000000
     orange_sms_sender_name: Optional[str] = None  # nom d'émetteur optionnel (si activé par Orange)
+    # OVH SMS (https://api.ovh.com) — secours / numéros hors Burkina
+    ovh_sms_endpoint: str = "ovh-eu"  # ovh-eu | ovh-ca
+    ovh_sms_application_key: Optional[str] = None
+    ovh_sms_application_secret: Optional[str] = None
+    ovh_sms_consumer_key: Optional[str] = None
+    ovh_sms_service_name: Optional[str] = None  # ex. sms-ab12345-1
+    ovh_sms_sender: Optional[str] = None  # expéditeur déclaré chez OVH, ex. beAuthentik
     # Indicatif ajouté aux numéros saisis sans indicatif (8 chiffres au Burkina Faso)
     default_phone_country_code: str = "226"
 

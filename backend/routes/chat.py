@@ -9,13 +9,15 @@ profils, cf. maquette Stitch "Très réactive" / "Répond parfois")."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
 from auth import decode_access_token, get_current_user
 from db import db
+from routes.account_extras import user_settings
+from storage import presigned_document_url, save_private_media
 from models import Message, PhotoStatus, _is_online
 from activity import ip_from_headers, log_activity
 from realtime import RateLimiter, conversation_channel, hub
@@ -56,7 +58,7 @@ async def _get_conversation_or_403(conversation_id: str, user_id: str) -> dict:
     return conv
 
 
-async def _persist_message(conversation: dict, sender: dict, text: str) -> Message:
+async def _persist_message(conversation: dict, sender: dict, text: str, **voice) -> Message:
     """Logique partagée par la route REST et le WebSocket : calcule le temps
     de réponse si applicable, enregistre le message, met à jour la
     conversation."""
@@ -86,7 +88,7 @@ async def _persist_message(conversation: dict, sender: dict, text: str) -> Messa
     # d'horloge, et created_at fini légèrement en retard sur le calcul du
     # delta qui a servi à le produire — écart mineur mais qui s'accumule sur
     # une conversation longue.
-    message = Message(conversation_id=conversation_id, sender_id=sender["id"], text=text, created_at=now.isoformat())
+    message = Message(conversation_id=conversation_id, sender_id=sender["id"], text=text, created_at=now.isoformat(), **voice)
     await db.messages.insert_one(message.model_dump(mode="json"))
     await db.conversations.update_one({"id": conversation_id}, {"$set": {"last_message_at": message.created_at}})
     return message
@@ -124,6 +126,8 @@ async def list_conversations(user: dict = Depends(get_current_user)):
                 "is_online": _is_online(other.get("last_seen_at")),
                 "is_verified": other.get("verification_status") == "verified",
                 "is_test_data": bool(other.get("is_test_data")),
+                # Accepte les notes vocales ? (masque le micro sinon)
+                "accepts_voice_notes": user_settings(other)["voice_notes"],
             },
             "last_message": last_message,
             "unread_count": unread,
@@ -184,11 +188,72 @@ async def list_messages(conversation_id: str, limit: int = 100, user: dict = Dep
     items = await db.messages.find(
         {"conversation_id": conversation_id}, {"_id": 0}
     ).sort("created_at", 1).to_list(limit)
+    show_transcripts = user_settings(user)["voice_transcription"]
+    for m in items:
+        await _prepare_voice(m, show_transcripts)
     return items
+
+
+async def _prepare_voice(message: dict, show_transcript: bool) -> dict:
+    """Note vocale : URL temporaire vers le fichier privé ; transcription
+    masquée si le lecteur l'a désactivée dans ses réglages."""
+    if message.get("kind") == "voice" and message.get("audio_key"):
+        message["audio_url"] = await presigned_document_url(message["audio_key"], VOICE_URL_TTL_SECONDS)
+    if not show_transcript:
+        message["transcript"] = None
+    return message
 
 
 class MessageCreate(BaseModel):
     text: str = Field(..., min_length=1, max_length=2000)
+
+
+# ---------------------------------------------------------------------------
+# Notes vocales
+# ---------------------------------------------------------------------------
+VOICE_MAX_BYTES = 5 * 1024 * 1024       # ~5 minutes en Opus
+VOICE_MAX_SECONDS = 180                 # 3 minutes par note
+VOICE_URL_TTL_SECONDS = 2 * 3600
+VOICE_CONTENT_TYPES = {"audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/aac", "audio/wav", "audio/x-m4a"}
+
+
+@router.post("/conversations/{conversation_id}/voice", response_model=Message, status_code=201)
+async def send_voice_note(
+    conversation_id: str,
+    file: UploadFile = File(...),
+    duration: float = Form(..., gt=0, le=VOICE_MAX_SECONDS + 1),
+    transcript: Optional[str] = Form(None, max_length=4000),
+    user: dict = Depends(get_current_user),
+):
+    """Envoie une note vocale. Refusée si l'expéditeur ou le destinataire a
+    désactivé les notes vocales dans ses réglages. La transcription (faite
+    par le navigateur de l'expéditeur) n'est gardée que s'il l'a activée."""
+    conv = await _get_conversation_or_403(conversation_id, user["id"])
+    mine = user_settings(user)
+    if not mine["voice_notes"]:
+        raise HTTPException(status_code=403, detail="Activez les notes vocales dans vos réglages")
+    other_id = conv["user_b"] if conv["user_a"] == user["id"] else conv["user_a"]
+    other = await db.users.find_one({"id": other_id}, {"_id": 0, "settings": 1, "full_name": 1})
+    if not user_settings(other or {})["voice_notes"]:
+        raise HTTPException(status_code=403, detail="Cette personne n'accepte pas les notes vocales")
+
+    content_type = (file.content_type or "").split(";")[0].strip()
+    if content_type not in VOICE_CONTENT_TYPES:
+        raise HTTPException(status_code=400, detail="Format audio non pris en charge")
+    content = await file.read()
+    if not content or len(content) > VOICE_MAX_BYTES:
+        raise HTTPException(status_code=400, detail="Note vocale vide ou trop longue")
+    audio_key = await save_private_media(content, content_type)
+
+    clean_transcript = (transcript or "").strip() or None if mine["voice_transcription"] else None
+    message = await _persist_message(
+        conv, user, "🎤 Note vocale", kind="voice", audio_key=audio_key,
+        audio_duration=round(duration, 1), transcript=clean_transcript,
+    )
+    data = await _prepare_voice(message.model_dump(mode="json"), True)
+    # Diffusion temps réel : chaque client masque la transcription selon ses réglages.
+    await hub.send(conversation_channel(conversation_id), "message", data)
+    return data
 
 
 @router.post("/conversations/{conversation_id}/messages", response_model=Message, status_code=201)
