@@ -7,6 +7,8 @@ import { useProfileOptions } from "@/hooks/useProfileOptions";
 import BottomNav from "@/components/BottomNav";
 import ProfilePhoto from "@/components/ProfilePhoto";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { formatDateTime } from "@/lib/format";
+import NumberVerification from "@/components/NumberVerification";
 import VideoGrid from "@/components/VideoGrid";
 import VideoAccessRequests from "@/components/VideoAccessRequests";
 import Toast, { useToast } from "@/components/Toast";
@@ -58,12 +60,21 @@ export default function Profile() {
   const [error, setError] = useState("");
   const [toast, showToast] = useToast();
   const photoInputRef = useRef(null);
+  // Appareil photo (selfie) : sur mobile, ouvre directement la caméra frontale.
+  const cameraInputRef = useRef(null);
   const docInputRef = useRef(null);
+  // Historique horodaté de mes demandes de vérification d'identité
+  const [idRequests, setIdRequests] = useState([]);
 
   useEffect(() => {
     setPhotos(user?.photos || []);
     setForm(toForm(user));
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    apiClient.get("/me/verification").then((r) => setIdRequests(r.data)).catch(() => {});
+  }, [user?.id, user?.verification_status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!user) return;
@@ -125,6 +136,8 @@ export default function Profile() {
       const { url } = await uploadFile(file, "photo");
       const res = await apiClient.post("/me/photos", { url, is_primary: photos.length === 0 });
       setPhotos((prev) => [...prev, res.data]);
+      // Refus immédiat (ex. trop de visages) : la raison est expliquée tout de suite.
+      if (res.data.rejection_reason) setError(res.data.rejection_reason);
     } catch (err) {
       setError(extractErrorMessage(err, "Échec de l'envoi de la photo"));
     } finally {
@@ -221,11 +234,37 @@ export default function Profile() {
               <span className="material-symbols-outlined">add_photo_alternate</span>
               <span className="text-xs font-semibold">{uploadingPhoto ? "Envoi…" : "Ajouter"}</span>
             </button>
+            <button
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              className="flex aspect-[3/4] flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-slate-200 text-slate-400 transition hover:border-primary hover:text-primary"
+            >
+              <span className="material-symbols-outlined">photo_camera</span>
+              <span className="text-xs font-semibold">Prendre</span>
+            </button>
             <input ref={photoInputRef} type="file" accept="image/*" hidden onChange={addPhoto} />
+            <input ref={cameraInputRef} type="file" accept="image/*" capture="user" hidden onChange={addPhoto} />
           </div>
           <p className="mt-2 text-xs text-slate-400">
-            Chaque photo est analysée avant publication ; en cas de doute, une modération humaine prend le relais.
+            Chaque photo est contrôlée par IA avant publication : votre visage doit être visible, tenue correcte, rien de
+            trop suggestif. En cas de doute, un modérateur humain décide.
           </p>
+          {/* Suivi horodaté des photos refusées ou en revue */}
+          {photos.some((p) => p.status !== "approved") && (
+            <ul className="mt-3 space-y-1.5">
+              {photos
+                .filter((p) => p.status !== "approved")
+                .map((p) => (
+                  <li key={p.id} className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                    <span className="font-bold">{PHOTO_STATUS_LABEL[p.status] || p.status}</span> · envoyée le{" "}
+                    {formatDateTime(p.created_at)}
+                    {p.moderated_at && <> · décision le {formatDateTime(p.reviewed_at || p.moderated_at)}</>}
+                    {p.rejection_reason && <p className="mt-0.5 text-red-500">{p.rejection_reason}</p>}
+                    {p.pending_human_review && <p className="mt-0.5 text-amber-600">Revue par un modérateur en cours.</p>}
+                  </li>
+                ))}
+            </ul>
+          )}
         </section>
 
         {/* À propos de moi */}
@@ -282,7 +321,7 @@ export default function Profile() {
           </div>
           <VideoGrid videos={videos} emptyText="Publiez votre premier Moment pour vous faire remarquer ✨" />
           <p className="mt-2 text-xs text-slate-400">
-            🔒 Vos vidéos sont floutées pour tout le monde. Seuls vos matchs et les membres vérifiés que vous
+            🔒 Sur vos vidéos, votre visage est flouté pour tout le monde (le reste reste visible). Seuls vos matchs et les membres vérifiés que vous
             acceptez les voient en clair.
           </p>
         </section>
@@ -315,9 +354,24 @@ export default function Profile() {
               <input ref={docInputRef} type="file" accept="image/*" hidden onChange={submitDocument} />
             </>
           )}
+          {/* Historique horodaté des demandes */}
+          {idRequests.length > 0 && (
+            <ul className="mt-3 space-y-1 text-xs text-slate-500">
+              {idRequests.slice(0, 3).map((r) => (
+                <li key={r.id}>
+                  Pièce envoyée le {formatDateTime(r.created_at)}
+                  {r.reviewed_at && <> · {r.status === "verified" ? "validée" : r.status === "rejected" ? "refusée" : "traitée"} le {formatDateTime(r.reviewed_at)}</>}
+                  {!r.reviewed_at && r.status === "pending" && <> · en attente d'un modérateur</>}
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         {/* Compte */}
+        {/* Numéros WhatsApp / téléphone vérifiés par code OTP */}
+        <NumberVerification />
+
         <section className="mt-8">
           <h2 className="section-title">Mon compte</h2>
           <div className="card divide-y divide-slate-100">

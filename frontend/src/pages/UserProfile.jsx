@@ -157,6 +157,21 @@ export default function UserProfile() {
                 {[profile.city, profile.country].filter(Boolean).join(", ")}
               </p>
             )}
+            {/* Badges des numéros vérifiés par code OTP (jamais le numéro) */}
+            {(profile.whatsapp_verified || profile.phone_verified) && (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {profile.whatsapp_verified && (
+                  <span className="chip bg-emerald-50 text-[11px] text-emerald-700">
+                    <span className="material-symbols-outlined icon-filled text-sm">verified</span> WhatsApp vérifié
+                  </span>
+                )}
+                {profile.phone_verified && (
+                  <span className="chip bg-sky-50 text-[11px] text-sky-700">
+                    <span className="material-symbols-outlined icon-filled text-sm">verified</span> Téléphone vérifié
+                  </span>
+                )}
+              </div>
+            )}
             <p className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-slate-400">
               <span className={`h-2 w-2 rounded-full ${profile.is_online ? "bg-emerald-500" : "bg-slate-300"}`} />
               {profile.is_online ? "En ligne" : formatLastSeen(profile.last_seen_at)}

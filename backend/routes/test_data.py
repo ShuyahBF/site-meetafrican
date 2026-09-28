@@ -36,7 +36,7 @@ from pydantic import BaseModel, Field
 
 from auth import get_current_admin, hash_password
 from db import db
-from image_processing import FONT_PATH, apply_face_mask, apply_watermark
+from image_processing import FONT_PATH, MASK_VERSION, apply_face_mask, apply_watermark
 from routes.videos import extract_hashtags
 from storage import delete_private_media, delete_public_media, save_photo, save_private_media, save_public_media
 from video_processing import ffmpeg_exe, process_video
@@ -213,7 +213,7 @@ async def _generate(count: int, videos: int) -> None:
                 "relationship_goal": rng.choice(GOALS),
                 "children": rng.choice(CHILDREN),
                 "profession": rng.choice(PROFESSIONS),
-                "photos": [{"id": _uuid(), "url": url, "masked_url": masked_url, "status": "approved",
+                "photos": [{"id": _uuid(), "url": url, "masked_url": masked_url, "mask_version": MASK_VERSION, "status": "approved",
                             "is_primary": True, "moderation_notes": "Donnée de test", "moderated_at": _iso(now),
                             "created_at": _iso(now)}],
                 "role": "user",
@@ -263,7 +263,7 @@ async def _generate(count: int, videos: int) -> None:
             caption = rng.choice(CAPTIONS).replace("{city}", author["city"].lower().replace(" ", "").replace("-", ""))
             video = {
                 "id": _uuid(), "user_id": author["id"], "caption": caption, "hashtags": extract_hashtags(caption),
-                "clear_key": clear_key, "blurred_url": blurred_url, "poster_url": poster_url,
+                "clear_key": clear_key, "blurred_url": blurred_url, "poster_url": poster_url, "blur_mode": result.blur_mode,
                 "duration_seconds": result.duration_seconds, "status": "published", "failure_reason": None,
                 "likes_count": 0, "comments_count": 0, "views_count": 0, "reports_count": 0, "removed_reason": None,
                 "ip": TEST_IP, "created_at": _iso(now - timedelta(hours=rng.randint(1, 240))), "is_test_data": True,

@@ -121,3 +121,29 @@ async def user_ip_summary(user_id: str, _: dict = Depends(get_current_admin)):
     ])
     ips = [{"ip": row["_id"], "count": row["count"], "first": row["first"], "last": row["last"]} async for row in cursor]
     return {"user": user, "ips": ips}
+
+
+# ---------------------------------------------------------------------------
+# Back-office : journal horodaté des vérifications (verification_log.py)
+# ---------------------------------------------------------------------------
+
+@router.get("/admin/verification-events")
+async def verification_events(
+    user_id: Optional[str] = None,
+    kind: Optional[str] = Query(None, pattern="^(photo|document|phone|whatsapp)$"),
+    limit: int = Query(100, ge=1, le=500),
+    skip: int = Query(0, ge=0),
+    _: dict = Depends(get_current_admin),
+):
+    query: dict = {}
+    if user_id:
+        query["user_id"] = user_id
+    if kind:
+        query["kind"] = kind
+    total = await db.verification_events.count_documents(query)
+    items = await db.verification_events.find(query, {"_id": 0}).sort("at", -1).skip(skip).limit(limit).to_list(limit)
+    users = await _user_cards([i.get("user_id") for i in items] + [i.get("actor_id") for i in items])
+    for item in items:
+        item["user"] = users.get(item.get("user_id"))
+        item["actor_user"] = users.get(item.get("actor_id"))
+    return {"total": total, "items": items}

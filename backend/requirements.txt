@@ -16,3 +16,5 @@ boto3==1.34.144
 Pillow==10.4.0
 # ffmpeg embarqué (binaire statique) : compression + floutage des vidéos du fil Moments
 imageio-ffmpeg==0.6.0
+# Détection de visage (YuNet) : floutage du visage seul sur photos et vidéos
+opencv-python-headless==5.0.0.93

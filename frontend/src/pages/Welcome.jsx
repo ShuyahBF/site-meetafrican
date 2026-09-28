@@ -29,7 +29,7 @@ const FREE_FEATURES = [
 const FEATURES = [
   { icon: "play_circle", title: "Les Moments, en vidéo", text: "Un fil vertical façon TikTok : défilez, double-tapez pour aimer, découvrez les gens tels qu'ils sont.", tint: "from-primary/15 to-sunset/15", big: true },
   { icon: "verified", title: "100 % identités vérifiées", text: "Pièce d'identité contrôlée par IA puis par un humain en cas de doute. Le badge bleu ne ment pas.", tint: "from-sky-100 to-sky-50" },
-  { icon: "lock", title: "Votre image vous appartient", text: "Vos vidéos sont floutées pour tous. Seuls vos matchs et les membres que vous acceptez vous voient en clair.", tint: "from-purple-100 to-purple-50" },
+  { icon: "lock", title: "Votre image vous appartient", text: "Votre visage est flouté pour tous sur vos vidéos. Seuls vos matchs et les membres que vous acceptez vous voient en clair.", tint: "from-purple-100 to-purple-50" },
   { icon: "bolt", title: "Chat en temps réel", text: "Messages instantanés, « en train d'écrire… », accusés « Vu ». La conversation coule naturellement.", tint: "from-amber-100 to-amber-50" },
   { icon: "tune", title: "Recherche avancée", text: "Âge, ville, pays, type de relation, enfants, centres d'intérêt : trouvez exactement qui vous correspond.", tint: "from-emerald-100 to-emerald-50" },
   { icon: "redeem", title: "Cadeaux & coups de cœur", text: "Une rose, un bouquet, un diamant : faites-vous remarquer avec élégance.", tint: "from-rose-100 to-rose-50" },
@@ -44,7 +44,7 @@ const STEPS = [
 const FAQ = [
   { q: "L'inscription est-elle gratuite ?", a: "Oui. Créer son profil, swiper, matcher et regarder les Moments est gratuit. L'abonnement Premium débloque tout le reste." },
   { q: "Comment payer l'abonnement ?", a: "Par Mobile Money : Orange Money, Moov Money, Telecel Money, Sank Money, via la page de paiement sécurisée PawaPay. Aucune carte bancaire nécessaire." },
-  { q: "Qui peut voir mes vidéos ?", a: "Tout le monde voit une version entièrement floutée. La version claire est réservée à vos matchs et aux membres vérifiés que vous acceptez — et vous pouvez retirer l'accès à tout moment." },
+  { q: "Qui peut voir mes vidéos ?", a: "Tout le monde voit votre vidéo avec le visage flouté et sans le son. La version claire est réservée à vos matchs et aux membres vérifiés que vous acceptez — et vous pouvez retirer l'accès à tout moment." },
   { q: "Pourquoi vérifier mon identité ?", a: "Pour garantir une communauté de personnes réelles. La vérification donne le badge bleu et permet de publier des Moments. Votre pièce n'est jamais montrée aux autres membres." },
 ];
 

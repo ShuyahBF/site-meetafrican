@@ -4,9 +4,11 @@ Pour chaque vidéo publiée, on produit TROIS fichiers à partir de l'original :
   - la version CLAIRE, compressée (H.264 720p max, son AAC) -> stockage
     PRIVÉ : seuls les membres autorisés par l'auteur la reçoivent, via une
     URL temporaire (cf. routes/videos.py) ;
-  - la version FLOUTÉE, entièrement floutée, basse résolution et SANS SON
-    (la voix permet aussi d'identifier quelqu'un) -> stockage PUBLIC,
-    c'est celle que tout le monde voit dans le fil ;
+  - la version FLOUTÉE : seul le VISAGE est flouté (face_blur.py), le reste
+    reste net ; les images où aucun visage n'est détecté sont entièrement
+    floutées (en cas de doute, tout est flouté). SANS SON (la voix permet
+    aussi d'identifier quelqu'un) -> stockage PUBLIC, c'est celle que tout
+    le monde voit dans le fil ;
   - une VIGNETTE (image JPEG floutée) -> stockage PUBLIC, pour les grilles
     de vidéos des profils.
 
@@ -30,6 +32,11 @@ from typing import List, Optional
 # qui bloquerait le serveur indéfiniment).
 FFMPEG_TIMEOUT_SECONDS = 240
 
+# Mode de floutage de la version publique (enregistré avec la vidéo ; les
+# vidéos d'un autre mode sont retraitées par media_migration.py).
+BLUR_MODE_FACE = "face-v1"
+BLUR_MODE_FULL = "full"
+
 DURATION_RE = re.compile(r"Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)")
 
 
@@ -41,8 +48,9 @@ class VideoProcessingError(Exception):
 class ProcessedVideo:
     duration_seconds: float
     clear_mp4: bytes      # version claire compressée (privée)
-    blurred_mp4: bytes    # version entièrement floutée (publique)
+    blurred_mp4: bytes    # version publique, visage flouté (publique)
     poster_jpg: bytes     # vignette floutée (publique)
+    blur_mode: str = BLUR_MODE_FULL  # "face-v1" (visage seul) ou "full"
 
 
 def ffmpeg_exe() -> str:
@@ -99,29 +107,51 @@ def process_video(source: Path, max_duration_seconds: int) -> ProcessedVideo:
             str(clear),
         ]), "compression")
 
-        # 2) Version entièrement floutée : on réduit fortement la définition
-        #    PUIS on floute (flou "boîte" répété) — aucun détail du visage
-        #    ne subsiste, même en agrandissant. Sans piste audio.
-        _check(_run([
-            "-y", "-i", str(clear),
-            "-vf", "scale=180:-2,boxblur=luma_radius=12:luma_power=4,scale=360:-2",
-            "-an",
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", "33", "-pix_fmt", "yuv420p",
-            "-movflags", "+faststart",
-            str(blurred),
-        ]), "floutage")
+        # 2) Version publique : visage flouté, reste net, sans son.
+        blur_mode = make_public_version(clear, blurred)
 
-        # 3) Vignette : une image de la version floutée (à 0,5 s, ou la
-        #    toute première si la vidéo est plus courte).
-        seek = "0.5" if duration > 1 else "0"
-        _check(_run(["-y", "-ss", seek, "-i", str(blurred), "-frames:v", "1", "-q:v", "4", str(poster)]), "vignette")
+        # 3) Vignette tirée de la version publique.
+        make_poster(blurred, poster, duration)
 
         return ProcessedVideo(
             duration_seconds=round(duration, 2),
             clear_mp4=clear.read_bytes(),
             blurred_mp4=blurred.read_bytes(),
             poster_jpg=poster.read_bytes(),
+            blur_mode=blur_mode,
         )
+
+
+def make_public_version(clear: Path, blurred: Path) -> str:
+    """Produit la version publique à partir de la version claire et renvoie
+    le mode de floutage obtenu. Visage seul si possible ; en cas d'échec de
+    la détection, repli sur l'ancien floutage complet."""
+    try:
+        from face_blur import render_face_blurred_video
+
+        stats = render_face_blurred_video(ffmpeg_exe(), clear, blurred, FFMPEG_TIMEOUT_SECONDS)
+        print(f"[video_processing] floutage visage : {stats}")
+        return BLUR_MODE_FACE
+    except Exception as exc:  # noqa: BLE001 — repli sûr, jamais d'erreur visible
+        print(f"[video_processing] floutage visage impossible ({exc}) : floutage complet")
+    # Repli : réduction forte de la définition PUIS flou "boîte" répété —
+    # aucun détail ne subsiste, même en agrandissant. Sans piste audio.
+    _check(_run([
+        "-y", "-i", str(clear),
+        "-vf", "scale=180:-2,boxblur=luma_radius=12:luma_power=4,scale=360:-2",
+        "-an",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "33", "-pix_fmt", "yuv420p",
+        "-movflags", "+faststart",
+        str(blurred),
+    ]), "floutage")
+    return BLUR_MODE_FULL
+
+
+def make_poster(blurred: Path, poster: Path, duration: float) -> None:
+    """Vignette : une image de la version publique (à 0,5 s, ou la toute
+    première si la vidéo est plus courte)."""
+    seek = "0.5" if duration > 1 else "0"
+    _check(_run(["-y", "-ss", seek, "-i", str(blurred), "-frames:v", "1", "-q:v", "4", str(poster)]), "vignette")
 
 
 def _check(result: subprocess.CompletedProcess, step: str) -> None:

@@ -56,3 +56,10 @@ export function formatRelativeShort(iso) {
   if (minutes < 7 * 24 * 60) return `${Math.floor(minutes / 1440)} j`;
   return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 }
+
+/** Date et heure lisibles : "28/09/2026 à 14:05" (horodatage des vérifications). */
+export function formatDateTime(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return `${d.toLocaleDateString("fr-FR")} à ${d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
+}

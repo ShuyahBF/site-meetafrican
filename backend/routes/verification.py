@@ -21,6 +21,7 @@ from pydantic import BaseModel
 from ai_moderation import analyze_image
 from auth import get_current_admin, get_current_user
 from db import db
+from verification_log import log_verification
 from models import (
     DEFAULT_ID_VERIFICATION_PROMPT,
     IdentityVerification,
@@ -49,12 +50,17 @@ class VerificationSubmit(BaseModel):
 async def submit_verification(payload: VerificationSubmit, user: dict = Depends(get_current_user)):
     settings = await _moderation_settings()
     verification = IdentityVerification(user_id=user["id"], document_key=payload.document_key)
+    await log_verification("document", "submitted", user["id"], target_id=verification.id)
 
     if settings.ai_auto_enabled:
         view_url = await presigned_document_url(payload.document_key)
         result = await analyze_image(view_url, settings.id_verification_prompt or DEFAULT_ID_VERIFICATION_PROMPT)
         verification.ai_decision = result.decision
         verification.ai_reason = result.reason
+        verification.ai_checked_at = await log_verification(
+            "document", f"ai_{result.decision}", user["id"], actor="ia", target_id=verification.id,
+            details={"reason": result.reason},
+        )
         if result.decision == "approved":
             verification.status = VerificationStatus.verified
             verification.reviewed_at = _now()
@@ -98,9 +104,13 @@ async def review_verification(verification_id: str, approve: bool, admin: dict =
         raise HTTPException(status_code=404, detail="Vérification introuvable")
 
     new_status = VerificationStatus.verified if approve else VerificationStatus.rejected
+    reviewed_at = await log_verification(
+        "document", "human_approved" if approve else "human_rejected", record["user_id"],
+        actor="moderateur", actor_id=admin["id"], target_id=verification_id,
+    )
     await db.identity_verifications.update_one(
         {"id": verification_id},
-        {"$set": {"status": new_status.value, "reviewed_by": admin["id"], "reviewed_at": _now()}},
+        {"$set": {"status": new_status.value, "reviewed_by": admin["id"], "reviewed_at": reviewed_at}},
     )
     await db.users.update_one(
         {"id": record["user_id"]},

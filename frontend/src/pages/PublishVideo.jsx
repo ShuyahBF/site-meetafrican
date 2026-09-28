@@ -184,7 +184,7 @@ export default function PublishVideo() {
 
           <p className="mt-4 flex gap-2 rounded-2xl bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-500">
             <span className="material-symbols-outlined icon-filled text-base text-primary">lock</span>
-            Votre vidéo sera compressée et entièrement floutée pour tous. Seuls vos matchs et les membres vérifiés
+            Votre vidéo sera compressée et votre visage flouté pour tous (silhouette et décor restent visibles). Seuls vos matchs et les membres vérifiés
             que vous acceptez la verront en clair.
           </p>
 

@@ -31,6 +31,8 @@ import AdminPayments from "@/pages/admin/AdminPayments";
 import AdminReports from "@/pages/admin/AdminReports";
 import AdminSubscriptionPlans from "@/pages/admin/AdminSubscriptionPlans";
 import AdminSettings from "@/pages/admin/AdminSettings";
+import AdminTeam from "@/pages/admin/AdminTeam";
+import AdminVerificationLog from "@/pages/admin/AdminVerificationLog";
 import SecureLayout from "@/secure/SecureLayout";
 import SecureFrame from "@/secure/SecureFrame";
 import securisationHtml from "@/secure/content/securisation.html?raw";
@@ -80,6 +82,8 @@ export default function App() {
             <Route path="signalements" element={<AdminReports />} />
             <Route path="abonnements" element={<AdminSubscriptionPlans />} />
             <Route path="parametres" element={<AdminSettings />} />
+            <Route path="equipe" element={<AdminTeam />} />
+            <Route path="journal-verifications" element={<AdminVerificationLog />} />
           </Route>
 
           {/* Route cachée (non liée dans la navigation du site) : accessible

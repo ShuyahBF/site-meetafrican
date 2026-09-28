@@ -80,6 +80,20 @@ def _return_url(payload_url: Optional[str], page: str, deposit_id: str) -> str:
     return f"{s.public_site_url}/{page}?paiement={deposit_id}"
 
 
+# Personnalisation de la page de paiement PawaPay. Le nom du marchand affiché
+# en tête de page vient du compte PawaPay (partagé avec Sawali) et ne peut
+# pas être changé par l'API ; on renseigne donc les champs qui le peuvent :
+#   - reason          : "ce que vous payez", affiché sur la page (1-50 car.)
+#   - customerMessage : libellé du SMS / de l'historique Mobile Money
+#                       (4-22 caractères alphanumériques)
+#   - language        : page en français
+BRAND_CUSTOMER_MESSAGE = "beAuthentik"
+
+
+def _branding(reason: str) -> Dict[str, Any]:
+    return {"reason": reason[:50], "customerMessage": BRAND_CUSTOMER_MESSAGE, "language": "FR"}
+
+
 def _readable(field: Any) -> Optional[str]:
     """PawaPay renvoie failureReason/rejectionReason comme des objets
     {failureCode, failureMessage}. On les rend imprimables pour le front."""
@@ -125,6 +139,7 @@ async def create_payment_page(
         "depositId": deposit_id,
         "returnUrl": return_url,
         "country": country,
+        **_branding("Abonnement Premium beAuthentik"),
         "amountDetails": {
             "amount": str(payload.amount_xof),
             "currency": _currency_for_country(country),
@@ -227,6 +242,7 @@ async def create_wallet_recharge(
         "depositId": deposit_id,
         "returnUrl": return_url,
         "country": country,
+        **_branding("Recharge portefeuille beAuthentik"),
         "amountDetails": {
             "amount": str(payload.amount_xof),
             "currency": _currency_for_country(country),

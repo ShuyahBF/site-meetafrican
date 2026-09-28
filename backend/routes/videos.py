@@ -293,6 +293,7 @@ async def _process_in_background(video_id: str, source: Path) -> None:
             "clear_key": clear_key,
             "blurred_url": blurred_url,
             "poster_url": poster_url,
+            "blur_mode": result.blur_mode,  # "face-v1" : visage seul flouté
             "duration_seconds": result.duration_seconds,
             "status": VideoStatus.published.value,
             "created_at": _now(),  # "publiée à" = fin du traitement
@@ -312,9 +313,23 @@ async def _process_in_background(video_id: str, source: Path) -> None:
 # Fil
 # ---------------------------------------------------------------------------
 
+# Rayon de l'onglet "Près de moi" > "Autour de moi" (géolocalisation).
+NEAR_RADIUS_KM = 50
+
+
+def _distance_km(a: dict, b: dict) -> float:
+    """Distance à vol d'oiseau (formule de haversine) entre deux positions."""
+    lat1, lng1, lat2, lng2 = map(math.radians, (a["lat"], a["lng"], b["lat"], b["lng"]))
+    h = math.sin((lat2 - lat1) / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin((lng2 - lng1) / 2) ** 2
+    return 6371 * 2 * math.asin(math.sqrt(h))
+
+
 @router.get("/videos/feed")
 async def video_feed(
     tab: Literal["pour-toi", "pres-de-moi", "matchs"] = "pour-toi",
+    # "Près de moi" : "ville" (même ville que mon profil) ou "gps" (autour de
+    # ma position réelle, triés par distance — géolocalisation obligatoire).
+    near: Literal["ville", "gps"] = "ville",
     tag: Optional[str] = Query(None, max_length=30),
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=30),
@@ -336,15 +351,48 @@ async def video_feed(
     else:
         # "Pour toi" et "Près de moi" : profils du genre recherché, actifs.
         wanted_gender = "femme" if user.get("gender") == "homme" else "homme"
-        author_query: dict = {"gender": wanted_gender, "is_active": True}
-        if tab == "pres-de-moi":
-            if not user.get("country"):
-                return {"items": [], "has_more": False, "hint": "Renseignez votre pays dans votre profil"}
-            author_query["country"] = {"$regex": f"^{re.escape(user['country'])}$", "$options": "i"}
-        author_ids = await db.users.distinct("id", author_query)
+        # Admin et modérateurs ne sont jamais visibles des membres.
+        author_query: dict = {"gender": wanted_gender, "is_active": True, "role": {"$nin": ["admin", "moderator"]}}
+        distances: dict = {}
+        if tab == "pres-de-moi" and near == "ville":
+            city = (user.get("city") or "").strip()
+            if not city:
+                return {"items": [], "has_more": False, "hint": "Renseignez votre ville dans votre profil"}
+            author_query["city"] = {"$regex": f"^\\s*{re.escape(city)}\\s*$", "$options": "i"}
+            if user.get("country"):
+                author_query["country"] = {"$regex": f"^{re.escape(user['country'])}$", "$options": "i"}
+        elif tab == "pres-de-moi" and near == "gps":
+            here = user.get("location")
+            if not here:
+                return {"items": [], "has_more": False, "location_required": True,
+                        "hint": "Activez la géolocalisation pour voir les membres autour de vous"}
+            # Pré-filtre "carré" autour de ma position, puis vraie distance.
+            dlat = NEAR_RADIUS_KM / 111.0
+            dlng = NEAR_RADIUS_KM / (111.0 * max(math.cos(math.radians(here["lat"])), 0.01))
+            author_query["location.lat"] = {"$gte": here["lat"] - dlat, "$lte": here["lat"] + dlat}
+            author_query["location.lng"] = {"$gte": here["lng"] - dlng, "$lte": here["lng"] + dlng}
+            for a in await db.users.find(author_query, {"_id": 0, "id": 1, "location": 1}).to_list(5000):
+                d = _distance_km(here, a["location"])
+                if d <= NEAR_RADIUS_KM:
+                    distances[a["id"]] = d
+        if tab == "pres-de-moi" and near == "gps":
+            author_ids = list(distances)
+        else:
+            author_ids = await db.users.distinct("id", author_query)
         query["user_id"] = {"$in": author_ids}
 
-    if tab == "pour-toi" and not tag:
+    if tab == "pres-de-moi" and near == "gps":
+        # Les plus proches d'abord, puis les plus récentes.
+        pool = await db.videos.find(query, {"_id": 0}).sort("created_at", -1).limit(FOR_YOU_POOL).to_list(FOR_YOU_POOL)
+        pool.sort(key=lambda v: distances.get(v["user_id"], NEAR_RADIUS_KM))
+        page = pool[skip: skip + limit]
+        has_more = skip + limit < len(pool)
+        items = await _decorate(page, user)
+        for item in items:
+            # Distance ARRONDIE (au km, 1 km minimum) : jamais la position.
+            item["distance_km"] = max(1, round(distances.get(item["user_id"], 0)))
+        return {"items": items, "has_more": has_more}
+    elif tab == "pour-toi" and not tag:
         # Classement "Pour toi" calculé sur les vidéos récentes.
         pool = await db.videos.find(query, {"_id": 0}).sort("created_at", -1).limit(FOR_YOU_POOL).to_list(FOR_YOU_POOL)
         seen = set(await db.video_views.distinct(

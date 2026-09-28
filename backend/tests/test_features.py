@@ -175,8 +175,8 @@ def test_video_blurred_for_all_clear_only_for_accepted_verified(client, make_use
 
 
 def test_feed_like_comment_view_report(client, make_user):
-    author_id, author, _ = make_user(gender="femme", verified=True, country="Mali")
-    _, viewer, _ = make_user(gender="homme", country="Mali")
+    author_id, author, _ = make_user(gender="femme", verified=True, country="Mali", city="Bamako")
+    _, viewer, _ = make_user(gender="homme", country="Mali", city=" bamako ")
     video_id = _publish_ready(client, author, author_id, caption="Bamako by night #bamako")["id"]
 
     feed = client.get("/api/videos/feed", headers=viewer).json()
@@ -506,3 +506,194 @@ def test_reconcile_activates_pending_payment_without_callback(client, make_user,
     assert client.portal.call(lambda: db.subscriptions.find_one({"id": sub_id}))["status"] == "active"
     # Passe suivante : plus rien en attente, rien n'est appliqué deux fois
     assert client.portal.call(pp.reconcile_pending_payments) == 0
+
+
+def test_payment_page_shows_beauthentik_branding(client, make_user, monkeypatch):
+    """La page PawaPay (compte partagé avec Sawali) affiche beAuthentik dans
+    "reason" et dans le libellé SMS (customerMessage), en français."""
+    import httpx
+
+    from config import get_settings
+
+    settings = get_settings()
+    monkeypatch.setattr(settings, "pawapay_environment", "sandbox")
+    monkeypatch.setattr(settings, "pawapay_api_token_sandbox", "tok")
+
+    sent = {}
+
+    async def fake_post(self, url, headers=None, json=None, **kw):
+        sent.update(json)  # corps envoyé à PawaPay
+        return httpx.Response(200, json={"redirectUrl": "https://pay.example/x"})
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+
+    _, headers, _ = make_user()
+    plan = client.get("/api/subscriptions/plans").json()[0]
+    sub = client.post("/api/subscriptions/subscribe", json={"plan_id": plan["id"]}, headers=headers).json()
+    r = client.post("/api/payments/pawapay/payment-page",
+                    json={"subscription_id": sub["subscription_id"], "amount_xof": 5000}, headers=headers)
+    assert r.status_code == 200, r.text
+    assert sent["customerMessage"] == "beAuthentik"
+    assert "beAuthentik" in sent["reason"] and len(sent["reason"]) <= 50
+    assert sent["language"] == "FR"
+
+
+
+def test_near_me_by_city_and_by_gps(client, make_user):
+    """"Près de moi" : par ville (profil) ou par géolocalisation (obligatoire
+    pour ce mode, distance arrondie, position jamais exposée)."""
+    a_id, a, _ = make_user(gender="femme", verified=True, country="Burkina Faso", city="Ouagadougou")
+    b_id, b, _ = make_user(gender="femme", verified=True, country="Burkina Faso", city="Bobo-Dioulasso")
+    _, viewer, _ = make_user(gender="homme", country="Burkina Faso", city="Ouagadougou")
+    va = _publish_ready(client, a, a_id, caption="Ouaga")["id"]
+    vb = _publish_ready(client, b, b_id, caption="Bobo")["id"]
+    feed = lambda near: client.get("/api/videos/feed", params={"tab": "pres-de-moi", "near": near}, headers=viewer).json()
+
+    # Ville : seulement Ouagadougou
+    ids = [v["id"] for v in feed("ville")["items"]]
+    assert va in ids and vb not in ids
+
+    # GPS : exigé tant que la position n'est pas partagée
+    assert feed("gps")["location_required"] is True
+
+    # Positions : A à ~5 km du visiteur, B à Bobo (~300 km, hors rayon)
+    assert client.put("/api/me/location", json={"lat": 12.3714, "lng": -1.5197}, headers=viewer).status_code == 200
+    client.put("/api/me/location", json={"lat": 12.41, "lng": -1.49}, headers=a)
+    client.put("/api/me/location", json={"lat": 11.1771, "lng": -4.2979}, headers=b)
+    items = feed("gps")["items"]
+    assert [v["id"] for v in items] == [va]
+    assert items[0]["distance_km"] in (5, 6)  # ~5,5 km entre positions arrondies
+    assert "location" not in items[0]["author"]
+
+    # Position arrondie à ~1 km en base, et effaçable
+    from db import db
+    doc = client.portal.call(lambda: db.users.find_one({"id": a_id}))
+    assert doc["location"] == {"lat": 12.41, "lng": -1.49}
+    client.delete("/api/me/location", headers=viewer)
+    assert feed("gps")["location_required"] is True
+
+
+def test_face_blur_falls_back_to_full_blur_without_face():
+    """Sans visage détecté : repli sûr (photo entièrement floutée)."""
+    import io
+
+    import numpy as np
+    from PIL import Image
+
+    from face_blur import blur_faces_in_photo, detect_faces
+    from image_processing import apply_face_mask
+
+    blank = np.full((400, 300, 3), 200, np.uint8)
+    assert detect_faces(blank) == []
+    assert blur_faces_in_photo(blank) is None
+    buf = io.BytesIO()
+    Image.fromarray(blank).save(buf, "JPEG")
+    masked = Image.open(io.BytesIO(apply_face_mask(buf.getvalue())))
+    assert masked.size == (300, 400)
+
+
+def test_moderators_team_and_staff_hidden(client, make_user):
+    """L'admin désigne des modérateurs ; les comptes de l'équipe sont
+    invisibles des membres (découverte, fiche profil)."""
+    from db import db
+
+    admin_id, admin, _ = make_user(gender="homme")
+    client.portal.call(lambda: db.users.update_one({"id": admin_id}, {"$set": {"role": "admin"}}))
+    mod_id, mod, _ = make_user(gender="femme")
+    _, member, _ = make_user(gender="homme")
+    email = client.portal.call(lambda: db.users.find_one({"id": mod_id}))["email"]
+
+    # Seul l'admin principal gère l'équipe
+    assert client.post("/api/admin/team", json={"email": email}, headers=member).status_code == 403
+    assert client.post("/api/admin/team", json={"email": email.upper()}, headers=admin).json()["role"] == "moderator"
+    assert client.get("/api/admin/team", headers=mod).status_code == 403
+    assert {u["id"] for u in client.get("/api/admin/team", headers=admin).json()} >= {admin_id, mod_id}
+
+    # Invisible pour un membre : fiche 404, jamais dans la découverte
+    assert client.get(f"/api/users/{mod_id}", headers=member).status_code == 404
+    client.portal.call(lambda: db.users.update_one({"id": mod_id}, {"$set": {"photos": [{"id": "p", "url": "u", "status": "approved"}]}}))
+    assert mod_id not in [p["id"] for p in client.get("/api/discover", headers=member).json()]
+
+    # Retrait : redevient un membre normal
+    assert client.delete(f"/api/admin/team/{mod_id}", headers=admin).status_code == 200
+    assert client.get(f"/api/users/{mod_id}", headers=member).status_code == 200
+
+
+def test_phone_and_whatsapp_otp_verification(client, make_user, monkeypatch):
+    """Code OTP par WhatsApp / SMS : envoi, erreurs, validation, badges,
+    anti-abus (délai entre envois) et unicité du numéro."""
+    import routes.phone_verification as pv
+
+    sent = {}
+
+    async def fake_send(msisdn, code):
+        sent["msisdn"], sent["code"] = msisdn, code
+        return True, None
+    monkeypatch.setattr(pv, "send_whatsapp_code", fake_send)
+    monkeypatch.setattr(pv, "send_sms_code", fake_send)
+
+    user_id, headers, _ = make_user()
+    other_id, other, _ = make_user()
+
+    # Numéro local à 8 chiffres -> indicatif 226 ajouté
+    r = client.post("/api/me/numbers/otp/request", json={"channel": "whatsapp", "number": "70 12 34 56"}, headers=headers)
+    assert r.status_code == 200, r.text
+    assert sent["msisdn"] == "22670123456"
+    # Nouvel envoi immédiat refusé (délai de 60 s)
+    assert client.post("/api/me/numbers/otp/request", json={"channel": "whatsapp", "number": "70123456"}, headers=headers).status_code == 429
+
+    # Mauvais code : 400 (pas 401), puis bon code
+    wrong = "000000" if sent["code"] != "000000" else "111111"
+    assert client.post("/api/me/numbers/otp/verify", json={"channel": "whatsapp", "code": wrong}, headers=headers).status_code == 400
+    r = client.post("/api/me/numbers/otp/verify", json={"channel": "whatsapp", "code": sent["code"]}, headers=headers)
+    assert r.status_code == 200 and r.json()["whatsapp_verified"] is True
+    numbers = client.get("/api/me/numbers", headers=headers).json()
+    assert numbers["whatsapp"] == "+22670123456" and numbers["whatsapp_verified"] is True
+
+    # Badge visible par les autres, jamais le numéro
+    profile = client.get(f"/api/users/{user_id}", headers=other).json()
+    assert "+22670123456" not in str(profile)
+
+    # Le même numéro ne peut pas être vérifié sur un autre compte
+    assert client.post("/api/me/numbers/otp/request", json={"channel": "whatsapp", "number": "+226 70 12 34 56"}, headers=other).status_code == 409
+
+    # SMS : même parcours, numéro de téléphone vérifié
+    client.post("/api/me/numbers/otp/request", json={"channel": "sms", "number": "+22676000000"}, headers=headers)
+    assert client.post("/api/me/numbers/otp/verify", json={"channel": "sms", "code": sent["code"]}, headers=headers).json()["phone_verified"] is True
+
+
+def test_group_photo_rejected_but_sent_to_human_review_with_timestamps(client, make_user, monkeypatch):
+    """Plus de 2 visages : refus immédiat avec raison, mais revue humaine
+    quand même ; chaque étape est horodatée dans le journal."""
+    import routes.photos as ph
+    from db import db
+
+    async def three_faces(_url):
+        return 3
+
+    async def ai_must_not_run(*_a, **_k):
+        raise AssertionError("l'IA ne doit pas être appelée")
+    monkeypatch.setattr(ph, "_count_faces", three_faces)
+    monkeypatch.setattr(ph, "analyze_image", ai_must_not_run)
+
+    user_id, headers, _ = make_user()
+    admin_id, admin, _ = make_user()
+    client.portal.call(lambda: db.users.update_one({"id": admin_id}, {"$set": {"role": "moderator"}}))
+
+    photo = client.post("/api/me/photos", json={"url": "https://example.com/groupe.jpg"}, headers=headers).json()
+    assert photo["status"] == "rejected" and photo["faces_detected"] == 3
+    assert "3 visages" in photo["rejection_reason"] and photo["pending_human_review"] is True
+    assert photo["moderated_at"]
+
+    # Dans la file de revue humaine
+    queue = client.get("/api/admin/photos/pending", headers=admin).json()
+    assert any(p["id"] == photo["id"] for p in queue)
+
+    # Le modérateur confirme le refus : sort de la file, horodaté
+    client.post(f"/api/admin/photos/{user_id}/{photo['id']}/review", params={"approve": False}, headers=admin)
+    assert not any(p["id"] == photo["id"] for p in client.get("/api/admin/photos/pending", headers=admin).json())
+
+    events = client.get("/api/admin/verification-events", params={"user_id": user_id, "kind": "photo"}, headers=admin).json()
+    actions = [e["action"] for e in events["items"]]
+    assert {"submitted", "faces_counted", "auto_rejected_faces", "human_rejected"} <= set(actions)
+    assert all(e["at"] for e in events["items"])
+    assert next(e for e in events["items"] if e["action"] == "human_rejected")["actor_id"] == admin_id

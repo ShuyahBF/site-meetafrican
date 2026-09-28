@@ -4,12 +4,10 @@
     appliqué à toute photo dès son approbation (IA ou admin) — dissuade la
     réutilisation des photos hors du site.
   - `apply_face_mask` : version masquée servie aux profils SANS abonnement
-    actif (voir routes/matching.py:_mask_photos_for_viewer). Limite réelle
-    assumée : sans détection de visage (aucune dépendance de ce type dans le
-    projet), on ne trace pas précisément yeux/nez/bouche — on applique un
-    flou fort sur toute l'image plus un bandeau de marque centré, ce qui
-    atteint le même objectif pratique (impossible de reconnaître la
-    personne) sans ajouter de dépendance de vision par ordinateur.
+    actif (voir routes/matching.py:_mask_photos_for_viewer). Le VISAGE est
+    détecté (face_blur.py) et seul lui est flouté : silhouette et style
+    restent visibles. Si aucun visage n'est détecté, par sécurité, toute
+    l'image est floutée avec un bandeau de marque (ancien comportement).
 
 Police utilisée : Plus Jakarta Sans (police de marque du site), embarquée
 dans assets/fonts/ pour ne pas dépendre des polices système — absentes par
@@ -20,7 +18,7 @@ from __future__ import annotations
 import io
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 FONT_PATH = Path(__file__).parent / "assets" / "fonts" / "PlusJakartaSans-Bold.ttf"
 BRAND_TEXT = "beAuthentik"
@@ -32,7 +30,9 @@ def _font(size: int) -> ImageFont.FreeTypeFont:
 
 def _load_rgb(image_bytes: bytes) -> Image.Image:
     img = Image.open(io.BytesIO(image_bytes))
-    return img.convert("RGB")
+    # Photos de téléphone : on applique l'orientation EXIF (sinon l'image
+    # peut être couchée et le visage non détecté).
+    return ImageOps.exif_transpose(img).convert("RGB")
 
 
 def _to_jpeg_bytes(img: Image.Image, quality: int = 85) -> bytes:
@@ -65,10 +65,49 @@ def apply_watermark(image_bytes: bytes) -> bytes:
     return _to_jpeg_bytes(watermarked)
 
 
+# Version du masquage : les photos masquées plus anciennes (ou d'une autre
+# version) sont régénérées automatiquement (voir media_migration.py).
+MASK_VERSION = "face-v1"
+
+
 def apply_face_mask(image_bytes: bytes) -> bytes:
-    """Version floutée + bandeau de marque, servie aux profils visiteurs
-    sans abonnement actif (voir limite documentée en tête de fichier)."""
+    """Version servie aux visiteurs sans abonnement : visage flouté, reste
+    net ; image entièrement floutée si aucun visage n'est détecté."""
     img = _load_rgb(image_bytes)
+    try:
+        import numpy as np
+
+        from face_blur import blur_faces_in_photo
+
+        faces_blurred = blur_faces_in_photo(np.asarray(img))
+    except Exception as exc:  # détecteur indisponible -> repli sûr
+        print(f"[image_processing] détection de visage impossible : {exc}")
+        faces_blurred = None
+    if faces_blurred is not None:
+        return _face_only_mask(Image.fromarray(faces_blurred))
+    return _full_mask(img)
+
+
+def _face_only_mask(img: Image.Image) -> bytes:
+    """Visage déjà flouté : on ajoute une petite étiquette en bas."""
+    overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(overlay)
+    font = _font(max(12, img.width // 28))
+    text = "Visage flouté · abonnez-vous pour le voir"
+    text_w = draw.textlength(text, font=font)
+    pad = max(6, img.width // 60)
+    x0 = (img.width - text_w) / 2 - pad
+    y0 = img.height - font.size - 3 * pad
+    draw.rounded_rectangle(
+        [(x0, y0), (x0 + text_w + 2 * pad, y0 + font.size + 2 * pad)],
+        radius=font.size, fill=(20, 4, 12, 170),
+    )
+    draw.text((x0 + pad, y0 + pad * 0.8), text, font=font, fill=(255, 255, 255, 235))
+    return _to_jpeg_bytes(Image.alpha_composite(img.convert("RGBA"), overlay).convert("RGB"))
+
+
+def _full_mask(img: Image.Image) -> bytes:
+    """Repli : image entièrement floutée + bandeau de marque centré."""
     blurred = img.filter(ImageFilter.GaussianBlur(radius=max(12, img.width // 25)))
 
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))

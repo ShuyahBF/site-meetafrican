@@ -216,6 +216,8 @@ export default function VideoSlide({
           <p className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-white/80">
             <span className="material-symbols-outlined text-sm">location_on</span>
             {[author.city, author.country].filter(Boolean).join(", ")}
+            {/* Mode "Autour de moi" : distance approximative (jamais la position) */}
+            {video.distance_km ? <span className="text-white/60"> · à {video.distance_km} km</span> : null}
           </p>
         )}
         {caption && (
@@ -323,7 +325,7 @@ function AccessBadge({ video, viewerVerified, onRequestAccess }) {
       <div className="glass pointer-events-auto flex flex-col items-center gap-2 rounded-3xl px-5 py-4 text-center">
         <span className="material-symbols-outlined icon-filled text-3xl text-white">lock</span>
         <p className="text-xs font-semibold text-white/85">
-          Vidéo floutée · visible en clair si {first} vous accepte
+          Visage flouté · visible en clair si {first} vous accepte
         </p>
         {content}
       </div>

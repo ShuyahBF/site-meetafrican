@@ -6,12 +6,14 @@ const NAV = [
   { to: "/admin/photos", label: "Photos" },
   { to: "/admin/videos", label: "Vidéos" },
   { to: "/admin/verifications", label: "Vérifications" },
+  { to: "/admin/journal-verifications", label: "Journal" },
   { to: "/admin/paiements", label: "Paiements" },
   { to: "/admin/signalements", label: "Signalements" },
   { to: "/admin/abonnements", label: "Abonnements" },
   { to: "/admin/activite", label: "Activité & IP" },
   { to: "/admin/donnees-test", label: "Données de test" },
   { to: "/admin/parametres", label: "Paramètres" },
+  { to: "/admin/equipe", label: "Équipe", adminOnly: true },
 ];
 
 export default function AdminLayout() {
@@ -30,7 +32,8 @@ export default function AdminLayout() {
       </header>
 
       <nav className="flex flex-wrap gap-1 border-b border-slate-200 bg-white px-4">
-        {NAV.map((item) => (
+        {/* "Équipe" : réservé à l'administrateur principal (pas aux modérateurs) */}
+        {NAV.filter((item) => !item.adminOnly || user?.role === "admin").map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

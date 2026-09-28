@@ -12,6 +12,10 @@ const RETENTION = [
   ["Pièce d'identité", "Stockage privé, jamais montrée aux membres. Conservée tant que le compte existe (preuve de la vérification), supprimée avec le compte."],
   ["Vidéos (« Moments »)", "Version floutée publique et version claire privée, jusqu'à suppression par vous, la modération ou la suppression du compte. Les liens vers la version claire expirent après 2 heures."],
   ["Messages et interactions (matchs, J'aime, commentaires)", "Tant que les comptes concernés existent ; supprimés avec le compte."],
+  ["Position (seulement si vous activez « Autour de moi »)", "Arrondie à environ 1 km, remplacée à chaque mise à jour, jamais montrée aux autres membres (seule une distance approximative l'est). Supprimée dès que vous cliquez sur « Ne plus partager ma position » ou avec le compte."],
+  ["Numéros WhatsApp et téléphone vérifiés", "Tant que le compte existe. Jamais montrés aux autres membres : seul le badge « vérifié » est visible."],
+  ["Codes de vérification envoyés par WhatsApp ou SMS", "Jamais conservés en clair ; effacés dès leur validation, ou automatiquement après 10 minutes."],
+  ["Journal horodaté des vérifications (photos, pièce d'identité, numéros : date, heure, décision, IP)", "Tant que le compte existe, comme preuve des contrôles effectués."],
   ["Journal d'activité (adresse IP, action réalisée, navigateur, date)", "12 mois, puis effacement automatique."],
   ["Adresse IP d'inscription et de dernière connexion", "Tant que le compte existe."],
   ["Adresse IP des visites de la page d'accueil", "31 jours (sert uniquement à ne compter qu'une visite par jour), puis effacement automatique. Seul le nombre total de visites est conservé."],
@@ -37,7 +41,7 @@ const SECTIONS = [
       <ul>
         <li><strong>Compte</strong> : nom affiché, email ou téléphone, mot de passe (stocké sous forme chiffrée irréversible), genre, date de naissance.</li>
         <li><strong>Profil</strong> : photos, bio, ville, pays, profession, centres d'intérêt, type de relation recherchée, situation vis-à-vis des enfants.</li>
-        <li><strong>Vérification</strong> : photo de votre pièce d'identité.</li>
+        <li><strong>Vérification</strong> : photo de votre pièce d'identité ; numéros WhatsApp et de téléphone confirmés par un code reçu par message.</li>
         <li><strong>Contenus et échanges</strong> : vidéos, légendes, commentaires, messages, J'aime, swipes, matchs, cadeaux, signalements, notes.</li>
         <li><strong>Paiements</strong> : formule, montant, date, référence et statut du paiement, numéro Mobile Money si vous le communiquez au prestataire.</li>
         <li><strong>Données techniques</strong> : adresse IP, navigateur, date et nature de chaque action (voir « Traçabilité » ci-dessous), date de dernière connexion.</li>
@@ -62,8 +66,8 @@ const SECTIONS = [
     title: "Ce que voient les autres membres",
     body: (
       <>
-        <p>Les autres membres peuvent voir : votre nom affiché, votre âge (jamais la date de naissance exacte), votre ville et votre pays, votre bio et vos informations de profil, vos photos approuvées (visage masqué pour les non-abonnés), vos vidéos (floutées, sauf accès accordé), votre statut « en ligne » ou votre dernière connexion, votre réactivité aux messages et vos compteurs (J'aime, coups de cœur).</p>
-        <p>Ils ne voient <strong>jamais</strong> : votre email, votre téléphone, votre pièce d'identité, votre adresse IP ni vos paiements.</p>
+        <p>Les autres membres peuvent voir : votre nom affiché, votre âge (jamais la date de naissance exacte), votre ville et votre pays, votre bio et vos informations de profil, vos photos approuvées (visage flouté pour les non-abonnés), vos vidéos (visage flouté et sans son, sauf accès accordé), une distance approximative en km si vous utilisez « Autour de moi », votre statut « en ligne » ou votre dernière connexion, votre réactivité aux messages et vos compteurs (J'aime, coups de cœur).</p>
+        <p>Ils ne voient <strong>jamais</strong> : votre email, votre téléphone, votre pièce d'identité, votre position exacte, votre adresse IP ni vos paiements.</p>
       </>
     ),
   },
@@ -152,7 +156,7 @@ const SECTIONS = [
     body: (
       <ul>
         <li><strong>Authenticité</strong> : vérification d'identité et modération des photos avant publication.</li>
-        <li><strong>Vie privée</strong> : vidéos floutées par défaut, visibles en clair uniquement sur votre accord, et accès révocable.</li>
+        <li><strong>Vie privée</strong> : visage flouté par défaut sur les vidéos, visibles en clair uniquement sur votre accord, et accès révocable.</li>
         <li><strong>Modération</strong> : les signalements sont examinés par l'équipe ; une vidéo signalée plusieurs fois est retirée en attendant la décision.</li>
         <li><strong>Paiements</strong> : abonnements sans renouvellement automatique ; tout paiement débité sans activation est régularisé sur simple demande.</li>
         <li><strong>Disponibilité</strong> : nous faisons notre possible pour que le site soit accessible en permanence, hors opérations de maintenance.</li>
