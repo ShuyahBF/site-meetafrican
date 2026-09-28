@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiClient } from "@/lib/api";
 
 const REASON_LABEL = {
@@ -52,7 +53,8 @@ export default function AdminReports() {
                 <span className="text-xs text-slate-400">{new Date(item.created_at).toLocaleString("fr-FR")}</span>
               </div>
               <p className="text-sm text-slate-700">
-                <strong>{item.reported_user_id}</strong> signalé par {item.reporter_user_id}
+                <Link to={`/admin/membres/${item.reported_user_id}`} className="font-bold text-primary hover:underline">Voir le compte signalé</Link>{" "}
+                signalé par <Link to={`/admin/membres/${item.reporter_user_id}`} className="text-primary hover:underline">l'auteur du signalement</Link>
               </p>
               {item.details && <p className="text-sm text-slate-500">{item.details}</p>}
               <div className="mt-2 flex flex-wrap gap-2">
