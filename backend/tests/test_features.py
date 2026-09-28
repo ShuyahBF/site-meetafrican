@@ -659,3 +659,41 @@ def test_phone_and_whatsapp_otp_verification(client, make_user, monkeypatch):
     # SMS : même parcours, numéro de téléphone vérifié
     client.post("/api/me/numbers/otp/request", json={"channel": "sms", "number": "+22676000000"}, headers=headers)
     assert client.post("/api/me/numbers/otp/verify", json={"channel": "sms", "code": sent["code"]}, headers=headers).json()["phone_verified"] is True
+
+
+def test_group_photo_rejected_but_sent_to_human_review_with_timestamps(client, make_user, monkeypatch):
+    """Plus de 2 visages : refus immédiat avec raison, mais revue humaine
+    quand même ; chaque étape est horodatée dans le journal."""
+    import routes.photos as ph
+    from db import db
+
+    async def three_faces(_url):
+        return 3
+
+    async def ai_must_not_run(*_a, **_k):
+        raise AssertionError("l'IA ne doit pas être appelée")
+    monkeypatch.setattr(ph, "_count_faces", three_faces)
+    monkeypatch.setattr(ph, "analyze_image", ai_must_not_run)
+
+    user_id, headers, _ = make_user()
+    admin_id, admin, _ = make_user()
+    client.portal.call(lambda: db.users.update_one({"id": admin_id}, {"$set": {"role": "moderator"}}))
+
+    photo = client.post("/api/me/photos", json={"url": "https://example.com/groupe.jpg"}, headers=headers).json()
+    assert photo["status"] == "rejected" and photo["faces_detected"] == 3
+    assert "3 visages" in photo["rejection_reason"] and photo["pending_human_review"] is True
+    assert photo["moderated_at"]
+
+    # Dans la file de revue humaine
+    queue = client.get("/api/admin/photos/pending", headers=admin).json()
+    assert any(p["id"] == photo["id"] for p in queue)
+
+    # Le modérateur confirme le refus : sort de la file, horodaté
+    client.post(f"/api/admin/photos/{user_id}/{photo['id']}/review", params={"approve": False}, headers=admin)
+    assert not any(p["id"] == photo["id"] for p in client.get("/api/admin/photos/pending", headers=admin).json())
+
+    events = client.get("/api/admin/verification-events", params={"user_id": user_id, "kind": "photo"}, headers=admin).json()
+    actions = [e["action"] for e in events["items"]]
+    assert {"submitted", "faces_counted", "auto_rejected_faces", "human_rejected"} <= set(actions)
+    assert all(e["at"] for e in events["items"])
+    assert next(e for e in events["items"] if e["action"] == "human_rejected")["actor_id"] == admin_id

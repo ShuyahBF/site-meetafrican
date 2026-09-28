@@ -6,6 +6,7 @@ const NAV = [
   { to: "/admin/photos", label: "Photos" },
   { to: "/admin/videos", label: "Vidéos" },
   { to: "/admin/verifications", label: "Vérifications" },
+  { to: "/admin/journal-verifications", label: "Journal" },
   { to: "/admin/paiements", label: "Paiements" },
   { to: "/admin/signalements", label: "Signalements" },
   { to: "/admin/abonnements", label: "Abonnements" },

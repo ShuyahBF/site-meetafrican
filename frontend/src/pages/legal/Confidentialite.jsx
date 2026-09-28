@@ -15,6 +15,7 @@ const RETENTION = [
   ["Position (seulement si vous activez « Autour de moi »)", "Arrondie à environ 1 km, remplacée à chaque mise à jour, jamais montrée aux autres membres (seule une distance approximative l'est). Supprimée dès que vous cliquez sur « Ne plus partager ma position » ou avec le compte."],
   ["Numéros WhatsApp et téléphone vérifiés", "Tant que le compte existe. Jamais montrés aux autres membres : seul le badge « vérifié » est visible."],
   ["Codes de vérification envoyés par WhatsApp ou SMS", "Jamais conservés en clair ; effacés dès leur validation, ou automatiquement après 10 minutes."],
+  ["Journal horodaté des vérifications (photos, pièce d'identité, numéros : date, heure, décision, IP)", "Tant que le compte existe, comme preuve des contrôles effectués."],
   ["Journal d'activité (adresse IP, action réalisée, navigateur, date)", "12 mois, puis effacement automatique."],
   ["Adresse IP d'inscription et de dernière connexion", "Tant que le compte existe."],
   ["Adresse IP des visites de la page d'accueil", "31 jours (sert uniquement à ne compter qu'une visite par jour), puis effacement automatique. Seul le nombre total de visites est conservé."],

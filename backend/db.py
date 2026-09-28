@@ -65,6 +65,9 @@ async def ensure_indexes() -> None:
     # par canal, effacé automatiquement à son expiration.
     await db.otp_codes.create_index([("user_id", 1), ("channel", 1)], unique=True)
     await db.otp_codes.create_index("expires_at_dt", expireAfterSeconds=0)
+    # Journal horodaté des vérifications (consultation par membre et par date)
+    await db.verification_events.create_index([("user_id", 1), ("at", -1)])
+    await db.verification_events.create_index("at")
     # Données de test (marquées is_test_data=True), cf. test_data.py
     await db.users.create_index("is_test_data", sparse=True)
     # Comptage des messages non lus (badge "Messages")

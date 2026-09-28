@@ -111,7 +111,16 @@ class Photo(BaseModel):
     is_primary: bool = False
     moderation_notes: Optional[str] = None
     moderated_at: Optional[str] = None
-    created_at: str = Field(default_factory=_now)
+    # Horodatage et traçabilité de chaque étape (détail complet dans le
+    # journal des vérifications, verification_log.py).
+    faces_detected: Optional[int] = None      # nombre de visages trouvés par le détecteur
+    ai_decision: Optional[str] = None
+    ai_checked_at: Optional[str] = None
+    rejection_reason: Optional[str] = None    # raison affichée au membre
+    pending_human_review: bool = False        # refusée mais soumise quand même à un modérateur
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[str] = None
+    created_at: str = Field(default_factory=_now)  # = date de soumission
 
 
 class User(BaseModel):
@@ -498,9 +507,10 @@ class IdentityVerification(BaseModel):
     status: VerificationStatus = VerificationStatus.pending
     ai_decision: Optional[AiDecision] = None
     ai_reason: Optional[str] = None
+    ai_checked_at: Optional[str] = None  # horodatage de l'analyse IA
     reviewed_by: Optional[str] = None
     reviewed_at: Optional[str] = None
-    created_at: str = Field(default_factory=_now)
+    created_at: str = Field(default_factory=_now)  # = date de soumission
 
 
 # ---------------------------------------------------------------------------

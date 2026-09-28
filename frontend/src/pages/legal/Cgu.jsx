@@ -61,7 +61,7 @@ const SECTIONS = [
     body: (
       <>
         <ul>
-          <li><strong>Photos</strong> : chaque photo est analysée avant publication (automatiquement, puis par un humain en cas de doute). Une photo approuvée reçoit un filigrane beAuthentik ; pour les visiteurs sans abonnement, le visage est flouté (le reste de la photo reste visible).</li>
+          <li><strong>Photos</strong> : chaque photo est analysée avant publication (automatiquement, puis par un humain en cas de doute). Une photo où plus de 2 visages sont détectés est refusée d'office (la raison vous est indiquée) puis revue par un modérateur. Chaque envoi et chaque décision sont horodatés. Une photo approuvée reçoit un filigrane beAuthentik ; pour les visiteurs sans abonnement, le visage est flouté (le reste de la photo reste visible).</li>
           <li><strong>Vidéos (« Moments »)</strong> : réservées aux identités vérifiées, 60 secondes maximum. Chaque vidéo est compressée puis, pour l'ensemble des membres, diffusée <strong>sans son et avec le visage flouté</strong> : la silhouette et le décor restent visibles, et toute image où le visage n'est pas détecté avec certitude est entièrement floutée. La version claire n'est montrée qu'à vos matchs et aux membres vérifiés dont vous avez accepté la demande — accès que vous pouvez retirer à tout moment.</li>
           <li>Vous restez propriétaire de vos contenus. Vous accordez à beAuthentik le droit de les héberger, de les transformer (compression, flou, filigrane) et de les afficher sur le Site, pour la seule durée de leur publication.</li>
           <li>Vous pouvez supprimer vos photos et vidéos à tout moment depuis votre profil.</li>

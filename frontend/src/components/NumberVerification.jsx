@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { apiClient, extractErrorMessage } from "@/lib/api";
+import { formatDateTime } from "@/lib/format";
 
 // Les deux canaux vérifiables : WhatsApp (API Meta) et téléphone (SMS Orange).
 const CHANNELS = [
   { key: "whatsapp", label: "WhatsApp", icon: "chat", numberField: "whatsapp", verifiedField: "whatsapp_verified", color: "text-emerald-600" },
   { key: "sms", label: "Téléphone (SMS)", icon: "sms", numberField: "phone", verifiedField: "phone_verified", color: "text-sky-600" },
-];
+].map((c) => ({ ...c, verifiedAtField: `${c.verifiedField}_at` })); // ex. "whatsapp_verified_at"
 
 /**
  * Section « Mes numéros » de la page profil : vérification du numéro
@@ -35,6 +36,7 @@ export default function NumberVerification() {
             channel={c}
             number={numbers[c.numberField]}
             verified={numbers[c.verifiedField]}
+            verifiedAt={numbers[c.verifiedAtField]}
             available={numbers.channels?.[c.key]}
             onVerified={load}
           />
@@ -45,7 +47,7 @@ export default function NumberVerification() {
 }
 
 /** Une ligne (WhatsApp ou SMS) avec son propre petit parcours OTP. */
-function ChannelRow({ channel, number, verified, available, onVerified }) {
+function ChannelRow({ channel, number, verified, verifiedAt, available, onVerified }) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(number || "");
   const [codeSentTo, setCodeSentTo] = useState(""); // numéro masqué, une fois le code envoyé
@@ -92,7 +94,10 @@ function ChannelRow({ channel, number, verified, available, onVerified }) {
         <span className={`material-symbols-outlined ${channel.color}`}>{channel.icon}</span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-extrabold">{channel.label}</p>
-          <p className="truncate text-xs text-slate-500">{number || "Aucun numéro"}</p>
+          <p className="truncate text-xs text-slate-500">
+            {number || "Aucun numéro"}
+            {verified && verifiedAt && <> · vérifié le {formatDateTime(verifiedAt)}</>}
+          </p>
         </div>
         {verified && !editing ? (
           <>

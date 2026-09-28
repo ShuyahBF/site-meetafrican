@@ -31,6 +31,7 @@ from pymongo.errors import DuplicateKeyError
 from auth import get_current_user
 from config import get_settings
 from db import db
+from verification_log import log_verification
 from otp_senders import send_sms_code, send_whatsapp_code, sms_configured, whatsapp_configured
 
 router = APIRouter(tags=["Vérification des numéros"])
@@ -41,6 +42,8 @@ RESEND_COOLDOWN_SECONDS = 60
 MAX_SENDS_PER_HOUR = 5
 
 Channel = Literal["sms", "whatsapp"]
+# Nom du type de vérification dans le journal horodaté
+_KIND = {"sms": "phone", "whatsapp": "whatsapp"}
 # Champs du profil mis à jour selon le canal
 _FIELDS = {
     "sms": ("phone", "phone_verified", "phone_verified_at"),
@@ -85,8 +88,10 @@ async def my_numbers(user: dict = Depends(get_current_user)):
     return {
         "phone": user.get("phone"),
         "phone_verified": bool(user.get("phone_verified")),
+        "phone_verified_at": user.get("phone_verified_at"),
         "whatsapp": user.get("whatsapp"),
         "whatsapp_verified": bool(user.get("whatsapp_verified")),
+        "whatsapp_verified_at": user.get("whatsapp_verified_at"),
         "channels": {"sms": sms_configured(), "whatsapp": whatsapp_configured()},
     }
 
@@ -119,6 +124,9 @@ async def request_code(payload: OtpRequest, user: dict = Depends(get_current_use
     code = f"{secrets.randbelow(1_000_000):06d}"
     sender = send_whatsapp_code if payload.channel == "whatsapp" else send_sms_code
     ok, error = await sender(msisdn, code)
+    masked = f"+{msisdn[:5]}•••{msisdn[-2:]}"
+    await log_verification(_KIND[payload.channel], "code_sent" if ok else "code_send_failed", user["id"],
+                           actor="systeme", details={"number": masked, **({} if ok else {"error": error})})
     if not ok:
         raise HTTPException(status_code=502, detail=error)
 
@@ -135,7 +143,7 @@ async def request_code(payload: OtpRequest, user: dict = Depends(get_current_use
         }},
         upsert=True,
     )
-    return {"ok": True, "expires_in_minutes": CODE_TTL_MINUTES, "masked_number": f"+{msisdn[:5]}•••{msisdn[-2:]}"}
+    return {"ok": True, "expires_in_minutes": CODE_TTL_MINUTES, "masked_number": masked}
 
 
 class OtpVerify(BaseModel):
@@ -154,6 +162,7 @@ async def verify_code(payload: OtpVerify, user: dict = Depends(get_current_user)
         raise HTTPException(status_code=429, detail="Trop d'essais : demandez un nouveau code")
     if not hmac.compare_digest(otp["code_hash"], _hash(payload.code.strip(), user["id"])):
         await db.otp_codes.update_one({"user_id": user["id"], "channel": payload.channel}, {"$inc": {"attempts": 1}})
+        await log_verification(_KIND[payload.channel], "code_wrong", user["id"])
         left = MAX_ATTEMPTS - otp.get("attempts", 0) - 1
         # 400 et non 401 : un 401 déconnecterait le membre côté interface.
         raise HTTPException(status_code=400, detail=f"Code incorrect ({left} essai(s) restant(s))")
@@ -162,9 +171,11 @@ async def verify_code(payload: OtpVerify, user: dict = Depends(get_current_user)
     if await _number_taken(user["id"], payload.channel, msisdn):
         raise HTTPException(status_code=409, detail="Ce numéro est déjà utilisé par un autre compte")
     field, verified_flag, verified_at = _FIELDS[payload.channel]
+    at = await log_verification(_KIND[payload.channel], "verified", user["id"],
+                                details={"number": f"+{msisdn[:5]}•••{msisdn[-2:]}"})
     try:
         await db.users.update_one({"id": user["id"]}, {"$set": {
-            field: f"+{msisdn}", verified_flag: True, verified_at: _now().isoformat(),
+            field: f"+{msisdn}", verified_flag: True, verified_at: at,
         }})
     except DuplicateKeyError:
         raise HTTPException(status_code=409, detail="Ce numéro est déjà utilisé par un autre compte")
