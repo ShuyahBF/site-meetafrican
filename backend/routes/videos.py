@@ -459,7 +459,9 @@ async def record_view(video_id: str, user: dict = Depends(get_current_user)):
     await _get_published_or_404(video_id)
     result = await db.video_views.update_one(
         {"video_id": video_id, "user_id": user["id"]},
-        {"$setOnInsert": {"video_id": video_id, "user_id": user["id"], "created_at": _now()}},
+        # invisible : vue faite en mode invisible -> absente de l'historique de l'auteur
+        {"$setOnInsert": {"video_id": video_id, "user_id": user["id"], "created_at": _now(),
+                          "invisible": bool((user.get("settings") or {}).get("invisible_mode"))}},
         upsert=True,
     )
     if result.upserted_id is not None:

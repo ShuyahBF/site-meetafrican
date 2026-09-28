@@ -86,6 +86,19 @@ services:
         sync: false
       - key: ORANGE_SMS_SENDER_NAME
         sync: false
+      # OVH SMS (secours d'Orange, et numéros hors Burkina Faso)
+      - key: OVH_SMS_ENDPOINT
+        value: ovh-eu
+      - key: OVH_SMS_APPLICATION_KEY
+        sync: false
+      - key: OVH_SMS_APPLICATION_SECRET
+        sync: false
+      - key: OVH_SMS_CONSUMER_KEY
+        sync: false
+      - key: OVH_SMS_SERVICE_NAME
+        sync: false
+      - key: OVH_SMS_SENDER
+        sync: false
       - key: DEFAULT_PHONE_COUNTRY_CODE
         value: "226"
 

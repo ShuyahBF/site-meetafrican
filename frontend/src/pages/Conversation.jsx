@@ -8,6 +8,7 @@ import ProfilePhoto from "@/components/ProfilePhoto";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { formatLastSeen } from "@/lib/format";
 import TestBadge from "@/components/TestBadge";
+import VoiceRecorder from "@/components/VoiceRecorder";
 
 // Emojis envoyables en un tap quand le champ est vide (brise-glace ludique).
 const ICEBREAKERS = ["👋🏾", "😍", "😂", "🔥", "🙏🏾"];
@@ -42,6 +43,8 @@ export default function Conversation() {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState("");
+  // Mes réglages (notes vocales / transcription) — voir /reglages
+  const [mySettings, setMySettings] = useState({ voice_notes: true, voice_transcription: true });
   const bottomRef = useRef(null);
 
   const appendMessage = useCallback((message) => {
@@ -83,6 +86,33 @@ export default function Conversation() {
     const interval = setInterval(loadMessages, 4000);
     return () => clearInterval(interval);
   }, [connected, loadMessages]);
+
+  useEffect(() => {
+    apiClient.get("/me/settings").then((r) => setMySettings(r.data)).catch(() => {});
+  }, []);
+
+  // Envoi d'une note vocale (fichier audio + transcription éventuelle)
+  const sendVoice = async ({ blob, duration, transcript }) => {
+    setSending(true);
+    try {
+      const form = new FormData();
+      const ext = blob.type.includes("mp4") ? "m4a" : blob.type.includes("ogg") ? "ogg" : "webm";
+      form.append("file", blob, `note.${ext}`);
+      form.append("duration", String(Math.min(duration, 180)));
+      if (transcript) form.append("transcript", transcript);
+      const res = await apiClient.post(`/conversations/${conversationId}/voice`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      appendMessage(res.data);
+    } catch (err) {
+      setNotice(err?.response?.data?.detail || "Envoi de la note vocale impossible");
+      setTimeout(() => setNotice(""), 4000);
+    } finally {
+      setSending(false);
+    }
+  };
+  const canSendVoice = mySettings.voice_notes && otherUser?.accepts_voice_notes !== false;
+  const [recordingVoice, setRecordingVoice] = useState(false);
 
   useEffect(() => {
     apiClient.get("/conversations").then((r) => {
@@ -176,14 +206,29 @@ export default function Conversation() {
             const prev = messages[i - 1];
             const newDay = !prev || new Date(prev.created_at).toDateString() !== new Date(m.created_at).toDateString();
             // Emoji seul -> affiché en grand, sans bulle (comme les messageries modernes).
-            const emojiOnly = EMOJI_ONLY_RE.test(m.text) && m.text.length <= 8;
+            const emojiOnly = m.kind !== "voice" && EMOJI_ONLY_RE.test(m.text) && m.text.length <= 8;
             return (
               <div key={m.id}>
                 {newDay && (
                   <p className="my-4 text-center text-[11px] font-bold uppercase tracking-wider text-slate-400">{dayLabel(m.created_at)}</p>
                 )}
                 <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                  {emojiOnly ? (
+                  {m.kind === "voice" ? (
+                    // Note vocale : lecteur audio + transcription (si activée dans mes réglages)
+                    <div
+                      className={`max-w-[80%] rounded-[1.4rem] px-3 py-2 shadow-sm ${
+                        mine ? "rounded-br-md bg-gradient-to-br from-primary to-sunset text-white" : "rounded-bl-md bg-slate-100 text-ink"
+                      }`}
+                    >
+                      <audio controls preload="metadata" src={m.audio_url} className="h-10 w-60 max-w-full" />
+                      {mySettings.voice_transcription && m.transcript && (
+                        <p className={`mt-1 whitespace-pre-wrap text-[13px] italic ${mine ? "text-white/90" : "text-slate-600"}`}>« {m.transcript} »</p>
+                      )}
+                      <span className={`mt-0.5 block text-right text-[10px] ${mine ? "text-white/70" : "text-slate-400"}`}>
+                        🎤 {Math.round(m.audio_duration || 0)} s · {timeOf(m.created_at)}
+                      </span>
+                    </div>
+                  ) : emojiOnly ? (
                     <span className="animate-pop text-5xl" title={timeOf(m.created_at)}>{m.text}</span>
                   ) : (
                     <div
@@ -245,24 +290,40 @@ export default function Conversation() {
           }}
           className="flex items-center gap-2 pb-1"
         >
-          <input
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              if (e.target.value) notifyTyping();
-            }}
-            maxLength={2000}
-            placeholder="Votre message…"
-            className="h-12 flex-1 rounded-full bg-slate-100 px-5 text-[15px] outline-none focus:ring-2 focus:ring-primary/30"
-          />
-          <button
-            type="submit"
-            disabled={sending || !text.trim()}
-            aria-label="Envoyer"
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-brand text-white shadow-lg shadow-primary/30 transition active:scale-90 disabled:opacity-40 disabled:shadow-none"
-          >
-            <span className="material-symbols-outlined">send</span>
-          </button>
+          {!recordingVoice && (
+            <input
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                if (e.target.value) notifyTyping();
+              }}
+              maxLength={2000}
+              placeholder="Votre message…"
+              className="h-12 flex-1 rounded-full bg-slate-100 px-5 text-[15px] outline-none focus:ring-2 focus:ring-primary/30"
+            />
+          )}
+          {/* Champ vide : micro (note vocale) ; sinon bouton Envoyer */}
+          {!text.trim() && canSendVoice ? (
+            <VoiceRecorder
+              transcribe={mySettings.voice_transcription}
+              onSend={sendVoice}
+              onError={(msg) => {
+                setNotice(msg);
+                setTimeout(() => setNotice(""), 4000);
+              }}
+              onRecordingChange={setRecordingVoice}
+              disabled={sending}
+            />
+          ) : (
+            <button
+              type="submit"
+              disabled={sending || !text.trim()}
+              aria-label="Envoyer"
+              className="flex h-12 w-12 items-center justify-center rounded-full bg-brand text-white shadow-lg shadow-primary/30 transition active:scale-90 disabled:opacity-40 disabled:shadow-none"
+            >
+              <span className="material-symbols-outlined">send</span>
+            </button>
+          )}
         </form>
       </div>
     </div>

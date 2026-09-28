@@ -167,6 +167,10 @@ async def public_profile(user_id: str, viewer: dict = Depends(get_current_user))
     if not doc:
         raise HTTPException(status_code=404, detail="Profil introuvable")
 
+    # Historique "Qui a vu mon profil" (horodaté ; masqué en mode invisible)
+    from routes.account_extras import record_profile_visit
+    await record_profile_visit(viewer, user_id)
+
     profile = to_user_public(doc)
     [profile] = await _with_likes_received([profile])
     if user_id != viewer["id"]:

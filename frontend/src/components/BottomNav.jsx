@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import CreateSheet from "@/components/CreateSheet";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 
 // Barre de navigation du bas, façon TikTok : 4 onglets + un gros bouton ✚
@@ -16,6 +18,8 @@ const RIGHT = [
 export default function BottomNav() {
   const { pathname } = useLocation();
   const unread = useUnreadCount();
+  // Le bouton ✚ ouvre le tiroir des actions (publier, me suivre, support…)
+  const [createOpen, setCreateOpen] = useState(false);
 
   const renderItem = (item) => {
     const active = pathname.startsWith(item.to);
@@ -43,14 +47,15 @@ export default function BottomNav() {
       {LEFT.map(renderItem)}
       {/* Bouton ✚ "Publier" : double pastille décalée rose/orange (clin
           d'œil au bouton de création TikTok). */}
-      <Link to="/moments/publier" aria-label="Publier une vidéo" className="relative mx-1 h-9 w-12 active:scale-95">
+      <button onClick={() => setCreateOpen(true)} aria-label="Créer et autres actions" className="relative mx-1 h-9 w-12 active:scale-95">
         <span className="absolute inset-y-0 left-0 w-10 rounded-xl bg-sunset" />
         <span className="absolute inset-y-0 right-0 w-10 rounded-xl bg-primary" />
         <span className="absolute inset-y-0 left-1 right-1 flex items-center justify-center rounded-xl bg-ink text-white">
           <span className="material-symbols-outlined text-xl">add</span>
         </span>
-      </Link>
+      </button>
       {RIGHT.map(renderItem)}
+      {createOpen && <CreateSheet onClose={() => setCreateOpen(false)} />}
     </nav>
   );
 }

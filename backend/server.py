@@ -18,7 +18,10 @@ from routes import (
     chat,
     interactions,
     matching,
+    account_extras,
+    community,
     payments_pawapay,
+    tracking,
     phone_verification,
     photos,
     profiles,
@@ -69,6 +72,9 @@ api.include_router(interactions.router)
 api.include_router(vidal.router)
 api.include_router(stats.router)
 api.include_router(phone_verification.router)
+api.include_router(account_extras.router)
+api.include_router(community.router)
+api.include_router(tracking.router)
 api.include_router(test_data.router)
 
 

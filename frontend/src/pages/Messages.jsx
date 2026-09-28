@@ -22,6 +22,8 @@ export default function Messages() {
   const { user } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
+  // Membres qui partagent leur position en direct avec moi (« Me suivre »)
+  const [watching, setWatching] = useState([]);
 
   useEffect(() => {
     const load = () =>
@@ -29,8 +31,14 @@ export default function Messages() {
         .get("/conversations")
         .then((r) => setConversations(r.data))
         .finally(() => setLoading(false));
+    const loadTracking = () =>
+      apiClient.get("/tracking/me").then((r) => setWatching(r.data.watching.filter((s) => s.status === "active"))).catch(() => {});
     load();
-    const t = setInterval(load, REFRESH_MS);
+    loadTracking();
+    const t = setInterval(() => {
+      load();
+      loadTracking();
+    }, REFRESH_MS);
     return () => clearInterval(t);
   }, []);
 
@@ -47,6 +55,13 @@ export default function Messages() {
       </header>
 
       <main className="flex-1 pb-6">
+        {watching.map((s) => (
+          <Link key={s.id} to={`/suivi/${s.id}`} className="mx-5 mb-2 flex items-center gap-3 rounded-2xl bg-emerald-50 p-3 ring-1 ring-emerald-100">
+            <span className="material-symbols-outlined text-emerald-600">share_location</span>
+            <span className="flex-1 text-sm font-bold text-emerald-900">{s.owner_name} partage sa position en direct avec vous</span>
+            <span className="material-symbols-outlined text-emerald-600">chevron_right</span>
+          </Link>
+        ))}
         {/* Demandes "Voir mes Moments en clair" à traiter */}
         <VideoAccessRequests mode="pending" />
         {loading ? (

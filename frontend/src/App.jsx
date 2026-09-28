@@ -33,6 +33,16 @@ import AdminSubscriptionPlans from "@/pages/admin/AdminSubscriptionPlans";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminTeam from "@/pages/admin/AdminTeam";
 import AdminVerificationLog from "@/pages/admin/AdminVerificationLog";
+import AdminSupport from "@/pages/admin/AdminSupport";
+import AdminCommunity from "@/pages/admin/AdminCommunity";
+// Actions du bouton ✚ / menu « … » et réglages du compte
+import Testimonials from "@/pages/extras/Testimonials";
+import Support from "@/pages/extras/Support";
+import FollowMe from "@/pages/extras/FollowMe";
+import TrackingView from "@/pages/extras/TrackingView";
+import Visitors from "@/pages/extras/Visitors";
+import AccountSettings from "@/pages/extras/AccountSettings";
+import TrackingBeacon from "@/components/TrackingBeacon";
 import SecureLayout from "@/secure/SecureLayout";
 import SecureFrame from "@/secure/SecureFrame";
 import securisationHtml from "@/secure/content/securisation.html?raw";
@@ -50,6 +60,8 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        {/* « Me suivre » : envoie la position tant qu'un suivi est actif, sur toutes les pages */}
+        <TrackingBeacon />
         <Routes>
           <Route path="/" element={<Welcome />} />
           <Route path="/inscription" element={<Register />} />
@@ -70,6 +82,12 @@ export default function App() {
           <Route path="/parrainage" element={<Protected><Referrals /></Protected>} />
           <Route path="/portefeuille" element={<Protected><Wallet /></Protected>} />
           <Route path="/abonnement" element={<Protected><Subscriptions /></Protected>} />
+          <Route path="/temoignages" element={<Protected><Testimonials /></Protected>} />
+          <Route path="/support" element={<Protected><Support /></Protected>} />
+          <Route path="/me-suivre" element={<Protected><FollowMe /></Protected>} />
+          <Route path="/suivi/:sessionId" element={<Protected><TrackingView /></Protected>} />
+          <Route path="/visiteurs" element={<Protected><Visitors /></Protected>} />
+          <Route path="/reglages" element={<Protected><AccountSettings /></Protected>} />
 
           <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
             <Route index element={<AdminDashboard />} />
@@ -84,6 +102,8 @@ export default function App() {
             <Route path="parametres" element={<AdminSettings />} />
             <Route path="equipe" element={<AdminTeam />} />
             <Route path="journal-verifications" element={<AdminVerificationLog />} />
+            <Route path="support" element={<AdminSupport />} />
+            <Route path="communaute" element={<AdminCommunity />} />
           </Route>
 
           {/* Route cachée (non liée dans la navigation du site) : accessible

@@ -9,6 +9,8 @@ const NAV = [
   { to: "/admin/journal-verifications", label: "Journal" },
   { to: "/admin/paiements", label: "Paiements" },
   { to: "/admin/signalements", label: "Signalements" },
+  { to: "/admin/support", label: "Support" },
+  { to: "/admin/communaute", label: "Témoignages & suivis" },
   { to: "/admin/abonnements", label: "Abonnements" },
   { to: "/admin/activite", label: "Activité & IP" },
   { to: "/admin/donnees-test", label: "Données de test" },
