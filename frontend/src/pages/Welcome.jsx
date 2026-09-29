@@ -104,8 +104,9 @@ export default function Welcome() {
       {/* ---------------------------------------------------------------- */}
       <header className="sticky top-0 z-40 border-b border-slate-100/80 bg-white/80 backdrop-blur-lg">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
-          <Link to="/" className="text-2xl font-extrabold tracking-tight">
-            be<span className="text-brand">Authentik</span>
+          <Link to="/" className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+            <img src="/icone-beauthentik.svg" alt="" className="h-9 w-9 rounded-xl" />
+            <span>be<span className="text-brand">Authentik</span></span>
           </Link>
           <nav className="hidden items-center gap-8 text-sm font-semibold text-slate-500 md:flex">
             <a href="#fonctionnalites" className="hover:text-ink">Fonctionnalités</a>
@@ -160,6 +161,12 @@ export default function Welcome() {
               <span className="flex items-center gap-1"><span className="material-symbols-outlined text-base text-emerald-500">check_circle</span>Paiement Mobile Money</span>
               <span className="flex items-center gap-1"><span className="material-symbols-outlined text-base text-emerald-500">check_circle</span>Vie privée protégée</span>
             </div>
+            {/* Liens légaux visibles dès l'accueil, sans ouvrir de menu (exigé par les revues TikTok / Meta) */}
+            <p className="mt-4 text-center text-xs text-slate-400 md:text-left">
+              <Link to="/cgu" className="underline hover:text-ink">Conditions d'utilisation</Link>
+              {" · "}
+              <Link to="/confidentialite" className="underline hover:text-ink">Politique de confidentialité</Link>
+            </p>
           </div>
 
           {/* Maquette de téléphone : aperçu du fil Moments (pur CSS) */}

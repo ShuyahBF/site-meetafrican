@@ -15,6 +15,7 @@ from models import SiteAppearance
 from routes import (
     admin,
     auth,
+    auth_tiktok,
     chat,
     interactions,
     matching,
@@ -57,6 +58,8 @@ app.add_middleware(
 
 api = APIRouter(prefix="/api")
 api.include_router(auth.router)
+# « Continuer avec TikTok » (TikTok Login Kit)
+api.include_router(auth_tiktok.router)
 api.include_router(payments_pawapay.router)
 api.include_router(subscriptions.router)
 api.include_router(admin.router)

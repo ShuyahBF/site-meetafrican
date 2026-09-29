@@ -56,6 +56,14 @@ services:
       # --- PawaPay (Mobile Money) ---
       # "sync: false" : valeur saisie dans le tableau de bord Render (production),
       # jamais écrasée par une resynchronisation du Blueprint.
+      # --- TikTok Login Kit (« Continuer avec TikTok ») : app créée sur developers.tiktok.com ---
+      - key: TIKTOK_CLIENT_KEY
+        sync: false
+      - key: TIKTOK_CLIENT_SECRET
+        sync: false
+      # Adresse de retour déclarée dans le portail TikTok
+      - key: TIKTOK_REDIRECT_URI
+        value: https://api.beauthentik.net/api/auth/tiktok/callback
       - key: PAWAPAY_ENVIRONMENT
         sync: false
       - key: PAWAPAY_API_TOKEN_SANDBOX

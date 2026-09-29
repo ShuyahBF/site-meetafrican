@@ -20,8 +20,9 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const login = async (identifier, password) => {
-    const res = await apiClient.post("/auth/login", { identifier, password });
+  // tiktokLien : code de liaison TikTok (« Continuer avec TikTok » sur un compte existant)
+  const login = async (identifier, password, tiktokLien = null) => {
+    const res = await apiClient.post("/auth/login", { identifier, password, tiktok_lien: tiktokLien });
     localStorage.setItem("maf_token", res.data.access_token);
     setUser(res.data.user);
     return res.data.user;
@@ -32,6 +33,13 @@ export function AuthProvider({ children }) {
     localStorage.setItem("maf_token", res.data.access_token);
     setUser(res.data.user);
     return res.data.user;
+  };
+
+  // Connexion directe après « Continuer avec TikTok » (compte déjà lié)
+  const loginWithToken = (data) => {
+    localStorage.setItem("maf_token", data.access_token);
+    setUser(data.user);
+    return data.user;
   };
 
   const logout = () => {
@@ -46,7 +54,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithToken, register, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,13 +1,16 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import BoutonTikTok from "@/components/BoutonTikTok";
 import { useAuth } from "@/context/AuthContext";
 import { extractErrorMessage } from "@/lib/api";
 
 export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
+  // Arrivée depuis « Continuer avec TikTok » : nom pré-rempli + code de liaison
+  const tiktok = useLocation().state?.tiktok || null;
   const [form, setForm] = useState({
-    full_name: "", email: "", phone: "", password: "", gender: "homme", birthdate: "",
+    full_name: tiktok?.nom || "", email: "", phone: "", password: "", gender: "homme", birthdate: "",
   });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -19,7 +22,7 @@ export default function Register() {
     setError("");
     setSubmitting(true);
     try {
-      await register(form);
+      await register({ ...form, tiktok_lien: tiktok?.lien || null });
       navigate("/moments");
     } catch (err) {
       setError(extractErrorMessage(err, "Erreur lors de l'inscription"));
@@ -31,6 +34,15 @@ export default function Register() {
   return (
     <div className="flex min-h-screen w-full flex-col bg-background-light px-6 py-10 font-display dark:bg-background-dark">
       <h1 className="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Créer un compte</h1>
+
+      {tiktok ? (
+        <p className="mb-4 flex items-center gap-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
+          {tiktok.avatar_url && <img src={tiktok.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover" />}
+          <span>Compte TikTok <b>{tiktok.nom}</b> : complétez votre inscription (âge et e-mail ou téléphone obligatoires).</span>
+        </p>
+      ) : (
+        <div className="mb-4"><BoutonTikTok onErreur={setError} /></div>
+      )}
 
       <form onSubmit={submit} className="flex flex-1 flex-col gap-4">
         <Field label="Nom complet">

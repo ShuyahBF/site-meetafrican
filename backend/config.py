@@ -43,6 +43,14 @@ class Settings(BaseSettings):
         origins = self.frontend_origins
         return origins[0].rstrip("/") if origins else "http://localhost:5173"
 
+    # TikTok Login Kit (« Continuer avec TikTok ») : app créée sur developers.tiktok.com.
+    # Client key / secret : variables d'environnement Render uniquement (jamais dans Git).
+    tiktok_client_key: Optional[str] = None
+    tiktok_client_secret: Optional[str] = None
+    # Adresse de retour déclarée dans le portail TikTok
+    # (défaut : <PUBLIC_BASE_URL>/api/auth/tiktok/callback, ex. https://api.beauthentik.net/api/auth/tiktok/callback)
+    tiktok_redirect_uri: Optional[str] = None
+
     # PawaPay (ported from ShuyahBF/Emergent, Site-SawaliSmartSystems)
     pawapay_environment: str = "sandbox"  # sandbox | production
     pawapay_api_token_sandbox: Optional[str] = None

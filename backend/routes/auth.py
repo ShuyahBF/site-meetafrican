@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from auth import create_access_token, get_current_user, hash_password, verify_password
 from db import db
 from models import Token, User, UserLogin, UserPublic, UserRegister, to_user_public, user_insert_doc
+from routes.auth_tiktok import lier_si_demande, lire_code
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -44,6 +45,10 @@ async def register(payload: UserRegister):
     if existing_query and await db.users.find_one({"$or": existing_query}):
         raise HTTPException(status_code=409, detail="Un compte existe déjà avec cet email/téléphone")
 
+    # Code de liaison TikTok vérifié AVANT de créer le compte (expiré -> refus)
+    if payload.tiktok_lien:
+        await lire_code(payload.tiktok_lien, consommer=False)
+
     referred_by: Optional[str] = None
     if payload.referral_code:
         referrer = await db.users.find_one({"referral_code": payload.referral_code}, {"_id": 0, "id": 1})
@@ -68,6 +73,8 @@ async def register(payload: UserRegister):
     doc["terms_accepted_at"] = doc["last_login_at"]
     doc["terms_version"] = TERMS_VERSION
     await db.users.insert_one(doc.copy())
+    # Inscription commencée par « Continuer avec TikTok » : liaison du compte TikTok
+    await lier_si_demande(user.id, payload.tiktok_lien)
     token = create_access_token(user.id)
     return Token(access_token=token, user=to_user_public(doc))
 
@@ -90,6 +97,8 @@ async def login(payload: UserLogin):
     # La tentative est déjà journalisée par le middleware (sans identité,
     # le membre n'ayant pas encore de jeton) : on ajoute la connexion réussie.
     await log_activity(user["id"], "Connexion réussie", ip)
+    # Compte existant + « Continuer avec TikTok » : liaison du compte TikTok
+    await lier_si_demande(user["id"], payload.tiktok_lien)
     token = create_access_token(user["id"])
     return Token(access_token=token, user=to_user_public(user))
 

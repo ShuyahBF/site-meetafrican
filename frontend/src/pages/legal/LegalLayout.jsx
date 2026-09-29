@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 
-// Adresse de contact affichée dans les pages légales (à confirmer par
-// l'éditeur du site). Une seule constante pour la changer partout.
-export const CONTACT_EMAIL = "contact@beauthentik.net";
+// Contact officiel de l'éditeur (SAWALI SMART SYSTEMS), affiché dans les pages
+// légales. Une seule constante pour les changer partout.
+export const CONTACT_EMAIL = "contact@sawalismartsystems.com";
+export const CONTACT_TELEPHONE = "+226 25 65 81 65";
 // Date de la version en vigueur (identique à TERMS_VERSION côté serveur,
 // backend/routes/auth.py — enregistrée à l'inscription de chaque membre).
 export const LEGAL_VERSION_DATE = "28 septembre 2026";
@@ -11,7 +13,15 @@ export const LEGAL_VERSION_DATE = "28 septembre 2026";
  * Mise en page commune des pages légales : fond blanc, largeur de lecture
  * confortable, sommaire cliquable, liens croisés entre les deux pages.
  */
-export default function LegalLayout({ title, intro, sections, other }) {
+export default function LegalLayout({ title, documentTitle, intro, sections, other }) {
+  // Titre de l'onglet : EXACTEMENT « beAuthentik Privacy Policy » / « beAuthentik
+  // Terms of Service » (vérifié par les revues d'applications TikTok, Meta…)
+  useEffect(() => {
+    if (!documentTitle) return undefined;
+    document.title = documentTitle;
+    return () => { document.title = "beAuthentik"; };
+  }, [documentTitle]);
+
   return (
     <div className="min-h-screen bg-white font-display text-ink">
       <header className="sticky top-0 z-10 border-b border-slate-100 bg-white/90 backdrop-blur">
@@ -24,6 +34,12 @@ export default function LegalLayout({ title, intro, sections, other }) {
       </header>
 
       <main className="mx-auto max-w-3xl px-5 pb-20 pt-10">
+        {/* Icône + nom de l'app en tête de page (demandé par les revues d'applications) */}
+        <div className="mb-6 flex items-center gap-3">
+          <img src="/icone-beauthentik.svg" alt="beAuthentik app icon" className="h-12 w-12 rounded-2xl" />
+          <span className="text-lg font-extrabold">beAuthentik</span>
+        </div>
+        {documentTitle && <p className="text-sm font-bold uppercase tracking-widest text-primary">{documentTitle}</p>}
         <h1 className="text-3xl font-extrabold leading-tight md:text-4xl">{title}</h1>
         <p className="mt-2 text-sm text-slate-400">Version en vigueur au {LEGAL_VERSION_DATE}</p>
         <p className="mt-6 leading-relaxed text-slate-600">{intro}</p>
@@ -55,7 +71,9 @@ export default function LegalLayout({ title, intro, sections, other }) {
 
         <p className="mt-14 rounded-2xl bg-primary/5 p-5 text-sm text-slate-600">
           Une question ? Écrivez-nous à{" "}
-          <a href={`mailto:${CONTACT_EMAIL}`} className="font-bold text-primary">{CONTACT_EMAIL}</a>.
+          <a href={`mailto:${CONTACT_EMAIL}`} className="font-bold text-primary">{CONTACT_EMAIL}</a> ou appelez le{" "}
+          <a href="tel:+22625658165" className="font-bold text-primary">{CONTACT_TELEPHONE}</a>.
+          <br />beAuthentik est édité par SAWALI SMART SYSTEMS, Ouagadougou, Burkina Faso.
         </p>
       </main>
     </div>
