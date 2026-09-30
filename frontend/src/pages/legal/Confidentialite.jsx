@@ -1,4 +1,4 @@
-import LegalLayout, { CONTACT_EMAIL } from "@/pages/legal/LegalLayout";
+import LegalLayout, { CONTACT_EMAIL, CONTACT_TELEPHONE } from "@/pages/legal/LegalLayout";
 
 // Politique de confidentialité et de service. Les durées de conservation
 // indiquées ici sont celles appliquées par le code :
@@ -170,6 +170,25 @@ const SECTIONS = [
     ),
   },
   {
+    id: "tiktok",
+    title: "Connexion avec TikTok",
+    body: (
+      <>
+        <p>
+          Si vous choisissez « Continuer avec TikTok », TikTok nous transmet, avec votre accord, les informations de
+          base de votre compte : identifiant TikTok, nom affiché et photo de profil. Nous les utilisons uniquement pour
+          vous connecter et pré-remplir votre profil, que vous pouvez modifier. Nous ne publions rien sur votre compte
+          TikTok et ne lisons ni vos vidéos ni vos abonnés.
+        </p>
+        <p>
+          La vérification d'identité et le contrôle de l'âge (18 ans et plus) restent obligatoires. Vous pouvez retirer
+          l'accès à tout moment depuis TikTok (Paramètres et confidentialité › Sécurité › Applications autorisées) ;
+          l'identifiant TikTok est supprimé avec votre compte beAuthentik.
+        </p>
+      </>
+    ),
+  },
+  {
     id: "mineurs",
     title: "Mineurs",
     body: <p>Le site est interdit aux moins de 18 ans. Tout compte d'une personne mineure est supprimé dès que nous en avons connaissance.</p>,
@@ -179,12 +198,26 @@ const SECTIONS = [
     title: "Évolution de cette politique",
     body: <p>Cette politique peut évoluer avec le service ; la version en vigueur et sa date figurent en tête de page, et les membres sont informés des changements importants.</p>,
   },
+  {
+    id: "english",
+    title: "Summary in English",
+    body: (
+      <p>
+        beAuthentik is an 18+ dating website operated by SAWALI SMART SYSTEMS (Ouagadougou, Burkina Faso). We collect
+        only the data needed to run the service (account, verified identity, profile, messages, payments) and never
+        sell it. If you sign in with TikTok, we receive only your basic profile (open ID, display name, avatar), used
+        to log you in and pre-fill your profile; we never post to your TikTok account. Contact: {CONTACT_EMAIL},
+        {" "}{CONTACT_TELEPHONE}.
+      </p>
+    ),
+  },
 ];
 
 export default function Confidentialite() {
   return (
     <LegalLayout
       title="Politique de confidentialité et de service"
+      documentTitle="beAuthentik Privacy Policy"
       intro="Nous prenons votre vie privée au sérieux : voici, en clair, quelles données nous collectons, pourquoi, qui peut les voir, combien de temps nous les gardons et comment exercer vos droits."
       sections={SECTIONS}
       other={{ to: "/cgu", label: "Conditions d'utilisation →" }}

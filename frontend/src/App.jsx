@@ -70,6 +70,11 @@ export default function App() {
           <Route path="/connexion" element={<Login />} />
           <Route path="/cgu" element={<Cgu />} />
           <Route path="/confidentialite" element={<Confidentialite />} />
+          {/* Alias anglais des pages légales (adresses déclarées aux revues TikTok / Meta) */}
+          <Route path="/terms-of-service" element={<Cgu />} />
+          <Route path="/terms" element={<Cgu />} />
+          <Route path="/privacy-policy" element={<Confidentialite />} />
+          <Route path="/privacy" element={<Confidentialite />} />
           {/* Fil vidéo façon TikTok : /moments, lien partagé /moments/:id */}
           <Route path="/moments" element={<Protected><Moments /></Protected>} />
           <Route path="/moments/publier" element={<Protected><PublishVideo /></Protected>} />

@@ -1,24 +1,55 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import BoutonTikTok from "@/components/BoutonTikTok";
 import { useAuth } from "@/context/AuthContext";
-import { extractErrorMessage } from "@/lib/api";
+import { apiClient, extractErrorMessage } from "@/lib/api";
+
+// Messages du retour de TikTok (?tiktok_erreur=…)
+const ERREURS_TIKTOK = {
+  refuse: "Connexion avec TikTok annulée.",
+  invalide: "La connexion avec TikTok a expiré. Recommencez.",
+  echec: "La connexion avec TikTok a échoué. Recommencez.",
+};
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, loginWithToken } = useAuth();
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Compte TikTok pas encore lié : { nom, avatar_url, lien }
+  const [tiktok, setTiktok] = useState(null);
+
+  const allerAccueil = (u) => navigate(u.role === "admin" || u.role === "moderator" ? "/admin" : "/moments");
+
+  // Retour de TikTok : ?tiktok=<code à usage unique> ou ?tiktok_erreur=<motif>
+  useEffect(() => {
+    const code = params.get("tiktok");
+    const erreur = params.get("tiktok_erreur");
+    if (!code && !erreur) return;
+    setParams({}, { replace: true });
+    if (erreur) {
+      setError(ERREURS_TIKTOK[erreur] || ERREURS_TIKTOK.echec);
+      return;
+    }
+    apiClient.post("/auth/tiktok/finaliser", { code })
+      .then((r) => {
+        if (r.data.access_token) allerAccueil(loginWithToken(r.data));
+        else setTiktok(r.data.inscription);
+      })
+      .catch((err) => setError(extractErrorMessage(err, ERREURS_TIKTOK.echec)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const submit = async (e) => {
     e.preventDefault();
     setError("");
     setSubmitting(true);
     try {
-      const loggedInUser = await login(identifier, password);
-      const isStaff = loggedInUser.role === "admin" || loggedInUser.role === "moderator";
-      navigate(isStaff ? "/admin" : "/moments");
+      // Si un compte TikTok attend d'être lié, il l'est à cette connexion
+      allerAccueil(await login(identifier, password, tiktok?.lien || null));
     } catch (err) {
       setError(extractErrorMessage(err, "Identifiants invalides"));
     } finally {
@@ -29,6 +60,20 @@ export default function Login() {
   return (
     <div className="flex min-h-screen w-full flex-col justify-center bg-background-light px-6 py-10 font-display dark:bg-background-dark">
       <h1 className="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Se connecter</h1>
+
+      {/* Compte TikTok reconnu mais pas encore lié à un compte beAuthentik */}
+      {tiktok && (
+        <div className="mb-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+          <div className="mb-3 flex items-center gap-3">
+            {tiktok.avatar_url && <img src={tiktok.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" />}
+            <p>Compte TikTok <b>{tiktok.nom}</b> reconnu.</p>
+          </div>
+          <Link to="/inscription" state={{ tiktok }} className="block h-12 w-full rounded-full bg-primary text-center font-bold leading-[3rem] text-white">
+            Nouveau ? Terminer mon inscription
+          </Link>
+          <p className="mt-3 text-center text-xs text-slate-500">Déjà membre ? Connectez-vous ci-dessous : votre compte TikTok sera lié.</p>
+        </div>
+      )}
 
       <form onSubmit={submit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1 text-sm font-semibold text-slate-700 dark:text-slate-200">
@@ -50,8 +95,18 @@ export default function Login() {
           {submitting ? "Connexion…" : "Se connecter"}
         </button>
 
+        {!tiktok && (
+          <>
+            <p className="text-center text-xs font-semibold uppercase tracking-widest text-slate-400">ou</p>
+            <BoutonTikTok onErreur={setError} />
+          </>
+        )}
+
         <p className="text-center text-sm text-slate-500 dark:text-slate-400">
           Pas encore de compte ? <Link to="/inscription" className="font-semibold text-primary">Créer un compte</Link>
+        </p>
+        <p className="text-center text-xs text-slate-400">
+          <Link to="/cgu" className="underline">Conditions d'utilisation</Link> · <Link to="/confidentialite" className="underline">Confidentialité</Link>
         </p>
       </form>
     </div>

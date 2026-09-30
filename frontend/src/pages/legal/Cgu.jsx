@@ -1,4 +1,4 @@
-import LegalLayout, { CONTACT_EMAIL } from "@/pages/legal/LegalLayout";
+import LegalLayout, { CONTACT_EMAIL, CONTACT_TELEPHONE } from "@/pages/legal/LegalLayout";
 import { PAYMENT_METHODS } from "@/components/PaymentMethods";
 
 // Conditions générales d'utilisation. Chaque règle décrite ici correspond à
@@ -171,12 +171,25 @@ const SECTIONS = [
       </p>
     ),
   },
+  {
+    id: "english",
+    title: "Summary in English",
+    body: (
+      <p>
+        beAuthentik is an 18+ dating website for African singles, operated by SAWALI SMART SYSTEMS (Ouagadougou,
+        Burkina Faso). Members must be adults, use their real identity and respect other members; fake profiles,
+        harassment and adult content are forbidden and removed. Members may sign in with TikTok; beAuthentik never posts
+        on their TikTok account. Contact: {CONTACT_EMAIL}, {CONTACT_TELEPHONE}.
+      </p>
+    ),
+  },
 ];
 
 export default function Cgu() {
   return (
     <LegalLayout
       title="Conditions générales d'utilisation"
+      documentTitle="beAuthentik Terms of Service"
       intro="Bienvenue sur beAuthentik. Ces conditions expliquent, simplement, comment utiliser le site : qui peut s'inscrire, ce qui est autorisé ou non, et comment fonctionnent les abonnements."
       sections={SECTIONS}
       other={{ to: "/confidentialite", label: "Confidentialité →" }}

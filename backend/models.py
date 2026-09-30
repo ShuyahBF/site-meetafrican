@@ -79,6 +79,8 @@ class UserRegister(BaseModel):
     gender: Gender
     birthdate: str  # ISO date — validé côté route (âge minimum)
     referral_code: Optional[str] = Field(None, max_length=20)
+    # Code de liaison TikTok (« Continuer avec TikTok » sans compte existant)
+    tiktok_lien: Optional[str] = Field(None, max_length=64)
 
     @field_validator("email", "phone", "referral_code", mode="before")
     @classmethod
@@ -94,6 +96,8 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     identifier: str  # email ou téléphone
     password: str
+    # Code de liaison TikTok : lie le compte TikTok au compte existant à la connexion
+    tiktok_lien: Optional[str] = Field(None, max_length=64)
 
 
 class Photo(BaseModel):
