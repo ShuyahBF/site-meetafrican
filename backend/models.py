@@ -486,6 +486,28 @@ class SiteAppearance(BaseModel):
     défaut embarquée dans le build."""
     id: str = "global"
     hero_image_url: Optional[str] = None
+    # Encart vidéo « Moments » de la page d'accueil (à côté du texte de
+    # présentation des Moments) : URL de la vidéo (fichier envoyé via
+    # POST /admin/settings/appearance/moments-video ou URL externe), image
+    # d'aperçu facultative, et interrupteur. Vidéo absente ou désactivée ->
+    # rien n'est affiché sur la page d'accueil.
+    moments_video_url: Optional[str] = Field(None, max_length=2000)
+    moments_video_poster_url: Optional[str] = Field(None, max_length=2000)
+    moments_video_enabled: bool = False
+
+    @field_validator("moments_video_url", "moments_video_poster_url", mode="before")
+    @classmethod
+    def _check_media_url(cls, value):
+        # Chaîne vide -> pas de média ; sinon seule une adresse http(s)
+        # absolue est acceptée (évite les schémas exotiques type javascript:).
+        if value is None:
+            return None
+        value = str(value).strip()
+        if not value:
+            return None
+        if not value.lower().startswith(("https://", "http://")):
+            raise ValueError("L'adresse doit commencer par https:// (ou http://)")
+        return value
 
 
 class ModerationSettings(BaseModel):

@@ -893,3 +893,43 @@ def test_admin_timeline_and_member_file(client, make_user):
     assert file["reports_received"][0]["reporter_name"]
     client.get(f"/api/users/{member_id}", headers=admin)
     assert client.get("/api/me/visitors", headers=member).json()["profile_visits"] == []
+
+
+# ---------------------------------------------------------------------------
+# Page d'accueil : encart vidéo « Moments » paramétrable par l'admin
+# ---------------------------------------------------------------------------
+
+def test_moments_video_settings(client, make_user):
+    admin = _admin_headers(client, make_user)
+    _, member, _ = make_user()
+
+    # Par défaut : aucune vidéo, encart désactivé (rien n'est affiché).
+    public = client.get("/api/appearance").json()
+    assert public["moments_video_url"] is None and public["moments_video_enabled"] is False
+
+    # Envoi du fichier : réservé à l'admin, MP4/WebM uniquement.
+    files = {"file": ("moment.mp4", b"\x00\x00\x00\x18ftypmp42", "video/mp4")}
+    assert client.post("/api/admin/settings/appearance/moments-video", files=files, headers=member).status_code == 403
+    bad = {"file": ("moment.mov", b"x", "video/quicktime")}
+    assert client.post("/api/admin/settings/appearance/moments-video", files=bad, headers=admin).status_code == 400
+    res = client.post("/api/admin/settings/appearance/moments-video", files=files, headers=admin)
+    assert res.status_code == 200, res.text
+    url = res.json()["url"]
+    assert url.endswith(".mp4")
+
+    # Enregistrement du réglage puis lecture publique (sans authentification).
+    current = client.get("/api/admin/settings/appearance", headers=admin).json()
+    payload = {**current, "moments_video_url": url, "moments_video_poster_url": "", "moments_video_enabled": True}
+    assert client.put("/api/admin/settings/appearance", json=payload, headers=admin).status_code == 200
+    public = client.get("/api/appearance").json()
+    assert public["moments_video_url"] == url
+    assert public["moments_video_poster_url"] is None  # chaîne vide -> pas d'aperçu
+    assert public["moments_video_enabled"] is True
+
+    # Seules les adresses http(s) sont acceptées.
+    evil = {**payload, "moments_video_url": "javascript:alert(1)"}
+    assert client.put("/api/admin/settings/appearance", json=evil, headers=admin).status_code == 422
+
+    # Remise à zéro pour ne pas influencer d'autres tests.
+    reset = {**payload, "moments_video_url": None, "moments_video_enabled": False}
+    assert client.put("/api/admin/settings/appearance", json=reset, headers=admin).status_code == 200

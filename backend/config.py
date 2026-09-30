@@ -90,6 +90,10 @@ class Settings(BaseSettings):
     # re-vérifiée sur la valeur déclarée côté serveur.
     max_video_upload_bytes: int = 50 * 1024 * 1024  # 50 Mo
     max_video_duration_seconds: int = 60
+    # Vidéo de présentation des Moments sur la page d'accueil (envoyée par
+    # l'admin) : volontairement plus légère que les Moments des membres,
+    # car elle est proposée à tous les visiteurs de la page publique.
+    max_home_video_upload_bytes: int = 20 * 1024 * 1024  # 20 Mo
 
     # Mode local uniquement
     uploads_dir: str = "./uploads"

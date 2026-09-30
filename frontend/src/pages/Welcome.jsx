@@ -1,10 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import PaymentMethods from "@/components/PaymentMethods";
 
 const DEFAULT_HERO_IMAGE = "/images/hero-couple.jpg";
+
+// Dernière image d'accueil connue, mémorisée dans le navigateur : au
+// rechargement suivant, on la pré-télécharge pendant que /appearance
+// répond, pour qu'elle s'affiche sans délai si le réglage n'a pas changé.
+// Elle n'est jamais AFFICHÉE avant la réponse : si l'admin a changé
+// d'image entre-temps, l'ancienne ne doit pas apparaître.
+const HERO_CACHE_KEY = "maf_hero_image";
+
+function readCachedHero() {
+  try {
+    return localStorage.getItem(HERO_CACHE_KEY);
+  } catch {
+    return null; // stockage indisponible (navigation privée…)
+  }
+}
+
+function writeCachedHero(url) {
+  try {
+    localStorage.setItem(HERO_CACHE_KEY, url);
+  } catch {
+    // stockage indisponible : sans conséquence, on attendra l'API la prochaine fois
+  }
+}
 
 // Formules affichées si l'API est momentanément injoignable — mêmes valeurs
 // que les formules par défaut du backend (backend/seed.py). Les vraies
@@ -60,6 +83,105 @@ function periodLabel(days) {
 }
 
 /**
+ * Petit encart vidéo montrant ce qu'est un Moment (vidéo réglée dans
+ * l'admin : Paramètres > Apparence de la page d'accueil).
+ *
+ * - Souris : la vidéo démarre au survol et s'arrête (retour au début)
+ *   quand la souris sort de l'encart.
+ * - Écran tactile (pas de survol possible) : un toucher lance la lecture,
+ *   un second toucher l'arrête. La lecture s'arrête aussi d'elle-même dès
+ *   que l'encart sort de l'écran (défilement).
+ * - Clavier : Entrée / Espace alternent lecture et arrêt.
+ * Vidéo toujours muette et en boucle ; preload="metadata" pour ne charger
+ * que l'en-tête du fichier tant que personne ne la lance.
+ */
+function MomentsVideo({ src, poster }) {
+  const videoRef = useRef(null);
+  const boxRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  // Type du dernier pointeur ayant touché l'encart ("mouse", "touch", "pen").
+  const pointerType = useRef("mouse");
+
+  const play = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    // play() peut être refusé par le navigateur : on reste alors à l'arrêt.
+    video.play().then(() => setPlaying(!video.paused)).catch(() => setPlaying(false));
+  };
+
+  const stop = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.pause();
+    video.currentTime = 0;
+    setPlaying(false);
+  };
+
+  const toggle = () => (playing ? stop() : play());
+
+  // Arrêt automatique quand l'encart sort de l'écran (utile surtout sur
+  // mobile, où aucun "survol terminé" ne vient arrêter la vidéo).
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!box || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) stop();
+    });
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, []);
+
+  // Sans image d'aperçu, "#t=0.1" force l'affichage de la première image
+  // de la vidéo (Safari iOS n'affiche sinon qu'un cadre noir).
+  const videoSrc = poster ? src : `${src}#t=0.1`;
+
+  return (
+    <div
+      ref={boxRef}
+      role="button"
+      tabIndex={0}
+      aria-label={playing ? "Arrêter la vidéo de présentation des Moments" : "Lire la vidéo de présentation des Moments"}
+      onPointerDown={(e) => { pointerType.current = e.pointerType; }}
+      onPointerEnter={(e) => { if (e.pointerType === "mouse") play(); }}
+      onPointerLeave={(e) => { if (e.pointerType === "mouse") stop(); }}
+      onClick={() => { if (pointerType.current !== "mouse") toggle(); }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          toggle();
+        }
+      }}
+      className="relative mx-auto aspect-[9/16] w-full max-w-[200px] shrink-0 cursor-pointer overflow-hidden rounded-2xl bg-ink shadow-lg ring-1 ring-black/5 md:mx-0 md:w-48"
+    >
+      <video
+        ref={videoRef}
+        src={videoSrc}
+        poster={poster}
+        muted
+        loop
+        playsInline
+        preload="metadata"
+        disablePictureInPicture
+        className="h-full w-full object-cover"
+      />
+      {/* Pictogramme "lecture" visible tant que la vidéo est à l'arrêt */}
+      <div
+        className={`pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/20 text-white transition-opacity duration-300 ${
+          playing ? "opacity-0" : "opacity-100"
+        }`}
+      >
+        <span className="material-symbols-outlined icon-filled text-5xl drop-shadow">play_circle</span>
+        <span className="text-[11px] font-bold drop-shadow">
+          {/* Libellé adapté à l'appareil : survol possible (souris) ou non (tactile) */}
+          <span className="hidden [@media(hover:hover)]:inline">Survolez pour voir</span>
+          <span className="[@media(hover:hover)]:hidden">Touchez pour voir</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Page d'accueil publique — fond blanc, simple et stylée :
  * héros avec maquette de téléphone animée, étapes, fonctionnalités
  * (grille "bento"), garanties de confiance, tarifs, FAQ, appel final.
@@ -67,12 +189,38 @@ function periodLabel(days) {
 export default function Welcome() {
   const { user } = useAuth();
   // Image modifiable par l'admin (Paramètres > Apparence) sans redéploiement.
-  const [heroImage, setHeroImage] = useState(DEFAULT_HERO_IMAGE);
+  // État initial = RIEN : aucune image (ni celle par défaut, ni une
+  // ancienne) n'est affichée tant que le réglage n'est pas connu, sinon
+  // elle "clignote" avant d'être remplacée par l'image paramétrée.
+  const [heroImage, setHeroImage] = useState(null);
+  // Adresse de l'image effectivement chargée : sert au fondu d'apparition.
+  const [heroLoaded, setHeroLoaded] = useState(null);
+  // Encart vidéo « Moments » (réglé dans l'admin) — null = pas d'encart.
+  const [momentsVideo, setMomentsVideo] = useState(null);
   const [plans, setPlans] = useState(FALLBACK_PLANS);
   const [stats, setStats] = useState(null); // { registered, verified, visits, your_ip }
 
   useEffect(() => {
-    apiClient.get("/appearance").then((r) => r.data?.hero_image_url && setHeroImage(r.data.hero_image_url)).catch(() => {});
+    // Pré-téléchargement (invisible) de la dernière image connue, en
+    // parallèle de l'appel à l'API : le cache HTTP du navigateur la servira
+    // instantanément si elle est toujours d'actualité.
+    const cachedHero = readCachedHero();
+    if (cachedHero) new Image().src = cachedHero;
+    apiClient
+      .get("/appearance")
+      .then((r) => {
+        // Image paramétrée, sinon image par défaut — puis mémorisation pour
+        // le prochain chargement de la page.
+        const url = r.data?.hero_image_url || DEFAULT_HERO_IMAGE;
+        setHeroImage(url);
+        writeCachedHero(url);
+        // Vidéo affichée uniquement si elle est activée ET renseignée.
+        if (r.data?.moments_video_enabled && r.data?.moments_video_url) {
+          setMomentsVideo({ src: r.data.moments_video_url, poster: r.data.moments_video_poster_url || undefined });
+        }
+      })
+      // API injoignable : dernière image connue, sinon l'image par défaut.
+      .catch(() => setHeroImage(cachedHero || DEFAULT_HERO_IMAGE));
     // Compteurs publics + IP du visiteur. La visite n'est enregistrée qu'une
     // fois par session de navigation (le serveur ne compte de toute façon
     // qu'une visite par IP et par jour).
@@ -173,7 +321,19 @@ export default function Welcome() {
           <div className="relative mx-auto w-[270px] md:w-[300px]">
             <div className="relative aspect-[9/19] overflow-hidden rounded-[2.75rem] bg-ink p-2.5 shadow-[0_30px_80px_-20px_rgba(244,37,106,0.45)]">
               <div className="relative h-full w-full overflow-hidden rounded-[2.2rem]">
-                <img src={heroImage} alt="Un couple souriant" className="h-full w-full object-cover" />
+                {/* Tant que l'image n'est pas connue/chargée : simple fond sombre
+                    (celui du téléphone), puis fondu d'apparition de la bonne image. */}
+                {heroImage && (
+                  <img
+                    key={heroImage}
+                    src={heroImage}
+                    alt="Un couple souriant"
+                    onLoad={() => setHeroLoaded(heroImage)}
+                    className={`h-full w-full object-cover transition-opacity duration-500 ${
+                      heroLoaded === heroImage ? "opacity-100" : "opacity-0"
+                    }`}
+                  />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
                 <div className="absolute inset-x-0 top-4 flex justify-center gap-4 text-[11px] font-extrabold text-white/70">
                   <span>Près de moi</span><span className="text-white underline decoration-2 underline-offset-4">Pour toi</span><span>Matchs</span>
@@ -256,27 +416,44 @@ export default function Welcome() {
       <section id="fonctionnalites" className="scroll-mt-20 mx-auto max-w-6xl px-5 py-16">
         <SectionTitle kicker="Fonctionnalités" title="Tout pour se découvrir, vraiment" />
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f) => (
-            <div
-              key={f.title}
-              className={`group flex flex-col rounded-3xl bg-gradient-to-br ${f.tint} p-6 transition duration-300 hover:-translate-y-1 hover:shadow-xl ${
-                f.big ? "ring-2 ring-primary/40" : ""
-              }`}
-            >
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm">
-                <span className="material-symbols-outlined icon-filled text-2xl text-primary">{f.icon}</span>
-              </span>
-              <div>
-                <p className="mt-5 text-lg font-extrabold">{f.title}</p>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{f.text}</p>
+          {FEATURES.map((f, i) => {
+            // Avec une vidéo configurée, la carte « Moments » occupe toute la
+            // largeur de la grille pour loger l'encart vidéo à côté du texte ;
+            // la dernière carte s'élargit alors sur 2 colonnes (tablette) pour
+            // ne pas rester seule sur sa ligne.
+            const withVideo = f.big && momentsVideo;
+            const span = withVideo
+              ? "sm:col-span-2 lg:col-span-3"
+              : momentsVideo && i === FEATURES.length - 1
+                ? "sm:col-span-2 lg:col-span-1"
+                : "";
+            return (
+              <div
+                key={f.title}
+                className={`group flex flex-col rounded-3xl bg-gradient-to-br ${f.tint} p-6 transition duration-300 hover:shadow-xl ${
+                  withVideo ? "gap-6 md:flex-row md:items-center" : "hover:-translate-y-1"
+                } ${f.big ? "ring-2 ring-primary/40" : ""} ${span}`}
+              >
+                {/* Texte de présentation (icône, titre, description, lien) */}
+                <div className="flex flex-1 flex-col">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm">
+                    <span className="material-symbols-outlined icon-filled text-2xl text-primary">{f.icon}</span>
+                  </span>
+                  <div>
+                    <p className="mt-5 text-lg font-extrabold">{f.title}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-600">{f.text}</p>
+                  </div>
+                  {f.big && (
+                    <Link to={primaryTo} className="mt-auto inline-flex items-center gap-1 pt-4 text-sm font-extrabold text-primary">
+                      Découvrir les Moments <span className="material-symbols-outlined text-lg transition group-hover:translate-x-1">arrow_forward</span>
+                    </Link>
+                  )}
+                </div>
+                {/* Encart vidéo : sous le texte sur mobile, à côté à partir du format tablette */}
+                {withVideo && <MomentsVideo src={momentsVideo.src} poster={momentsVideo.poster} />}
               </div>
-              {f.big && (
-                <Link to={primaryTo} className="mt-auto inline-flex items-center gap-1 pt-4 text-sm font-extrabold text-primary">
-                  Découvrir les Moments <span className="material-symbols-outlined text-lg transition group-hover:translate-x-1">arrow_forward</span>
-                </Link>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 
