@@ -9,12 +9,14 @@ from __future__ import annotations
 import re
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, EmailStr
 
 from auth import get_current_admin, get_current_super_admin
+from config import get_settings
 from db import db
 from models import ReferralPointsSettings, SiteAppearance, SubscriptionPlan
+from storage import save_public_media
 
 router = APIRouter(prefix="/admin", tags=["Administration"])
 
@@ -31,6 +33,31 @@ async def update_appearance_settings(payload: SiteAppearance, _: dict = Depends(
     doc["id"] = "global_appearance"
     await db.settings.update_one({"id": "global_appearance"}, {"$set": doc}, upsert=True)
     return payload
+
+
+# Formats acceptés pour la vidéo de présentation des Moments : ceux que tous
+# les navigateurs récents lisent nativement dans une balise <video>.
+HOME_VIDEO_TYPES = {"video/mp4", "video/webm"}
+
+
+@router.post("/settings/appearance/moments-video")
+async def upload_moments_video(file: UploadFile = File(...), _: dict = Depends(get_current_admin)):
+    """Envoi du fichier vidéo de l'encart « Moments » de la page d'accueil.
+    Le fichier est rangé dans le stockage public existant (même bucket que
+    les photos et les Moments) et son URL est renvoyée ; c'est l'interface
+    d'administration qui l'enregistre ensuite via PUT /settings/appearance.
+    Pas de retraitement (floutage…) : la vidéo est fournie par l'admin."""
+    settings = get_settings()
+    if file.content_type not in HOME_VIDEO_TYPES:
+        raise HTTPException(status_code=400, detail="Format non autorisé (MP4 ou WebM uniquement)")
+    content = await file.read()
+    if len(content) > settings.max_home_video_upload_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Vidéo trop volumineuse (max {settings.max_home_video_upload_bytes // (1024 * 1024)} Mo)",
+        )
+    url = await save_public_media(content, file.content_type)
+    return {"url": url}
 
 
 @router.get("/settings/referral-points", response_model=ReferralPointsSettings)

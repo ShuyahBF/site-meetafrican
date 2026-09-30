@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { apiClient } from "@/lib/api";
+import { apiClient, extractErrorMessage } from "@/lib/api";
 import { uploadFile } from "@/lib/upload";
 
 export default function AdminSettings() {
@@ -155,7 +155,202 @@ function AppearanceSection() {
 
       {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
       {saved && <span className="mt-3 inline-block text-sm text-emerald-600">Enregistré ✓</span>}
+
+      <MomentsVideoSettings form={form} save={save} />
     </section>
+  );
+}
+
+// Taille maximale de la vidéo « Moments » de l'accueil — même valeur par
+// défaut que le backend (max_home_video_upload_bytes), vérifiée ici pour
+// prévenir l'admin avant un envoi inutile ; le serveur reste l'arbitre.
+const HOME_VIDEO_MAX_MB = 20;
+const HOME_VIDEO_TYPES = ["video/mp4", "video/webm"];
+
+/**
+ * Encart vidéo « Moments » de la page d'accueil : fichier envoyé (MP4/WebM)
+ * ou URL, image d'aperçu facultative, activation. Tout est enregistré dans
+ * le même réglage "Apparence" que l'image de la page d'accueil.
+ */
+function MomentsVideoSettings({ form, save }) {
+  const [videoUrl, setVideoUrl] = useState(form.moments_video_url || "");
+  const [posterUrl, setPosterUrl] = useState(form.moments_video_poster_url || "");
+  const [enabled, setEnabled] = useState(!!form.moments_video_enabled);
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+  const videoFileRef = useRef(null);
+  const posterFileRef = useRef(null);
+
+  // Enregistre le réglage complet (en conservant l'image d'accueil actuelle).
+  const persist = async (next) => {
+    setError("");
+    setSaved(false);
+    try {
+      await save({
+        ...form,
+        moments_video_url: next.videoUrl.trim() || null,
+        moments_video_poster_url: next.posterUrl.trim() || null,
+        moments_video_enabled: next.enabled,
+      });
+      setSaved(true);
+    } catch (err) {
+      setError(extractErrorMessage(err, "Échec de l'enregistrement"));
+    }
+  };
+
+  // Envoi du fichier vidéo vers le stockage des médias, puis enregistrement.
+  const uploadVideo = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!HOME_VIDEO_TYPES.includes(file.type)) {
+      setError("Format non autorisé : MP4 ou WebM uniquement");
+      return;
+    }
+    if (file.size > HOME_VIDEO_MAX_MB * 1024 * 1024) {
+      setError(`Vidéo trop volumineuse (max ${HOME_VIDEO_MAX_MB} Mo)`);
+      return;
+    }
+    setError("");
+    setBusy("video");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const { data } = await apiClient.post("/admin/settings/appearance/moments-video", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setVideoUrl(data.url);
+      setEnabled(true);
+      await persist({ videoUrl: data.url, posterUrl, enabled: true });
+    } catch (err) {
+      setError(extractErrorMessage(err, "Échec de l'envoi de la vidéo"));
+    } finally {
+      setBusy("");
+    }
+  };
+
+  // Envoi de l'image d'aperçu (même circuit que les photos), puis enregistrement.
+  const uploadPoster = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setError("");
+    setBusy("poster");
+    try {
+      const { url } = await uploadFile(file, "photo");
+      setPosterUrl(url);
+      await persist({ videoUrl, posterUrl: url, enabled });
+    } catch (err) {
+      setError(extractErrorMessage(err, "Échec de l'envoi de l'image"));
+    } finally {
+      setBusy("");
+    }
+  };
+
+  // Retire complètement la vidéo : plus aucun encart sur la page d'accueil.
+  const remove = async () => {
+    setVideoUrl("");
+    setPosterUrl("");
+    setEnabled(false);
+    await persist({ videoUrl: "", posterUrl: "", enabled: false });
+  };
+
+  return (
+    <div className="mt-6 border-t border-slate-100 pt-5">
+      <h3 className="font-bold">Vidéo « Moments »</h3>
+      <p className="mt-1 text-sm text-slate-500">
+        Petit encart vidéo affiché à côté du texte de présentation des Moments, pour montrer aux visiteurs ce
+        qu'est un Moment. Muette, en boucle, elle démarre au survol de la souris (au toucher sur mobile).
+        Format vertical conseillé, MP4 ou WebM, {HOME_VIDEO_MAX_MB} Mo maximum — idéalement 5 à 15 secondes.
+        Sans vidéo (ou désactivée), rien n'est affiché.
+      </p>
+
+      <div className="mt-4 flex flex-wrap items-start gap-4">
+        {/* Aperçu de la vidéo telle qu'elle apparaîtra (lecture au survol) */}
+        <div className="aspect-[9/16] w-28 overflow-hidden rounded-lg bg-slate-100">
+          {videoUrl.trim() && (
+            <video
+              key={videoUrl}
+              src={videoUrl}
+              poster={posterUrl || undefined}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              onMouseEnter={(e) => e.currentTarget.play().catch(() => {})}
+              onMouseLeave={(e) => {
+                e.currentTarget.pause();
+                e.currentTarget.currentTime = 0;
+              }}
+              className="h-full w-full object-cover"
+            />
+          )}
+        </div>
+
+        <div className="flex min-w-[240px] flex-1 flex-col gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => videoFileRef.current?.click()}
+              disabled={!!busy}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {busy === "video" ? "Envoi…" : "Envoyer une vidéo"}
+            </button>
+            <button
+              onClick={() => posterFileRef.current?.click()}
+              disabled={!!busy}
+              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 disabled:opacity-50"
+            >
+              {busy === "poster" ? "Envoi…" : "Image d'aperçu (facultatif)"}
+            </button>
+          </div>
+          <input ref={videoFileRef} type="file" accept="video/mp4,video/webm" hidden onChange={uploadVideo} />
+          <input ref={posterFileRef} type="file" accept="image/*" hidden onChange={uploadPoster} />
+
+          <Field label="… ou adresse de la vidéo (https://…)">
+            <input
+              type="url"
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+              placeholder="https://…/moment.mp4"
+              className="admin-input"
+            />
+          </Field>
+          <Field label="Adresse de l'image d'aperçu (facultatif)">
+            <input
+              type="url"
+              value={posterUrl}
+              onChange={(e) => setPosterUrl(e.target.value)}
+              placeholder="https://…/apercu.jpg"
+              className="admin-input"
+            />
+          </Field>
+
+          <label className="mt-2 flex items-center gap-2 text-sm font-semibold">
+            <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
+            Afficher la vidéo sur la page d'accueil
+          </label>
+
+          <div className="mt-2 flex items-center gap-3">
+            <button
+              onClick={() => persist({ videoUrl, posterUrl, enabled })}
+              disabled={!!busy}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              Enregistrer
+            </button>
+            {(videoUrl || posterUrl) && (
+              <button onClick={remove} disabled={!!busy} className="text-xs font-semibold text-slate-500 hover:text-primary">
+                Retirer la vidéo
+              </button>
+            )}
+            {saved && <span className="text-sm text-emerald-600">Enregistré ✓</span>}
+          </div>
+          {error && <p className="text-sm text-red-500">{error}</p>}
+        </div>
+      </div>
+    </div>
   );
 }
 
