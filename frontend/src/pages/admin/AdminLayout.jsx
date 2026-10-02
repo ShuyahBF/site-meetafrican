@@ -20,6 +20,7 @@ const NAV = [
   { to: "/admin/equipe", label: "Équipe", adminOnly: true },
   { to: "/admin/donnees-maintenance", label: "Données & maintenance", adminOnly: true },
   { to: "/admin/abonnements-sessions", label: "Sessions, sauvegardes & cycle de vie", adminOnly: true },
+  { to: "/admin/envoi-emails", label: "Envoi des e-mails", adminOnly: true },
 ];
 
 export default function AdminLayout() {

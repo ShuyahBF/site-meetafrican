@@ -41,8 +41,8 @@ Cron Job Render (chaque nuit) :
 `curl -fsS -X POST -H "X-Sauvegarde-Jeton: $SAUVEGARDE_AUTO_JETON" https://api.beauthentik.net/api/sauvegarde-auto/declencher`
 — réponse 202 immédiate, une seule sauvegarde réussie par jour (UTC), puis la tâche du cycle de vie.
 Même format `.baexport` et même chiffrement que l'export manuel. Rétention 7 quotidiennes + 4 hebdomadaires + 12 mensuelles.
-Échec : alerte WhatsApp/SMS aux administrateurs (beAuthentik n'envoie pas d'e-mail) ; alerte dans l'administration si la
-dernière réussite a plus de 26 h. Restauration depuis la liste R2 (mode Remplacer, mot de passe + « REMPLACER »).
+Échec : alerte WhatsApp/SMS aux administrateurs, plus un e-mail à leur adresse (si le service d'envoi est réglé) ;
+réussite : rapport par e-mail seulement ; alerte dans l'administration si la dernière réussite a plus de 26 h. Restauration depuis la liste R2 (mode Remplacer, mot de passe + « REMPLACER »).
 
 ## C. Cycle de vie du non-renouvellement
 J+103 avertissement · J+110 suspension (compte masqué, accès limité au renouvellement ; un paiement lève la suspension) ·
@@ -52,3 +52,19 @@ Archives conservées 1 an (réglable) puis effacées avec les médias du membre.
 depuis l'archive (frais de réouverture affichés, encaissement manuel). Interrupteur + mode simulation + rapports quotidiens.
 Exclus : administrateurs, modérateurs, comptes de test, comptes désactivés manuellement, membres jamais abonnés.
 À la mise en service, les échéances anciennes repartent de J+103 (aucune suspension ni suppression sans avertissement).
+Avertissements J+103, J+110 et J+112 : WhatsApp puis SMS, plus un e-mail aux membres qui ont une adresse (une seule fois
+chacun ; statut de l'e-mail noté dans le journal du cycle de vie). Rapport quotidien : WhatsApp/SMS + e-mail détaillé.
+
+## Envoi des e-mails de la plateforme
+Écran « Envoi des e-mails » (administrateur principal, `/admin/envoi-emails`). Service au choix : Resend, ZeptoMail (Zoho,
+région .com / .eu / .in), Brevo, SMTP, ou Désactivé (par défaut). Les e-mails s'ajoutent toujours à WhatsApp / SMS.
+- Clés API et mot de passe SMTP chiffrés en base (Fernet dérivé de `JWT_SECRET`), jamais renvoyés au navigateur ;
+  champ secret laissé vide = valeur conservée.
+- SMTP : bloqué sur les services Render gratuits (ports 25, 465, 587) ; fonctionne avec l'offre Starter, sauf le port 25
+  (refusé par l'écran). Les 3 autres services passent par HTTPS (port 443).
+- « Envoyer un essai » utilise les réglages enregistrés et affiche le message d'erreur du fournisseur.
+- Journal des modifications (qui, quand, quel fournisseur, quels champs — jamais la clé) : `maf_email_reglages_journal` ;
+  journal des envois (ENVOYE / ECHEC / NON_CONFIGURE) : `maf_emails_journal`.
+- Repli quand rien n'est réglé dans l'écran : `RESEND_API_KEY` + `RESEND_EXPEDITEUR`, puis `PLATEFORME_SMTP_*` (ou
+  `SMTP_*`), puis `BREVO_API_KEY`, puis `ZEPTOMAIL_API_KEY` (+ `ZEPTOMAIL_HOTE`), avec `EMAIL_EXPEDITEUR`.
+- Pas de réglage par membre : seul le niveau plateforme existe.
