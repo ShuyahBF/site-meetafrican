@@ -14,7 +14,8 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
-from auth import decode_access_token, get_current_user
+import maintenance_plateforme
+from auth import decode_access_payload, get_current_user
 from db import db
 from routes.account_extras import user_settings
 from storage import presigned_document_url, save_private_media
@@ -292,12 +293,17 @@ async def _broadcast_presence(conversation_id: str) -> None:
 
 @router.websocket("/ws/conversations/{conversation_id}")
 async def conversation_ws(websocket: WebSocket, conversation_id: str, token: str = ""):
-    user_id = decode_access_token(token) if token else None
-    if not user_id:
+    jeton = decode_access_payload(token) if token else None
+    if not jeton:
         await websocket.close(code=4401)  # non authentifié
         return
+    user_id = jeton["sub"]
     user = await db.users.find_one({"id": user_id}, {"_id": 0})
     if not user or not user.get("is_active", True):
+        await websocket.close(code=4401)
+        return
+    # Maintenance de la plateforme (ou session antérieure à la dernière maintenance)
+    if not await maintenance_plateforme.session_admise(user, jeton):
         await websocket.close(code=4401)
         return
     conv = await db.conversations.find_one({"id": conversation_id}, {"_id": 0})

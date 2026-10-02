@@ -11,6 +11,7 @@ from activity import current_ip, log_activity
 TERMS_VERSION = "2026-09-28"
 from fastapi import APIRouter, Depends, HTTPException, status
 
+import maintenance_plateforme
 from auth import create_access_token, get_current_user, hash_password, verify_password
 from db import db
 from models import Token, User, UserLogin, UserPublic, UserRegister, to_user_public, user_insert_doc
@@ -29,6 +30,8 @@ def _age_years(birthdate: str) -> int:
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 async def register(payload: UserRegister):
+    # Pas de nouveau compte pendant une maintenance (il serait perdu lors d'un transfert)
+    await maintenance_plateforme.refuser_si_maintenance()
     if not payload.email and not payload.phone:
         raise HTTPException(status_code=400, detail="Email ou téléphone requis")
     try:
@@ -88,6 +91,8 @@ async def login(payload: UserLogin):
         raise HTTPException(status_code=401, detail="Identifiants invalides")
     if not user.get("is_active", True):
         raise HTTPException(status_code=403, detail="Compte désactivé")
+    # Maintenance : seul l'administrateur principal peut se connecter
+    await maintenance_plateforme.refuser_si_maintenance(user)
     user.pop("_id", None)
     ip = current_ip()
     await db.users.update_one(

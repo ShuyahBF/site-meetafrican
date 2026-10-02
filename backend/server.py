@@ -18,12 +18,14 @@ from routes import (
     auth_tiktok,
     chat,
     interactions,
+    maintenance_plateforme,
     matching,
     account_extras,
     admin_timeline,
     community,
     payments_pawapay,
     tracking,
+    transfert_donnees,
     phone_verification,
     photos,
     profiles,
@@ -81,6 +83,11 @@ api.include_router(community.router)
 api.include_router(tracking.router)
 api.include_router(admin_timeline.router)
 api.include_router(test_data.router)
+# Maintenance de la plateforme : état public + déconnexion de tous les utilisateurs
+api.include_router(maintenance_plateforme.public)
+api.include_router(maintenance_plateforme.admin)
+# Export / import complets de la base (changement de cluster MongoDB)
+api.include_router(transfert_donnees.router)
 
 
 @api.get("/health")

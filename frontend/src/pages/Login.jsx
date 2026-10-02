@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BoutonTikTok from "@/components/BoutonTikTok";
+import { AvisMaintenance } from "@/components/MaintenancePlateforme";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient, extractErrorMessage } from "@/lib/api";
 
@@ -21,6 +22,14 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false);
   // Compte TikTok pas encore lié : { nom, avatar_url, lien }
   const [tiktok, setTiktok] = useState(null);
+  // Nouvelle base sans aucun compte (changement de cluster) : lien vers la restauration
+  const [restaurationPossible, setRestaurationPossible] = useState(false);
+
+  useEffect(() => {
+    apiClient.get("/plateforme/transfert/restauration-initiale")
+      .then((r) => setRestaurationPossible(!!r.data.disponible))
+      .catch(() => setRestaurationPossible(false));
+  }, []);
 
   const allerAccueil = (u) => navigate(u.role === "admin" || u.role === "moderator" ? "/admin" : "/moments");
 
@@ -60,6 +69,17 @@ export default function Login() {
   return (
     <div className="flex min-h-screen w-full flex-col justify-center bg-background-light px-6 py-10 font-display dark:bg-background-dark">
       <h1 className="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Se connecter</h1>
+
+      {/* Maintenance annoncée ou en cours (connexions suspendues) */}
+      <AvisMaintenance />
+
+      {restaurationPossible && (
+        <div className="mb-6 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">
+          <p className="font-bold">Base de données neuve</p>
+          <p className="mt-1">Aucun compte n'existe encore sur ce serveur. Administrateur : rechargez la sauvegarde de l'ancienne base.</p>
+          <Link to="/restauration-initiale" className="mt-2 inline-block font-semibold text-primary underline">Restaurer une sauvegarde</Link>
+        </div>
+      )}
 
       {/* Compte TikTok reconnu mais pas encore lié à un compte beAuthentik */}
       {tiktok && (

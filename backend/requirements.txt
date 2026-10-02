@@ -18,3 +18,5 @@ Pillow==10.4.0
 imageio-ffmpeg==0.6.0
 # Détection de visage (YuNet) : floutage du visage seul sur photos et vidéos
 opencv-python-headless==5.0.0.93
+# Chiffrement des exports complets de la base (AES-256-GCM + scrypt), voir chiffrement_flux.py
+cryptography==50.0.2

@@ -11,6 +11,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 
+import maintenance_plateforme
 from config import get_settings
 from db import db
 from models import User
@@ -29,18 +30,28 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 def create_access_token(user_id: str) -> str:
     settings = get_settings()
-    expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expires_minutes)
-    payload = {"sub": user_id, "exp": expires_at}
+    maintenant = datetime.now(timezone.utc)
+    expires_at = maintenant + timedelta(minutes=settings.jwt_expires_minutes)
+    # « ouv » : heure d'ouverture de la session (secondes, avec décimales) —
+    # sert à invalider les sessions ouvertes avant une maintenance
+    # (voir maintenance_plateforme.session_valide).
+    payload = {"sub": user_id, "exp": expires_at, "ouv": maintenant.timestamp()}
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
-def decode_access_token(token: str) -> Optional[str]:
+def decode_access_payload(token: str) -> Optional[dict]:
+    """Contenu du jeton (None s'il est invalide ou expiré)."""
     settings = get_settings()
     try:
         payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
     except jwt.PyJWTError:
         return None
-    return payload.get("sub")
+    return payload if payload.get("sub") else None
+
+
+def decode_access_token(token: str) -> Optional[str]:
+    payload = decode_access_payload(token)
+    return payload.get("sub") if payload else None
 
 
 async def get_current_user(
@@ -48,12 +59,15 @@ async def get_current_user(
 ) -> dict:
     if credentials is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Non authentifié")
-    user_id = decode_access_token(credentials.credentials)
-    if not user_id:
+    payload = decode_access_payload(credentials.credentials)
+    if not payload:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session invalide ou expirée")
-    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0})
     if not user or not user.get("is_active", True):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Compte introuvable ou désactivé")
+    # Maintenance de la plateforme : 503 pendant la maintenance, 401 pour une
+    # session ouverte avant la dernière maintenance (administrateur jamais bloqué)
+    await maintenance_plateforme.controler_session(user, payload)
     _touch_last_seen(user)
     return user
 
