@@ -29,8 +29,10 @@ Jours comptés en jours calendaires (UTC) depuis l'échéance impayée (grâce c
     réouverture (montant + devise, paramètres de la plateforme) sont affichés et
     notés ; leur encaissement reste manuel.
 
-Avertissements : WhatsApp puis SMS (envoi_messages.py — beAuthentik n'envoie pas
-d'e-mail), une seule fois chacun par échéance, journalisés. Si la tâche n'a pas
+Avertissements : WhatsApp puis SMS (envoi_messages.py), PLUS un e-mail aux membres
+qui ont une adresse (envoi_email.py, service choisi par l'administrateur principal ;
+jamais à la place de WhatsApp / SMS), une seule fois chacun par échéance, journalisés
+(canal WhatsApp / SMS et statut de l'e-mail ENVOYE / ECHEC / NON_CONFIGURE). Si la tâche n'a pas
 tourné un jour, seul l'avertissement de l'étape atteinte est envoyé.
 
 Mise en service (« rattrapage ») : le jour où le cycle tourne pour la première
@@ -47,7 +49,7 @@ Tâche quotidienne : lancée par le Cron Job de la sauvegarde
 interrupteur « Cycle de vie automatique » (activé par défaut) et MODE SIMULATION
 (liste ce qui serait fait, sans rien faire) ; rapport quotidien
 (`maf_cycle_vie_rapports`, visible dans l'administration et envoyé aux
-administrateurs par WhatsApp/SMS quand il y a des actions ou des erreurs).
+administrateurs par WhatsApp/SMS et par e-mail quand il y a des actions ou des erreurs).
 """
 from __future__ import annotations
 
@@ -67,6 +69,7 @@ from pymongo.errors import BulkWriteError
 
 import abonnement_grace
 import chiffrement_flux
+import envoi_email
 import envoi_messages
 import parametres_plateforme
 import sauvegarde_auto
@@ -215,20 +218,35 @@ def texte_avertissement(etape: int, s: dict) -> str:
             f"renouvellement de votre abonnement. Renouvelez : {url}")
 
 
+# Objet des e-mails d'avertissement (le corps est le même texte que le WhatsApp / SMS)
+SUJETS_AVERTISSEMENT = {
+    J_AVERTISSEMENT: "beAuthentik — votre compte sera suspendu dans 7 jours",
+    J_SUSPENSION: "beAuthentik — votre compte est suspendu",
+    J_VEILLE: "beAuthentik — dernier rappel : suppression de votre compte demain",
+}
+
+
 async def _avertir(user: dict, etape: int, s: dict, suivi: dict) -> dict:
     cle = f"avertissement_{etape}"
     if suivi.get(cle):
         return {}
-    resultat = await envoi_messages.envoyer(user, texte_avertissement(etape, s))
-    suivi[cle] = {"le": maintenant().isoformat(), "ok": resultat["ok"], "canal": resultat["canal"],
-                  "erreur": resultat["erreur"]}
+    texte = texte_avertissement(etape, s)
+    resultat = await envoi_messages.envoyer(user, texte)
+    # E-mail EN PLUS de WhatsApp / SMS, aux membres qui ont une adresse (jamais bloquant)
+    courriel = {"statut": "NON_CONFIGURE", "erreur": "Aucune adresse e-mail"}
+    if envoi_email.email_valide(user.get("email")):
+        courriel = await envoi_email.envoyer_journalise(user["email"], SUJETS_AVERTISSEMENT[etape], texte,
+                                                        f"cycle_vie_{cle}", user_id=user["id"])
+    suivi[cle] = {"le": maintenant().isoformat(), "ok": resultat["ok"] or courriel["statut"] == "ENVOYE",
+                  "canal": resultat["canal"], "erreur": resultat["erreur"],
+                  "email": courriel["statut"], "email_erreur": courriel.get("erreur")}
     # Les avertissements des étapes déjà dépassées ne seront plus envoyés
     for precedente in (J_AVERTISSEMENT, J_SUSPENSION, J_VEILLE):
         if precedente < etape and not suivi.get(f"avertissement_{precedente}"):
             suivi[f"avertissement_{precedente}"] = {"le": maintenant().isoformat(), "saute": True}
     await db.users.update_one({"id": user["id"]}, {"$set": {"cycle_vie": suivi}})
     await _journal(cle, user["id"], nom=user.get("full_name"), **{k: v for k, v in suivi[cle].items() if k != "le"})
-    return {"action": cle, "envoye": resultat["ok"], "canal": resultat["canal"]}
+    return {"action": cle, "envoye": suivi[cle]["ok"], "canal": resultat["canal"], "email": courriel["statut"]}
 
 
 async def suspendre(user: dict, suivi: dict) -> None:
@@ -425,11 +443,28 @@ async def _executer(params: dict, declencheur: str, simulation: bool, par: Optio
         try:
             await envoi_messages.alerter_administrateurs(
                 f"beAuthentik — cycle de vie du {_fmt(maintenant().date())} : {len(actions)} action(s), "
-                f"{len(erreurs)} erreur(s), {len(purges)} archive(s) effacée(s). Détail dans l'administration.")
+                f"{len(erreurs)} erreur(s), {len(purges)} archive(s) effacée(s). Détail dans l'administration.",
+                corps_email=_rapport_texte(rapport))
         except Exception:  # noqa: BLE001
             pass
     rapport.pop("_id", None)
     return rapport
+
+
+def _rapport_texte(rapport: dict) -> str:
+    """Rapport quotidien détaillé (corps de l'e-mail aux administrateurs)."""
+    lignes = [f"Cycle de vie du {_fmt(maintenant().date())} (déclencheur : {rapport['declencheur']}).", ""]
+    lignes.append(f"Actions ({len(rapport['actions'])}) :")
+    for a in rapport["actions"][:200]:
+        extra = f" — J+{a['jours']}" if a.get("jours") is not None else ""
+        email = f" — e-mail : {a['email']}" if a.get("email") else ""
+        lignes.append(f"  - {a.get('nom') or a['user_id']} : {a['action']}{extra}{email}")
+    lignes.append(f"Erreurs ({len(rapport['erreurs'])}) :")
+    for e in rapport["erreurs"][:100]:
+        lignes.append(f"  - {e.get('nom') or e['user_id']} : {e['erreur']}")
+    lignes.append(f"Archives effacées (fin de conservation) : {len(rapport['archives_effacees'])}")
+    lignes += ["", "Détail dans l'administration de beAuthentik."]
+    return "\n".join(lignes)
 
 
 def _prevu(jours: int, user: dict, suivi: dict) -> str:

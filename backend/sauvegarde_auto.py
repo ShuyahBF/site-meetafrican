@@ -23,9 +23,10 @@ règle R3), et dépôt R2 commun aux archives de membres (cycle_vie.py).
   - Rétention : 7 quotidiennes + 4 hebdomadaires + 12 mensuelles (la plus récente
     de chaque jour / semaine ISO / mois) ; les autres sont effacées après chaque
     sauvegarde réussie.
-  - Rapport : beAuthentik n'a pas d'envoi d'e-mail ; en cas d'échec, alerte par
-    WhatsApp / SMS aux administrateurs principaux (envoi_messages.py) et alerte
-    dans l'administration si la dernière réussite a plus de 26 h.
+  - Rapport : en cas d'échec, alerte par WhatsApp / SMS aux administrateurs
+    principaux PLUS un e-mail à leur adresse (envoi_messages.py, envoi_email.py) ;
+    après une réussite, rapport par e-mail seulement (pas de WhatsApp / SMS
+    quotidien) ; alerte dans l'administration si la dernière réussite a plus de 26 h.
   - Restauration : depuis la liste des sauvegardes R2, en mode « Remplacer » avec
     les garde-fous existants (mot de passe de l'administrateur, mot REMPLACER),
     par l'import de transfert_donnees.py (suivi de progression identique).
@@ -49,6 +50,7 @@ from fastapi import HTTPException
 from pymongo.errors import DuplicateKeyError
 
 import chiffrement_flux
+import envoi_email
 import envoi_messages
 import transfert_donnees
 from config import get_settings
@@ -287,6 +289,7 @@ async def executer(force_motif: Optional[str] = None) -> dict:
                    "documents": sum(c["documents"] for c in collections), "collections": len(collections),
                    "supprimees_retention": len(supprimees), "stockage": dep.nom}
         await db.sauvegardes_auto.update_one({"_id": ligne["_id"]}, {"$set": rapport})
+        await _rapport_email(ligne["jour"], rapport)
         return rapport
     except Exception as exc:  # noqa: BLE001 — rapporté dans le journal et aux administrateurs
         logger.exception("Échec de la sauvegarde automatique")
@@ -301,6 +304,21 @@ async def executer(force_motif: Optional[str] = None) -> dict:
         return {"statut": "ECHEC", "erreur": erreur}
     finally:
         transfert_donnees._supprimer(chemin)  # noqa: SLF001 — jamais de fichier laissé sur le serveur
+
+
+async def _rapport_email(jour: str, rapport: dict) -> None:
+    """Rapport de la sauvegarde réussie, par e-mail aux administrateurs (s'ajoute à
+    l'administration ; jamais bloquant)."""
+    corps = (f"Sauvegarde automatique du {jour} réussie.\n\n"
+             f"Fichier : {rapport['cle']}\nTaille : {rapport['taille']} octets\n"
+             f"Documents : {rapport['documents']} ({rapport['collections']} collections)\n"
+             f"Anciennes sauvegardes effacées (rétention 7/4/12) : {rapport['supprimees_retention']}\n"
+             f"Stockage : {rapport['stockage']}\n\nDétail dans l'administration de beAuthentik.")
+    try:
+        await envoi_email.envoyer_aux_administrateurs(f"beAuthentik — sauvegarde automatique du {jour} réussie",
+                                                      corps, "rapport_sauvegarde")
+    except Exception:  # noqa: BLE001
+        logger.exception("Rapport de sauvegarde par e-mail impossible")
 
 
 async def executer_nuit() -> dict:
