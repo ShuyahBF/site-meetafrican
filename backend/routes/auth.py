@@ -9,10 +9,13 @@ from activity import current_ip, log_activity
 # Version des CGU / politique de confidentialité en vigueur (date de
 # publication, affichée en tête des pages /cgu et /confidentialite).
 TERMS_VERSION = "2026-09-28"
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+
+import cycle_vie
+import sessions_comptes
 
 import maintenance_plateforme
-from auth import create_access_token, get_current_user, hash_password, verify_password
+from auth import get_current_user, hash_password, verify_password
 from db import db
 from models import Token, User, UserLogin, UserPublic, UserRegister, to_user_public, user_insert_doc
 from routes.auth_tiktok import lier_si_demande, lire_code
@@ -29,7 +32,7 @@ def _age_years(birthdate: str) -> int:
 
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
-async def register(payload: UserRegister):
+async def register(payload: UserRegister, request: Request):
     # Pas de nouveau compte pendant une maintenance (il serait perdu lors d'un transfert)
     await maintenance_plateforme.refuser_si_maintenance()
     if not payload.email and not payload.phone:
@@ -78,18 +81,21 @@ async def register(payload: UserRegister):
     await db.users.insert_one(doc.copy())
     # Inscription commencée par « Continuer avec TikTok » : liaison du compte TikTok
     await lier_si_demande(user.id, payload.tiktok_lien)
-    token = create_access_token(user.id)
+    # Ouverture d'une session (appareil, IP) — limite d'appareils, voir sessions_comptes.py
+    token = await sessions_comptes.ouvrir(user.id, request.headers.get("user-agent"))
     return Token(access_token=token, user=to_user_public(doc))
 
 
 @router.post("/login", response_model=Token)
-async def login(payload: UserLogin):
+async def login(payload: UserLogin, request: Request):
     user = await db.users.find_one(
         {"$or": [{"email": payload.identifier}, {"phone": payload.identifier}]},
     )
     if not user or not verify_password(payload.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Identifiants invalides")
-    if not user.get("is_active", True):
+    # Membre suspendu pour non-renouvellement : il peut se connecter pour renouveler
+    # son abonnement (seules les routes de renouvellement lui sont ouvertes)
+    if not user.get("is_active", True) and not cycle_vie.est_suspendu(user):
         raise HTTPException(status_code=403, detail="Compte désactivé")
     # Maintenance : seul l'administrateur principal peut se connecter
     await maintenance_plateforme.refuser_si_maintenance(user)
@@ -104,7 +110,7 @@ async def login(payload: UserLogin):
     await log_activity(user["id"], "Connexion réussie", ip)
     # Compte existant + « Continuer avec TikTok » : liaison du compte TikTok
     await lier_si_demande(user["id"], payload.tiktok_lien)
-    token = create_access_token(user["id"])
+    token = await sessions_comptes.ouvrir(user["id"], request.headers.get("user-agent"))
     return Token(access_token=token, user=to_user_public(user))
 
 

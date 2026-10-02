@@ -155,14 +155,15 @@ async def send_sms_code(msisdn: str, code: str, primary: str = "auto") -> Tuple[
     return False, "Envoi du SMS impossible pour le moment. Réessayez plus tard ou choisissez WhatsApp."
 
 
-async def _send_sms_ovh(msisdn: str, code: str) -> bool:
-    """OVH SMS : requête signée "$1$" + SHA1(secret+consumer+méthode+url+corps+horodatage)."""
+async def _send_sms_ovh(msisdn: str, code: str, texte: Optional[str] = None) -> bool:
+    """`texte` : message libre (avertissements, voir envoi_messages.py) à la place du code.
+    OVH SMS : requête signée "$1$" + SHA1(secret+consumer+méthode+url+corps+horodatage)."""
     s = get_settings()
     host = "https://ca.api.ovh.com/1.0" if (s.ovh_sms_endpoint or "").lower() == "ovh-ca" else "https://eu.api.ovh.com/1.0"
     url = f"{host}/sms/{s.ovh_sms_service_name}/jobs"
     body = json.dumps({
         "charset": "UTF-8", "class": "phoneDisplay", "coding": "8bit",
-        "message": SMS_TEXT.format(code=code), "noStopClause": True, "priority": "high",
+        "message": texte or SMS_TEXT.format(code=code), "noStopClause": True, "priority": "high",
         "receivers": [f"+{msisdn}"], "senderForResponse": False,
         "sender": s.ovh_sms_sender or "beAuthentik", "validityPeriod": 30,
     })
@@ -188,7 +189,8 @@ async def _send_sms_ovh(msisdn: str, code: str) -> bool:
     return False
 
 
-async def _send_sms_orange(msisdn: str, code: str) -> bool:
+async def _send_sms_orange(msisdn: str, code: str, texte: Optional[str] = None) -> bool:
+    """`texte` : message libre (avertissements, voir envoi_messages.py) à la place du code."""
     s = get_settings()
     sender = s.orange_sms_sender_msisdn.strip()
     sender = sender if sender.startswith("+") else f"+{sender}"
@@ -196,7 +198,7 @@ async def _send_sms_orange(msisdn: str, code: str) -> bool:
     request = {
         "address": f"tel:+{msisdn}",
         "senderAddress": f"tel:{sender}",
-        "outboundSMSTextMessage": {"message": SMS_TEXT.format(code=code)},
+        "outboundSMSTextMessage": {"message": texte or SMS_TEXT.format(code=code)},
     }
     if s.orange_sms_sender_name:
         request["senderName"] = s.orange_sms_sender_name

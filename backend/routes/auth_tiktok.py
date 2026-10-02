@@ -22,13 +22,14 @@ from urllib.parse import urlencode
 
 import httpx
 import jwt
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
+import cycle_vie
 import maintenance_plateforme
+import sessions_comptes
 from activity import current_ip, log_activity
-from auth import create_access_token
 from config import get_settings
 from db import db
 from models import to_user_public
@@ -147,11 +148,11 @@ async def lire_code(code: str, consommer: bool) -> dict:
 
 
 @router.post("/finaliser")
-async def finaliser(data: Finalisation):
+async def finaliser(data: Finalisation, request: Request):
     doc = await lire_code(data.code, consommer=False)
     user = await db.users.find_one({"tiktok_open_id": doc["open_id"]}, {"_id": 0})
     if user:
-        if not user.get("is_active", True):
+        if not user.get("is_active", True) and not cycle_vie.est_suspendu(user):
             raise HTTPException(403, "Compte désactivé")
         # Maintenance : connexion refusée (sauf administrateur principal)
         await maintenance_plateforme.refuser_si_maintenance(user)
@@ -160,7 +161,8 @@ async def finaliser(data: Finalisation):
         await db.users.update_one({"id": user["id"]}, {"$set": {
             "last_login_ip": ip, "last_login_at": datetime.now().astimezone().isoformat()}})
         await log_activity(user["id"], "Connexion réussie (TikTok)", ip)
-        return {"access_token": create_access_token(user["id"]), "token_type": "bearer", "user": to_user_public(user)}
+        jeton = await sessions_comptes.ouvrir(user["id"], request.headers.get("user-agent"))
+        return {"access_token": jeton, "token_type": "bearer", "user": to_user_public(user)}
     # Pas encore de compte lié : infos pour pré-remplir l'inscription
     return {"inscription": {"nom": doc["display_name"], "avatar_url": doc["avatar_url"], "lien": data.code}}
 

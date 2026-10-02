@@ -116,7 +116,11 @@ JOURNAL = "journal_transferts"
 # Collections techniques (noms logiques) : voir la docstring du module
 TECHNIQUES_REMPLACEES = ("users", "subscription_plans", "gifts", "settings", "vidal_sync_config")
 TECHNIQUES_FUSIONNEES = (JOURNAL, "activity_log", "site_visits", "vidal_sync_log",
-                         "maintenance_plateforme", "maintenance_plateforme_journal")
+                         "maintenance_plateforme", "maintenance_plateforme_journal",
+                         # Sessions ouvertes (la connexion de l'administrateur qui importe en crée une),
+                         # journaux de la sauvegarde automatique et du cycle de vie, paramètres
+                         "sessions", "sauvegardes_auto", "cycle_vie_journal", "cycle_vie_rapports", "abonnements_journal",
+                         "parametres_plateforme")
 # Options d'index propres au serveur, à ne pas renvoyer à create_index
 _OPTIONS_INDEX_IGNOREES = {"v", "key", "ns", "background", "textIndexVersion", "2dsphereIndexVersion"}
 
@@ -306,17 +310,32 @@ async def lancer_export(user: dict, phrase: str, ip: Optional[str]) -> dict:
     return tache
 
 
-async def _executer_export(tache: dict, phrase: str, user: dict, ip: Optional[str]) -> None:
-    chemin = tache["_chemin"]
+async def ecrire_export(chemin: str, phrase: str, selection: Optional[dict[str, dict]] = None,
+                        tache: Optional[dict] = None) -> list[dict]:
+    """Écrit un fichier .baexport chiffré à `chemin` (via un fichier « .partiel »
+    renommé à la fin) et renvoie la description des collections exportées.
+
+    `selection` : None = toutes les collections du projet ; sinon
+    {nom logique: filtre MongoDB} — seules ces collections, et dans chacune les
+    seuls documents du filtre (archive d'un membre, voir cycle_vie.py).
+    Réutilisé par la sauvegarde automatique (sauvegarde_auto.py) : même format,
+    même chiffrement que l'export manuel."""
     partiel = chemin + ".partiel"
     try:
-        DOSSIER.mkdir(mode=0o700, parents=True, exist_ok=True)
+        Path(chemin).parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         base = base_brute()
         p = _prefixe()
-        noms = await collections_du_projet(base)
-        tache["documents_total"] = sum([await base[n].estimated_document_count() for n in noms])
+        if selection is None:
+            noms = await collections_du_projet(base)
+            filtres = {n: {} for n in noms}
+        else:
+            existantes = set(await base.list_collection_names())
+            filtres = {_physique(n): q for n, q in selection.items()}
+            noms = sorted(n for n in filtres if n in existantes)
+        if tache is not None:
+            tache["documents_total"] = sum([await base[n].estimated_document_count() for n in noms])
+            tache["etape"] = "Préparation du chiffrement…"
         collections: list[dict] = []
-        tache["etape"] = "Préparation du chiffrement…"
         with open(partiel, "wb") as fichier:
             os.chmod(partiel, 0o600)
             ecrivain = await asyncio.to_thread(chiffrement_flux.EcrivainChiffre, fichier, phrase, _cle_signature())
@@ -324,35 +343,51 @@ async def _executer_export(tache: dict, phrase: str, user: dict, ip: Optional[st
             archive = zipfile.ZipFile(ecrivain, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6)
             for nom_reel in noms:
                 nom = nom_reel[len(p):] if p else nom_reel
-                tache["etape"] = f"Export de « {nom} »…"
+                if tache is not None:
+                    tache["etape"] = f"Export de « {nom} »…"
                 collection = base[nom_reel]
                 index = [dict(i) async for i in collection.list_indexes()]
                 compte = 0
                 with archive.open(f"collections/{nom}.jsonl", "w", force_zip64=True) as entree:
                     lignes: list[str] = []
-                    async for doc in collection.find({}, batch_size=LOT):
+
+                    async def _vider(lignes_: list[str]) -> None:
+                        await asyncio.to_thread(entree.write, ("\n".join(lignes_) + "\n").encode("utf-8"))
+                        if tache is not None:
+                            tache["documents_traites"] += len(lignes_)
+                            tache["progression"] = _pourcentage(tache)
+
+                    async for doc in collection.find(filtres[nom_reel], batch_size=LOT):
                         lignes.append(json_util.dumps(doc, json_options=CANONICAL_JSON_OPTIONS, ensure_ascii=False))
                         if len(lignes) >= LOT:
-                            await asyncio.to_thread(entree.write, ("\n".join(lignes) + "\n").encode("utf-8"))
+                            await _vider(lignes)
                             compte += len(lignes)
-                            tache["documents_traites"] += len(lignes)
-                            tache["progression"] = _pourcentage(tache)
                             lignes = []
                     if lignes:
-                        await asyncio.to_thread(entree.write, ("\n".join(lignes) + "\n").encode("utf-8"))
+                        await _vider(lignes)
                         compte += len(lignes)
-                        tache["documents_traites"] += len(lignes)
-                        tache["progression"] = _pourcentage(tache)
                 collections.append({"nom": nom, "fichier": f"collections/{nom}.jsonl", "documents": compte,
                                     "index": index})
             manifest = {"application": APPLICATION, "version_format": VERSION_FORMAT,
                         "base": get_settings().mongo_db_name, "prefixe": p,
                         "date_utc": _maintenant_iso(), "collections": collections}
+            if selection is not None:
+                manifest["partiel"] = True  # archive limitée (un membre), pas toute la base
             archive.writestr("manifest.json", json_util.dumps(manifest, json_options=CANONICAL_JSON_OPTIONS,
                                                              ensure_ascii=False, indent=2).encode("utf-8"))
             await asyncio.to_thread(archive.close)
             await asyncio.to_thread(ecrivain.fermer_flux)
         os.replace(partiel, chemin)
+        return collections
+    except BaseException:
+        _supprimer(partiel)
+        raise
+
+
+async def _executer_export(tache: dict, phrase: str, user: dict, ip: Optional[str]) -> None:
+    chemin = tache["_chemin"]
+    try:
+        collections = await ecrire_export(chemin, phrase, tache=tache)
         total = sum(c["documents"] for c in collections)
         tache.update({"etape": "Export terminé : le fichier est prêt à être téléchargé", "fichier_disponible": True,
                       "taille": os.path.getsize(chemin), "documents_traites": total, "documents_total": total,
@@ -363,7 +398,6 @@ async def _executer_export(tache: dict, phrase: str, user: dict, ip: Optional[st
                           documents=total, taille=tache["taille"])
     except Exception as exc:  # noqa: BLE001 — l'erreur est rapportée à l'administrateur
         logger.exception("Échec de l'export complet")
-        _supprimer(partiel)
         _supprimer(chemin)
         _terminer(tache, "ECHEC", str(exc) if isinstance(exc, ErreurTransfert) else f"L'export a échoué : {exc}")
         await journaliser("export", "ECHEC", user, ip, tache=tache["id"], erreur=str(exc)[:300])
@@ -491,6 +525,10 @@ def _valider_manifest(manifest: Any, archive: zipfile.ZipFile) -> list[dict]:
         raise ErreurTransfert("Ce fichier ne provient pas de beAuthentik")
     if manifest.get("version_format") != VERSION_FORMAT:
         raise ErreurTransfert(f"Version du fichier non prise en charge ({manifest.get('version_format')})")
+    if manifest.get("partiel"):
+        # Archive d'UN membre (cycle de vie) : ne doit jamais remplacer toute la base
+        raise ErreurTransfert("Ce fichier est l'archive d'un seul membre : utilisez « Rouvrir » dans "
+                              "Abonnements & cycle de vie, pas l'import complet")
     collections = manifest.get("collections")
     if not isinstance(collections, list):
         raise ErreurTransfert("Fichier invalide : liste des collections absente")

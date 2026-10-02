@@ -141,6 +141,24 @@ class Settings(BaseSettings):
     # cachée pourrait épuiser le quota VIDAL réel.
     vidal_proxy_secret: Optional[str] = None
 
+    # Sauvegarde générale automatique (voir sauvegarde_auto.py) — variables Render uniquement.
+    # Phrase de chiffrement des sauvegardes et des archives de membres (12 caractères minimum) :
+    # sans elle, la sauvegarde automatique est désactivée (alerte dans l'administration).
+    sauvegarde_auto_phrase: Optional[str] = None
+    # Secret de l'en-tête X-Sauvegarde-Jeton exigé par POST /api/sauvegarde-auto/declencher (Cron Job Render)
+    sauvegarde_auto_jeton: Optional[str] = None
+    # Stockage R2 des sauvegardes : identifiants DÉDIÉS facultatifs ; à défaut, ceux du stockage
+    # des médias (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY) sont réutilisés, et le
+    # bucket PRIVÉ des pièces d'identité (R2_BUCKET_DOCUMENTS) reçoit les sauvegardes sous le
+    # dossier BEAUTHENTIK_SAUVEGARDES_PREFIXE (jamais le bucket public des photos).
+    beauthentik_sauvegardes_r2_account_id: Optional[str] = None
+    beauthentik_sauvegardes_r2_access_key_id: Optional[str] = None
+    beauthentik_sauvegardes_r2_secret_access_key: Optional[str] = None
+    beauthentik_sauvegardes_bucket: Optional[str] = None
+    beauthentik_sauvegardes_prefixe: str = "sauvegardes-beauthentik/"
+    # Développement / tests UNIQUEMENT : dossier local qui remplace R2 (jamais en production)
+    beauthentik_sauvegardes_dossier_local: Optional[str] = None
+
 
 @lru_cache
 def get_settings() -> Settings:

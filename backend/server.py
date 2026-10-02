@@ -13,14 +13,17 @@ from config import get_settings
 from db import db, ensure_indexes
 from models import SiteAppearance
 from routes import (
+    abonnement_grace,
     admin,
     auth,
     auth_tiktok,
     chat,
+    cycle_vie,
     interactions,
     maintenance_plateforme,
     matching,
     account_extras,
+    parametres_plateforme,
     admin_timeline,
     community,
     payments_pawapay,
@@ -31,6 +34,8 @@ from routes import (
     profiles,
     ratings,
     referrals,
+    sauvegarde_auto,
+    sessions_comptes,
     stats,
     test_data,
     subscriptions,
@@ -88,6 +93,15 @@ api.include_router(maintenance_plateforme.public)
 api.include_router(maintenance_plateforme.admin)
 # Export / import complets de la base (changement de cluster MongoDB)
 api.include_router(transfert_donnees.router)
+# Abonnements, sessions et sauvegardes (spécification commune du 02/10/2026)
+api.include_router(sessions_comptes.compte)          # sessions + inactivité du membre
+api.include_router(sessions_comptes.admin)
+api.include_router(abonnement_grace.membre)          # A : grâce après échéance impayée
+api.include_router(abonnement_grace.admin)
+api.include_router(parametres_plateforme.router)     # réglages de l'administrateur principal
+api.include_router(sauvegarde_auto.public)           # E : sauvegarde automatique (Cron Job) + D
+api.include_router(sauvegarde_auto.admin)
+api.include_router(cycle_vie.router)                 # C : cycle de vie du non-renouvellement
 
 
 @api.get("/health")

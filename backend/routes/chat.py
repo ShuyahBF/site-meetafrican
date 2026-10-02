@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, W
 from pydantic import BaseModel, Field
 
 import maintenance_plateforme
+import sessions_comptes
 from auth import decode_access_payload, get_current_user
 from db import db
 from routes.account_extras import user_settings
@@ -304,6 +305,10 @@ async def conversation_ws(websocket: WebSocket, conversation_id: str, token: str
         return
     # Maintenance de la plateforme (ou session antérieure à la dernière maintenance)
     if not await maintenance_plateforme.session_admise(user, jeton):
+        await websocket.close(code=4401)
+        return
+    # Session fermée (limite d'appareils, fermeture manuelle, inactivité)
+    if not await sessions_comptes.session_admise(user, jeton):
         await websocket.close(code=4401)
         return
     conv = await db.conversations.find_one({"id": conversation_id}, {"_id": 0})
