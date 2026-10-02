@@ -39,6 +39,7 @@ import AdminTimeline from "@/pages/admin/AdminTimeline";
 import AdminMember from "@/pages/admin/AdminMember";
 import AdminDonneesMaintenance from "@/pages/admin/AdminDonneesMaintenance";
 import AdminAbonnementsSessions from "@/pages/admin/AdminAbonnementsSessions";
+import AdminEnvoiEmails from "@/pages/admin/AdminEnvoiEmails";
 // Abonnement (grâce, suspension), sessions et déconnexion après inactivité
 import BandeauAbonnement from "@/components/BandeauAbonnement";
 import DeconnexionInactivite from "@/components/DeconnexionInactivite";
@@ -131,6 +132,7 @@ export default function App() {
             <Route path="membres/:userId" element={<AdminMember />} />
             <Route path="donnees-maintenance" element={<AdminDonneesMaintenance />} />
             <Route path="abonnements-sessions" element={<AdminAbonnementsSessions />} />
+            <Route path="envoi-emails" element={<AdminEnvoiEmails />} />
           </Route>
 
           {/* Route cachée (non liée dans la navigation du site) : accessible

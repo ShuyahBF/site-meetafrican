@@ -6,8 +6,10 @@ l'administrateur) avec les mécanismes d'envoi EXISTANTS de beAuthentik
      écrit au numéro beAuthentik dans les dernières 24 h — règle de Meta) ;
   2. en repli, SMS (Orange SMS API puis OVH, ou l'inverse hors Burkina).
 
-beAuthentik n'a PAS d'envoi d'e-mail : aucun e-mail n'est envoyé. Chaque envoi
-est noté par l'appelant (journal du cycle de vie / de la sauvegarde).
+EN PLUS (jamais à la place) : un e-mail par le service d'envoi choisi par
+l'administrateur principal (envoi_email.py : Resend, ZeptoMail, Brevo ou SMTP ;
+désactivé par défaut). Chaque envoi est noté par l'appelant (journal du cycle de
+vie / de la sauvegarde) et chaque e-mail dans `maf_emails_journal`.
 Dans les tests, `envoyer` est remplacé (aucun appel réseau).
 """
 from __future__ import annotations
@@ -75,12 +77,36 @@ async def envoyer(user: dict, texte: str) -> dict:
     return {"ok": False, "canal": None, "erreur": "WhatsApp et SMS indisponibles ou non configurés"}
 
 
-async def alerter_administrateurs(texte: str) -> int:
-    """Envoie une alerte à chaque administrateur principal ayant un numéro. Renvoie le nombre d'envois réussis."""
+def sujet_alerte(texte: str) -> str:
+    """Objet de l'e-mail tiré du début du texte de l'alerte (une ligne, 120 caractères au plus)."""
+    premiere = " ".join(texte.split())
+    # « beAuthentik — cycle de vie du JJ/MM/AAAA : ... » -> partie avant « : » si elle est parlante
+    if " : " in premiere and len(premiere.split(" : ", 1)[0]) >= 20:
+        return premiere.split(" : ", 1)[0][:120]
+    for separateur in (" (", ". "):
+        if separateur in premiere:
+            premiere = premiere.split(separateur, 1)[0]
+            break
+    return premiere.rstrip(".")[:120] or "beAuthentik — alerte"
+
+
+async def alerter_administrateurs(texte: str, corps_email: Optional[str] = None) -> int:
+    """Envoie une alerte à chaque administrateur principal : WhatsApp / SMS à ceux qui
+    ont un numéro, PLUS un e-mail à l'adresse de chaque compte administrateur (si le
+    service d'envoi des e-mails est réglé). Renvoie le nombre d'envois réussis
+    (WhatsApp / SMS et e-mails). `corps_email` : texte plus détaillé pour l'e-mail
+    (par défaut, le même texte que le WhatsApp / SMS)."""
     from db import db
+    import envoi_email
     reussis = 0
     async for adm in db.users.find({"role": "admin", "is_active": {"$ne": False}},
                                    {"_id": 0, "whatsapp": 1, "phone": 1}):
         if (await envoyer(adm, texte))["ok"]:
             reussis += 1
+    # E-mail en plus : une erreur ici ne bloque jamais l'alerte WhatsApp / SMS déjà partie
+    try:
+        reussis += await envoi_email.envoyer_aux_administrateurs(sujet_alerte(texte), corps_email or texte,
+                                                             "alerte_administrateurs")
+    except Exception:  # noqa: BLE001
+        pass
     return reussis

@@ -119,3 +119,8 @@ async def ensure_indexes() -> None:
     await db.archives_membres.create_index("id", unique=True)
     await db.archives_membres.create_index([("statut", 1), ("expire_le", 1)])
     await db.users.create_index("statut_cycle", sparse=True)
+    # Envoi des e-mails de la plateforme (envoi_email.py) : journal des envois
+    # et journal des modifications des réglages
+    await db.emails_journal.create_index([("date", -1)])
+    await db.emails_journal.create_index("user_id", sparse=True)
+    await db.email_reglages_journal.create_index([("date", -1)])

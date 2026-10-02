@@ -164,7 +164,7 @@ def test_verification_echouee_rien_n_est_supprime(client, make_user, cycle, monk
     cycle["decalage"]["jours"] = 3
     alertes = []
 
-    async def alerter(texte):
+    async def alerter(texte, **_):
         alertes.append(texte)
         return 0
 

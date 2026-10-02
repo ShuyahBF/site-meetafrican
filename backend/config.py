@@ -159,6 +159,32 @@ class Settings(BaseSettings):
     # Développement / tests UNIQUEMENT : dossier local qui remplace R2 (jamais en production)
     beauthentik_sauvegardes_dossier_local: Optional[str] = None
 
+    # Envoi des e-mails de la PLATEFORME (voir envoi_email.py). Le service se règle dans
+    # l'administration (Sessions, sauvegardes & cycle de vie > Envoi des e-mails) ; les
+    # variables ci-dessous ne servent qu'en REPLI quand rien n'y est réglé, dans cet ordre :
+    #   1. RESEND_API_KEY + RESEND_EXPEDITEUR ;
+    #   2. PLATEFORME_SMTP_* (ou SMTP_*) — SMTP bloqué sur les services Render gratuits ;
+    #   3. BREVO_API_KEY puis ZEPTOMAIL_API_KEY (+ ZEPTOMAIL_HOTE), avec EMAIL_EXPEDITEUR.
+    resend_api_key: Optional[str] = None
+    resend_expediteur: Optional[str] = None
+    plateforme_smtp_hote: Optional[str] = None
+    plateforme_smtp_port: Optional[int] = None
+    plateforme_smtp_utilisateur: Optional[str] = None
+    plateforme_smtp_mot_de_passe: Optional[str] = None
+    plateforme_smtp_ssl: Optional[bool] = None
+    plateforme_expediteur: Optional[str] = None
+    smtp_host: Optional[str] = None
+    smtp_port: Optional[int] = None
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
+    smtp_ssl: Optional[bool] = None
+    smtp_from: Optional[str] = None
+    brevo_api_key: Optional[str] = None
+    zeptomail_api_key: Optional[str] = None
+    zeptomail_hote: Optional[str] = None
+    email_expediteur: Optional[str] = None
+    email_nom_expediteur: str = "beAuthentik"
+
 
 @lru_cache
 def get_settings() -> Settings:
