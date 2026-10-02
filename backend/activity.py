@@ -73,6 +73,10 @@ _ACTION_LABELS = [
     (r"^POST /api/me/referrals/share$", "Partage du lien de parrainage"),
     (r"^POST /api/stats/visit$", "Visite du site"),
     (r"^(POST|PUT|DELETE) /api/admin/", "Action d'administration"),
+    (r"^POST /api/plateforme/transfert/export$", "Export complet des données"),
+    (r"^POST /api/plateforme/transfert/import$", "Import complet des données"),
+    (r"^POST /api/plateforme/transfert/restauration-initiale$", "Restauration initiale des données"),
+    (r"^POST /api/plateforme/deconnexion-generale", "Maintenance / déconnexion de tous les utilisateurs"),
 ]
 _COMPILED_LABELS = [(re.compile(p), label) for p, label in _ACTION_LABELS]
 

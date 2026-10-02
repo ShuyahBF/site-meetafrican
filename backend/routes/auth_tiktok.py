@@ -26,6 +26,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
+import maintenance_plateforme
 from activity import current_ip, log_activity
 from auth import create_access_token
 from config import get_settings
@@ -152,6 +153,8 @@ async def finaliser(data: Finalisation):
     if user:
         if not user.get("is_active", True):
             raise HTTPException(403, "Compte désactivé")
+        # Maintenance : connexion refusée (sauf administrateur principal)
+        await maintenance_plateforme.refuser_si_maintenance(user)
         await lire_code(data.code, consommer=True)
         ip = current_ip()
         await db.users.update_one({"id": user["id"]}, {"$set": {
