@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import DerniereSauvegarde from "@/components/DerniereSauvegarde";
 
 const NAV = [
   { to: "/admin", label: "Tableau de bord", end: true },
@@ -18,6 +19,7 @@ const NAV = [
   { to: "/admin/parametres", label: "Paramètres" },
   { to: "/admin/equipe", label: "Équipe", adminOnly: true },
   { to: "/admin/donnees-maintenance", label: "Données & maintenance", adminOnly: true },
+  { to: "/admin/abonnements-sessions", label: "Sessions, sauvegardes & cycle de vie", adminOnly: true },
 ];
 
 export default function AdminLayout() {
@@ -56,6 +58,8 @@ export default function AdminLayout() {
       <main className="mx-auto max-w-5xl px-6 py-8">
         <Outlet />
       </main>
+      {/* Pied de page discret : dernière sauvegarde générale */}
+      <footer className="pb-6 text-center"><DerniereSauvegarde /></footer>
     </div>
   );
 }

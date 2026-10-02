@@ -8,6 +8,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
+import abonnement_grace
 from activity import current_ip
 from auth import get_current_user
 from db import db
@@ -18,21 +19,11 @@ router = APIRouter(prefix="/subscriptions", tags=["Abonnements"])
 
 async def has_active_subscription(user_id: str) -> bool:
     """Utilisé ailleurs (floutage des photos pour les non-abonnés — voir
-    routes/matching.py) : vérifie le statut ET la date d'expiration, pas
-    seulement status=="active" — rien ne repasse aujourd'hui une
-    souscription à "expired" une fois expires_at dépassé."""
-    sub = await db.subscriptions.find_one(
-        {"user_id": user_id, "status": "active"}, {"_id": 0, "expires_at": 1},
-        sort=[("created_at", -1)],
-    )
-    if not sub:
-        return False
-    if not sub.get("expires_at"):
-        return True
-    try:
-        return datetime.fromisoformat(sub["expires_at"]) > datetime.now(timezone.utc)
-    except ValueError:
-        return True
+    routes/matching.py, routes/profiles.py, routes/chat.py) : vérifie le statut
+    ET la date d'échéance, en tenant compte de la PÉRIODE DE GRÂCE (3 jours par
+    défaut, réglable par membre) — voir abonnement_grace.py. Après la grâce, les
+    fonctions payantes sont coupées à la requête suivante."""
+    return await abonnement_grace.premium_actif(user_id)
 
 
 @router.get("/plans", response_model=List[SubscriptionPlan])

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { apiClient } from "@/lib/api";
+import { apiClient, FOND } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
 const CHECK_EVERY_MS = 60 * 1000; // vérifie s'il y a un suivi actif
@@ -36,7 +36,7 @@ export default function TrackingBeacon() {
       if (!session || Date.now() - lastSentRef.current < SEND_EVERY_MS) return;
       lastSentRef.current = Date.now();
       apiClient
-        .post(`/tracking/sessions/${session.id}/points`, { lat: coords.latitude, lng: coords.longitude, accuracy: coords.accuracy })
+        .post(`/tracking/sessions/${session.id}/points`, { lat: coords.latitude, lng: coords.longitude, accuracy: coords.accuracy }, FOND)
         .catch((err) => {
           if (err?.response?.status === 410 || err?.response?.status === 404) stopWatching(); // suivi terminé
         });
@@ -45,7 +45,7 @@ export default function TrackingBeacon() {
     // Y a-t-il un suivi actif ? -> démarrer / arrêter la géolocalisation
     const check = async () => {
       try {
-        const { data } = await apiClient.get("/tracking/me");
+        const { data } = await apiClient.get("/tracking/me", FOND);
         const active = data.mine.find((s) => s.status === "active");
         if (active && !sessionRef.current && navigator.geolocation) {
           sessionRef.current = active;

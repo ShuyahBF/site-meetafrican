@@ -38,6 +38,11 @@ import AdminCommunity from "@/pages/admin/AdminCommunity";
 import AdminTimeline from "@/pages/admin/AdminTimeline";
 import AdminMember from "@/pages/admin/AdminMember";
 import AdminDonneesMaintenance from "@/pages/admin/AdminDonneesMaintenance";
+import AdminAbonnementsSessions from "@/pages/admin/AdminAbonnementsSessions";
+// Abonnement (grâce, suspension), sessions et déconnexion après inactivité
+import BandeauAbonnement from "@/components/BandeauAbonnement";
+import DeconnexionInactivite from "@/components/DeconnexionInactivite";
+import SecuriteSessions from "@/pages/extras/SecuriteSessions";
 // Restauration initiale (nouvelle base sans aucun compte) et maintenance
 import RestaurationInitiale from "@/pages/RestaurationInitiale";
 import SurveillanceMaintenance from "@/components/MaintenancePlateforme";
@@ -70,6 +75,9 @@ export default function App() {
         <TrackingBeacon />
         {/* Maintenance de la plateforme : annonce, écran verrouillé, déconnexion forcée */}
         <SurveillanceMaintenance />
+        {/* Abonnement expiré (grâce, suspension) et déconnexion après inactivité */}
+        <BandeauAbonnement />
+        <DeconnexionInactivite />
         <Routes>
           <Route path="/" element={<Welcome />} />
           <Route path="/inscription" element={<Register />} />
@@ -102,6 +110,7 @@ export default function App() {
           <Route path="/suivi/:sessionId" element={<Protected><TrackingView /></Protected>} />
           <Route path="/visiteurs" element={<Protected><Visitors /></Protected>} />
           <Route path="/reglages" element={<Protected><AccountSettings /></Protected>} />
+          <Route path="/securite" element={<Protected><SecuriteSessions /></Protected>} />
 
           <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
             <Route index element={<AdminDashboard />} />
@@ -121,6 +130,7 @@ export default function App() {
             <Route path="chronologie" element={<AdminTimeline />} />
             <Route path="membres/:userId" element={<AdminMember />} />
             <Route path="donnees-maintenance" element={<AdminDonneesMaintenance />} />
+            <Route path="abonnements-sessions" element={<AdminAbonnementsSessions />} />
           </Route>
 
           {/* Route cachée (non liée dans la navigation du site) : accessible

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import DerniereSauvegarde from "@/components/DerniereSauvegarde";
 import { Link } from "react-router-dom";
 import { apiClient, extractErrorMessage } from "@/lib/api";
 import { uploadFile } from "@/lib/upload";
@@ -382,9 +383,12 @@ export default function Profile() {
             <AccountRow to="/visiteurs" icon="visibility" label="Qui m'a vu" />
             <AccountRow to="/me-suivre" icon="share_location" label="Me suivre (sécurité)" />
             <AccountRow to="/reglages" icon="settings" label="Réglages (vocal, mode invisible)" />
+            <AccountRow to="/securite" icon="devices" label="Sécurité & sessions" />
             <AccountRow to="/support" icon="support_agent" label="Écrire au support" />
             <AccountRow to="/temoignages" icon="format_quote" label="Témoignages" />
           </div>
+          {/* Date de la dernière sauvegarde générale de la plateforme */}
+          <DerniereSauvegarde className="mt-3 text-center" />
           <button onClick={logout} className="mt-4 w-full py-3 text-sm font-bold text-slate-400 hover:text-red-500">
             Se déconnecter
           </button>

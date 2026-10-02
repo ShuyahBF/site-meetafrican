@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiClient } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
+import { useAuth } from "@/context/AuthContext";
+import AbonnementSessionsMembre from "@/components/admin/AbonnementSessionsMembre";
 
 const REASON = { fake_profile: "Faux profil", abus: "Comportement abusif", autre: "Autre" };
 
@@ -23,6 +25,7 @@ function Block({ title, children }) {
  */
 export default function AdminMember() {
   const { userId } = useParams();
+  const { user: moi } = useAuth();
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
 
@@ -86,6 +89,9 @@ export default function AdminMember() {
           </div>
         </Block>
       </div>
+
+      {/* Abonnement (grâce), sessions et inactivité : administrateur principal uniquement */}
+      {moi?.role === "admin" && <AbonnementSessionsMembre userId={u.id} />}
 
       <Block title={`Signalements reçus (${data.reports_received.length})`}>
         {data.reports_received.length === 0 && <p className="text-sm text-slate-400">Aucun.</p>}

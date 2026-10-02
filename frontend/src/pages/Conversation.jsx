@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { apiClient } from "@/lib/api";
+import { apiClient, FOND } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useConversationSocket } from "@/hooks/useConversationSocket";
 import UserActionsMenu from "@/components/UserActionsMenu";
@@ -71,7 +71,7 @@ export default function Conversation() {
     });
 
   const loadMessages = useCallback(
-    () => apiClient.get(`/conversations/${conversationId}/messages`).then((r) => setMessages(r.data)),
+    () => apiClient.get(`/conversations/${conversationId}/messages`, FOND).then((r) => setMessages(r.data)),
     [conversationId],
   );
 

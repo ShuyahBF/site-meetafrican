@@ -109,3 +109,13 @@ async def ensure_indexes() -> None:
     await db.vidal_sync_config.create_index("id", unique=True)
     await db.vidal_sync_log.create_index([("ts", -1)])
     await db.vidal_sync_log.create_index("type")
+    # Sessions ouvertes (limite d'appareils, inactivité) : effacées à l'expiration du jeton
+    await db.sessions.create_index([("user_id", 1), ("fermee", 1), ("derniere_activite", 1)])
+    await db.sessions.create_index("expire_le", expireAfterSeconds=0)
+    # Abonnements (grâce), cycle de vie et sauvegarde automatique
+    await db.abonnements_journal.create_index([("user_id", 1), ("date", -1)])
+    await db.cycle_vie_journal.create_index([("user_id", 1), ("date", -1)])
+    await db.cycle_vie_rapports.create_index([("date", -1)])
+    await db.archives_membres.create_index("id", unique=True)
+    await db.archives_membres.create_index([("statut", 1), ("expire_le", 1)])
+    await db.users.create_index("statut_cycle", sparse=True)

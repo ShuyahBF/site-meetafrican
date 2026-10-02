@@ -20,6 +20,39 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+// Requêtes de FOND (rafraîchissements automatiques : compteurs, suivi, bandeaux) :
+// contrôlées par le serveur mais NON comptées comme une activité du membre, sinon
+// un onglet oublié ne serait jamais déconnecté pour inactivité (voir
+// backend/inactivite.py). Usage : apiClient.get(url, FOND).
+export const FOND = { headers: { "X-BA-Fond": "1" } };
+
+// Motif de la dernière déconnexion forcée, affiché sur la page de connexion
+export const MOTIF_DECONNEXION_KEY = "ba_motif_deconnexion";
+
+// Session fermée par le serveur (limite d'appareils, fermeture depuis un autre
+// appareil ou par l'administrateur, inactivité) : le jeton est effacé et le
+// membre revient à la page de connexion avec le motif.
+const PREFIXES_SESSION_FERMEE = ["Session fermée", "Session expirée après inactivité"];
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const detail = error?.response?.data?.detail;
+    if (
+      error?.response?.status === 401 &&
+      typeof detail === "string" &&
+      PREFIXES_SESSION_FERMEE.some((p) => detail.startsWith(p)) &&
+      localStorage.getItem("maf_token")
+    ) {
+      try {
+        localStorage.removeItem("maf_token");
+        sessionStorage.setItem(MOTIF_DECONNEXION_KEY, detail);
+      } catch { /* stockage indisponible */ }
+      if (window.location.pathname !== "/connexion") window.location.assign("/connexion");
+    }
+    return Promise.reject(error);
+  },
+);
+
 // Messages génériques de FastAPI/Starlette (jamais écrits par notre code,
 // toujours en anglais) — un exemple vécu : une mauvaise URL d'API côté
 // frontend a fait passer "Not Found" tel quel à l'utilisateur. On ne les

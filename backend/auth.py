@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 
@@ -28,14 +28,18 @@ def verify_password(password: str, password_hash: str) -> bool:
     return pwd_context.verify(password, password_hash)
 
 
-def create_access_token(user_id: str) -> str:
+def create_access_token(user_id: str, sid: Optional[str] = None, ouverture: Optional[float] = None) -> str:
+    """Jeton d'accès. Utiliser sessions_comptes.ouvrir() pour une connexion : il
+    enregistre la session (« sid ») et applique la limite d'appareils."""
     settings = get_settings()
     maintenant = datetime.now(timezone.utc)
     expires_at = maintenant + timedelta(minutes=settings.jwt_expires_minutes)
     # « ouv » : heure d'ouverture de la session (secondes, avec décimales) —
     # sert à invalider les sessions ouvertes avant une maintenance
     # (voir maintenance_plateforme.session_valide).
-    payload = {"sub": user_id, "exp": expires_at, "ouv": maintenant.timestamp()}
+    payload = {"sub": user_id, "exp": expires_at, "ouv": ouverture or maintenant.timestamp()}
+    if sid:
+        payload["sid"] = sid  # identifiant de la session (voir sessions_comptes.py)
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
@@ -55,6 +59,7 @@ def decode_access_token(token: str) -> Optional[str]:
 
 
 async def get_current_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
 ) -> dict:
     if credentials is None:
@@ -62,12 +67,22 @@ async def get_current_user(
     payload = decode_access_payload(credentials.credentials)
     if not payload:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session invalide ou expirée")
+    # Imports différés : ces modules importent eux-mêmes activity.py, qui importe auth.py
+    import cycle_vie
+    import sessions_comptes
+
     user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0})
-    if not user or not user.get("is_active", True):
+    if user and not user.get("is_active", True) and cycle_vie.est_suspendu(user):
+        # Suspendu pour non-renouvellement (cycle de vie) : levée s'il a payé, sinon
+        # seules les routes de renouvellement restent ouvertes (403 ailleurs)
+        user = await cycle_vie.controler_suspendu(user, request)
+    elif not user or not user.get("is_active", True):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Compte introuvable ou désactivé")
     # Maintenance de la plateforme : 503 pendant la maintenance, 401 pour une
     # session ouverte avant la dernière maintenance (administrateur jamais bloqué)
     await maintenance_plateforme.controler_session(user, payload)
+    # Session fermée (limite d'appareils, fermeture manuelle) ou inactivité dépassée : 401
+    await sessions_comptes.controler(user, payload, request)
     _touch_last_seen(user)
     return user
 
