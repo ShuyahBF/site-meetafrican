@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import BoutonTikTok from "@/components/BoutonTikTok";
 import { AvisMaintenance } from "@/components/MaintenancePlateforme";
 import { useAuth } from "@/context/AuthContext";
-import { apiClient, extractErrorMessage } from "@/lib/api";
+import { apiClient, extractErrorMessage, MOTIF_DECONNEXION_KEY } from "@/lib/api";
 
 // Messages du retour de TikTok (?tiktok_erreur=…)
 const ERREURS_TIKTOK = {
@@ -24,6 +24,16 @@ export default function Login() {
   const [tiktok, setTiktok] = useState(null);
   // Nouvelle base sans aucun compte (changement de cluster) : lien vers la restauration
   const [restaurationPossible, setRestaurationPossible] = useState(false);
+  // Motif d'une déconnexion forcée (session fermée, inactivité), affiché une fois
+  const [motif] = useState(() => {
+    try {
+      const m = sessionStorage.getItem(MOTIF_DECONNEXION_KEY);
+      sessionStorage.removeItem(MOTIF_DECONNEXION_KEY);
+      return m;
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
     apiClient.get("/plateforme/transfert/restauration-initiale")
@@ -69,6 +79,10 @@ export default function Login() {
   return (
     <div className="flex min-h-screen w-full flex-col justify-center bg-background-light px-6 py-10 font-display dark:bg-background-dark">
       <h1 className="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Se connecter</h1>
+
+      {motif && (
+        <div role="alert" className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">{motif}</div>
+      )}
 
       {/* Maintenance annoncée ou en cours (connexions suspendues) */}
       <AvisMaintenance />

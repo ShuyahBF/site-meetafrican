@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { apiClient } from "@/lib/api";
+import { apiClient, FOND } from "@/lib/api";
 
 const POLL_MS = 20000;
 
@@ -16,7 +16,7 @@ export function useUnreadCount() {
     let cancelled = false;
     const load = () =>
       apiClient
-        .get("/conversations/unread-count")
+        .get("/conversations/unread-count", FOND)
         .then((r) => !cancelled && setUnread(r.data.unread + (r.data.video_requests || 0)))
         .catch(() => {});
     load();

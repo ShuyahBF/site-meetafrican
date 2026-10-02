@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { apiClient, extractErrorMessage } from "@/lib/api";
+import { apiClient, extractErrorMessage, FOND } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import PageShell from "@/components/PageShell";
 
@@ -30,7 +30,7 @@ export default function FollowMe() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const load = () => apiClient.get("/tracking/me").then((r) => setData(r.data));
+  const load = () => apiClient.get("/tracking/me", FOND).then((r) => setData(r.data));
   useEffect(() => {
     load();
     // Mes matchs = contacts proposés (on peut aussi saisir un email)

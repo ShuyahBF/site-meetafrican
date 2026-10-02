@@ -42,7 +42,14 @@ export function AuthProvider({ children }) {
     return data.user;
   };
 
+  // Déconnexion : la session est aussi fermée côté serveur (liste « Sécurité &
+  // sessions »), sans attendre la réponse (serveur injoignable, maintenance…)
   const logout = () => {
+    const jeton = localStorage.getItem("maf_token");
+    if (jeton) {
+      // Jeton passé explicitement : il est effacé juste après, avant l'envoi effectif
+      apiClient.post("/auth/deconnexion", null, { headers: { Authorization: `Bearer ${jeton}` } }).catch(() => {});
+    }
     localStorage.removeItem("maf_token");
     setUser(null);
   };

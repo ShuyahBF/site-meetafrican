@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { apiClient } from "@/lib/api";
+import { apiClient, FOND } from "@/lib/api";
 
 // ---------------------------------------------------------------------------
 // Maintenance de la plateforme (déconnexion programmée de tous les utilisateurs).
@@ -65,7 +65,7 @@ export function useEtatMaintenance(actif = true, source = "/maintenance/etat") {
   const recharger = useCallback(async () => {
     const avant = Date.now();
     try {
-      const { data } = await apiClient.get(source);
+      const { data } = await apiClient.get(source, FOND);
       const apres = Date.now();
       // Heure du serveur rapportée au milieu de l'aller-retour
       decalage.current = Date.parse(data.maintenant_serveur) - (avant + apres) / 2;

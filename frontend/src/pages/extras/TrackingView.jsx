@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { apiClient, extractErrorMessage } from "@/lib/api";
+import { apiClient, extractErrorMessage, FOND } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import PageShell from "@/components/PageShell";
 
@@ -26,7 +26,7 @@ export default function TrackingView() {
   useEffect(() => {
     const load = () =>
       apiClient
-        .get(`/tracking/sessions/${sessionId}`)
+        .get(`/tracking/sessions/${sessionId}`, FOND)
         .then((r) => setSession(r.data))
         .catch((err) => setError(extractErrorMessage(err, "Suivi introuvable")));
     load();
