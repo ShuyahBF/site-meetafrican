@@ -37,6 +37,10 @@ import AdminSupport from "@/pages/admin/AdminSupport";
 import AdminCommunity from "@/pages/admin/AdminCommunity";
 import AdminTimeline from "@/pages/admin/AdminTimeline";
 import AdminMember from "@/pages/admin/AdminMember";
+import AdminDonneesMaintenance from "@/pages/admin/AdminDonneesMaintenance";
+// Restauration initiale (nouvelle base sans aucun compte) et maintenance
+import RestaurationInitiale from "@/pages/RestaurationInitiale";
+import SurveillanceMaintenance from "@/components/MaintenancePlateforme";
 // Actions du bouton ✚ / menu « … » et réglages du compte
 import Testimonials from "@/pages/extras/Testimonials";
 import Support from "@/pages/extras/Support";
@@ -64,10 +68,13 @@ export default function App() {
       <BrowserRouter>
         {/* « Me suivre » : envoie la position tant qu'un suivi est actif, sur toutes les pages */}
         <TrackingBeacon />
+        {/* Maintenance de la plateforme : annonce, écran verrouillé, déconnexion forcée */}
+        <SurveillanceMaintenance />
         <Routes>
           <Route path="/" element={<Welcome />} />
           <Route path="/inscription" element={<Register />} />
           <Route path="/connexion" element={<Login />} />
+          <Route path="/restauration-initiale" element={<RestaurationInitiale />} />
           <Route path="/cgu" element={<Cgu />} />
           <Route path="/confidentialite" element={<Confidentialite />} />
           {/* Alias anglais des pages légales (adresses déclarées aux revues TikTok / Meta) */}
@@ -113,6 +120,7 @@ export default function App() {
             <Route path="communaute" element={<AdminCommunity />} />
             <Route path="chronologie" element={<AdminTimeline />} />
             <Route path="membres/:userId" element={<AdminMember />} />
+            <Route path="donnees-maintenance" element={<AdminDonneesMaintenance />} />
           </Route>
 
           {/* Route cachée (non liée dans la navigation du site) : accessible
