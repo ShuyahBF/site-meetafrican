@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import BoutonTikTok from "@/components/BoutonTikTok";
 import { useAuth } from "@/context/AuthContext";
 import { extractErrorMessage } from "@/lib/api";
+import ChampMotDePasse from "@/components/ChampMotDePasse"; // lot 46 — œil pour voir la saisie
 
 export default function Register() {
   const { register } = useAuth();
@@ -55,7 +56,7 @@ export default function Register() {
           <input value={form.phone} onChange={update("phone")} className="input" placeholder="+226 ..." />
         </Field>
         <Field label="Mot de passe">
-          <input required type="password" minLength={8} value={form.password} onChange={update("password")} className="input" />
+          <ChampMotDePasse required minLength={8} value={form.password} onChange={update("password")} className="input" />
         </Field>
         <Field label="Date de naissance">
           <input required type="date" value={form.birthdate} onChange={update("birthdate")} className="input" />

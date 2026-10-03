@@ -44,6 +44,7 @@ import AdminEnvoiEmails from "@/pages/admin/AdminEnvoiEmails";
 import BandeauAbonnement from "@/components/BandeauAbonnement";
 import DeconnexionInactivite from "@/components/DeconnexionInactivite";
 import BipNouveauMessage from "@/components/BipNouveauMessage";
+import ProtectionCaptures from "@/components/ProtectionCaptures"; // lot 46 — captures d'écran interdites
 import SecuriteSessions from "@/pages/extras/SecuriteSessions";
 // Restauration initiale (nouvelle base sans aucun compte) et maintenance
 import RestaurationInitiale from "@/pages/RestaurationInitiale";
@@ -82,6 +83,8 @@ export default function App() {
         <DeconnexionInactivite />
         {/* Bip sonore à l'arrivée d'un nouveau message (réglable dans « Réglages ») */}
         <BipNouveauMessage />
+        {/* Lot 46 — protection contre les captures d'écran, sur tout le site */}
+        <ProtectionCaptures />
         <Routes>
           <Route path="/" element={<Welcome />} />
           <Route path="/inscription" element={<Register />} />

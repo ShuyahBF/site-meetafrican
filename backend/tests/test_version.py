@@ -16,8 +16,8 @@ def test_api_version_reprend_le_fichier_source_unique(client):
     assert corps["lot"] == attendu_lot
     assert corps["commit"]
     assert corps["demarrage"]
-    # Libellé « Version 5.45 du JJ/MM/AAAA » : sans hash de commit
-    jour = version_plateforme.DEMARRAGE.strftime("%d/%m/%Y")
+    # Libellé « Version 6.46 du JJ/MM/AAAA à HH:MM » : sans hash de commit
+    jour = version_plateforme.DEMARRAGE.strftime("%d/%m/%Y à %H:%M")
     assert corps["libelle"] == f"Version {attendu_version}.{attendu_lot} du {jour}"
     assert corps["commit"] not in corps["libelle"]
 
@@ -25,7 +25,7 @@ def test_api_version_reprend_le_fichier_source_unique(client):
 def test_format_du_libelle():
     from datetime import datetime, timezone
     date = datetime(2026, 10, 3, 23, 30, tzinfo=timezone.utc)
-    assert version_plateforme.libelle(5, 45, date) == "Version 5.45 du 03/10/2026"
+    assert version_plateforme.libelle(5, 45, date) == "Version 5.45 du 03/10/2026 à 23:30"
 
 
 def test_lecture_robuste_si_fichier_absent_ou_invalide(tmp_path):

@@ -9,6 +9,7 @@ import {
   AvertissementPhrase, BarreProgression, Champ, EXTENSION, Fenetre, PHRASE_MIN, RapportImport,
   dateHeure, tailleLisible, useSuiviTache,
 } from "./commun";
+import ChampMotDePasse from "@/components/ChampMotDePasse"; // lot 46 — œil pour voir la saisie
 
 const MOT_REMPLACER = "REMPLACER";
 const BOUTON_DANGER = "inline-flex h-12 items-center justify-center rounded-full bg-rose-600 px-6 text-sm font-bold text-white shadow-lg shadow-rose-600/30 disabled:opacity-50";
@@ -87,11 +88,11 @@ function FenetreExport({ tacheInitiale, onFermer, onFini }) {
           </p>
           <AvertissementPhrase />
           <Champ label="Phrase secrète" aide={`${form.phrase.length} caractère(s) — au moins ${PHRASE_MIN}`}>
-            <input className={`admin-input ${form.phrase && !phraseOk ? "border-rose-400" : ""}`} type="password" autoComplete="new-password"
+            <ChampMotDePasse className={`admin-input ${form.phrase && !phraseOk ? "border-rose-400" : ""}`} autoComplete="new-password"
               value={form.phrase} onChange={(e) => maj("phrase", e.target.value)} />
           </Champ>
           <Champ label="Retapez la phrase secrète" aide={form.phrase_confirmation && !identiques ? "Les deux phrases ne sont pas identiques" : null}>
-            <input className={`admin-input ${form.phrase_confirmation && !identiques ? "border-rose-400" : ""}`} type="password" autoComplete="new-password"
+            <ChampMotDePasse className={`admin-input ${form.phrase_confirmation && !identiques ? "border-rose-400" : ""}`} autoComplete="new-password"
               value={form.phrase_confirmation} onChange={(e) => maj("phrase_confirmation", e.target.value)} />
           </Champ>
           <label className="flex items-start gap-2 text-sm">
@@ -99,7 +100,7 @@ function FenetreExport({ tacheInitiale, onFermer, onFini }) {
             <span>J'ai noté ma phrase secrète en lieu sûr. Je sais qu'elle ne pourra pas être retrouvée.</span>
           </label>
           <Champ label="Votre mot de passe (administrateur)" aide="Demandé à chaque export, par sécurité.">
-            <input className="admin-input" type="password" autoComplete="current-password" value={form.mot_de_passe}
+            <ChampMotDePasse className="admin-input" autoComplete="current-password" value={form.mot_de_passe}
               onChange={(e) => maj("mot_de_passe", e.target.value)} />
           </Champ>
           <Erreur texte={erreur} />
@@ -203,7 +204,7 @@ function FenetreImport({ tacheInitiale, onFermer, onFini }) {
               onChange={(e) => maj("fichier", e.target.files?.[0] || null)} />
           </Champ>
           <Champ label="Phrase secrète choisie lors de l'export">
-            <input className="admin-input" type="password" autoComplete="off" value={form.phrase} onChange={(e) => maj("phrase", e.target.value)} />
+            <ChampMotDePasse className="admin-input" autoComplete="off" value={form.phrase} onChange={(e) => maj("phrase", e.target.value)} />
           </Champ>
 
           <fieldset className="space-y-2">
@@ -236,7 +237,7 @@ function FenetreImport({ tacheInitiale, onFermer, onFini }) {
           </div>
 
           <Champ label="Votre mot de passe (administrateur)" aide="Celui avec lequel vous êtes connecté maintenant.">
-            <input className="admin-input" type="password" autoComplete="current-password" value={form.mot_de_passe}
+            <ChampMotDePasse className="admin-input" autoComplete="current-password" value={form.mot_de_passe}
               onChange={(e) => maj("mot_de_passe", e.target.value)} />
           </Champ>
           <Erreur texte={erreur} />

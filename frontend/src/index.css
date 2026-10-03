@@ -114,3 +114,25 @@ body {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }
 
+
+/* ===================================================================
+   Lot 46 — protection contre les captures d'écran (voir
+   components/ProtectionCaptures.jsx) :
+   - .masque-capture : tout le site est flouté (page inactive, Impr. écran…) ;
+   - impression : page blanche ;
+   - photos et vidéos : pas de sélection, de glisser ni de menu « Enregistrer »
+     à l'appui long (iOS).
+   =================================================================== */
+html.masque-capture #root {
+  filter: blur(28px);
+  transition: filter 0.05s linear;
+}
+@media print {
+  body { display: none !important; }
+}
+img, video, picture, canvas {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
