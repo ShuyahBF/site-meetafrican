@@ -251,9 +251,9 @@ export default function Welcome() {
       {/* Barre de navigation                                               */}
       {/* ---------------------------------------------------------------- */}
       <header className="sticky top-0 z-40 border-b border-slate-100/80 bg-white/80 backdrop-blur-lg">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
-          <Link to="/" className="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-            <img src="/icone-beauthentik.svg" alt="" className="h-9 w-9 rounded-xl" />
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-3.5 sm:px-5">
+          <Link to="/" className="flex shrink-0 items-center gap-1.5 text-lg font-extrabold tracking-tight sm:gap-2 sm:text-2xl">
+            <img src="/icone-beauthentik.svg" alt="" className="h-8 w-8 rounded-xl sm:h-9 sm:w-9" />
             <span>be<span className="text-brand">Authentik</span></span>
           </Link>
           <nav className="hidden items-center gap-8 text-sm font-semibold text-slate-500 md:flex">
@@ -262,14 +262,18 @@ export default function Welcome() {
             <a href="#tarifs" className="hover:text-ink">Tarifs</a>
             <a href="#faq" className="hover:text-ink">FAQ</a>
           </nav>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            {/* Lot 52 — « Connexion » chevauchait le logo sur téléphone : remplacé par un
+                bouton court « Live » sur fond vert (mène à la page de connexion) */}
             {!user && (
-              <Link to="/connexion" className="whitespace-nowrap rounded-full px-3 py-2 text-sm font-bold text-ink hover:bg-slate-50 sm:px-4">
-                <span className="sm:hidden">Connexion</span>
-                <span className="hidden sm:inline">Se connecter</span>
+              <Link to="/connexion" title="Se connecter" aria-label="Se connecter"
+                className="inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full bg-emerald-600 px-3 text-sm sm:h-10 sm:px-4 font-bold text-white shadow-sm hover:bg-emerald-700">
+                {/* Petit point blanc qui pulse : rappel visuel du « direct » */}
+                <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
+                Live
               </Link>
             )}
-            <Link to={primaryTo} className="btn-primary h-10 px-5 text-sm">
+            <Link to={primaryTo} className="btn-primary h-9 px-3.5 text-sm sm:h-10 sm:px-5">
               {user ? "Ouvrir" : "S'inscrire"}
             </Link>
           </div>
