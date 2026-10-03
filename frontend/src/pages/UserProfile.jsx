@@ -13,6 +13,7 @@ import Toast, { useToast } from "@/components/Toast";
 import { formatCount, formatLastSeen, responseBadge } from "@/lib/format";
 import TestBadge from "@/components/TestBadge";
 import MentionVersion from "@/components/MentionVersion";
+import Filigrane from "@/components/Filigrane"; // lot 49 — filigrane dissuasif anti-capture
 
 /**
  * Fiche publique d'un membre (fond blanc) : carrousel de photos, identité
@@ -113,9 +114,13 @@ export default function UserProfile() {
           onScroll={(e) => setPhotoIndex(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))}
         >
           {(approvedPhotos.length ? approvedPhotos : [null]).map((photo, i) => (
-            <div key={photo?.id || i} className="h-full w-full shrink-0 snap-center">
+            <div key={photo?.id || i} className="relative h-full w-full shrink-0 snap-center">
               {photo ? (
-                <img src={photo.url} alt={profile.full_name} className="h-full w-full object-cover" />
+                <>
+                  <img src={photo.url} alt={profile.full_name} className="h-full w-full object-cover" />
+                  {/* Lot 49 — filigrane dissuasif (pseudo du visiteur + date/heure) */}
+                  <Filigrane />
+                </>
               ) : (
                 <ProfilePhoto profile={profile} className="h-full w-full" />
               )}
