@@ -47,11 +47,14 @@ MOTIFS = {
     "inactivite": inactivite.MESSAGE_INACTIVITE,
     "deconnexion": "Session fermée. Reconnectez-vous.",
     "compte": "Session fermée. Reconnectez-vous.",
+    # Lot 47 : blocage par le super-administrateur (onglet « Usage », blocages_acces.py).
+    # Tant que le blocage dure, l'appareil reçoit le 403 « Accès momentanément suspendu ».
+    "blocage": "Session fermée. Reconnectez-vous.",
 }
 LIBELLES_MOTIFS = {
     "limite": "Nombre maximal d'appareils atteint", "membre": "Fermée par le membre",
     "admin": "Fermée par l'administrateur", "inactivite": "Inactivité", "deconnexion": "Déconnexion",
-    "compte": "Compte suspendu ou supprimé",
+    "compte": "Compte suspendu ou supprimé", "blocage": "Accès bloqué par l'administrateur",
 }
 DUREE_CACHE = 15.0  # secondes : état d'une session relu en base au plus toutes les 15 s
 
@@ -109,9 +112,12 @@ async def sessions_max() -> int:
 # ---------------------------------------------------------------------------
 # Ouverture (connexion)
 # ---------------------------------------------------------------------------
-async def ouvrir(user_id: str, user_agent: Optional[str] = None) -> str:
+async def ouvrir(user_id: str, user_agent: Optional[str] = None, methode: str = "mot_de_passe") -> str:
     """Ouvre une session pour ce compte et renvoie le jeton d'accès. Au-delà du
-    nombre maximal, la session la moins récemment active est fermée."""
+    nombre maximal, la session la moins récemment active est fermée.
+    `methode` (lot 47) : « mot_de_passe », « inscription » ou « tiktok », inscrite
+    au journal des connexions (onglet « Usage » du back-office)."""
+    import blocages_acces  # import différé : blocages_acces importe ce module
     from auth import create_access_token
 
     sid = nouveau_sid()
@@ -124,6 +130,8 @@ async def ouvrir(user_id: str, user_agent: Optional[str] = None) -> str:
     })
     _connues[sid] = {"lu_a": maintenant, "derniere": maintenant, "fermee": None}
     await _appliquer_limite(user_id, garder=sid)
+    # Lot 47 : une ligne « réussie » au journal des connexions (IP réelle, appareil, session)
+    await blocages_acces.journaliser_connexion(user_id, methode, "reussie", ip=ip, user_agent=user_agent, sid=sid)
     return create_access_token(user_id, sid=sid, ouverture=maintenant)
 
 
@@ -171,8 +179,16 @@ async def controler(user: dict, contenu: dict, request: Optional[Request] = None
             connue = {"lu_a": maintenant, "derniere": doc.get("derniere_activite"),
                       "fermee": (doc.get("motif") or "compte") if doc.get("fermee") else None}
         _connues[sid] = connue
+    import blocages_acces  # import différé (lot 47)
     if connue["fermee"]:
+        # Session fermée par un blocage TOUJOURS en cours : page « Accès momentanément
+        # suspendu » (403). Blocage levé depuis : simple « Reconnectez-vous » (401).
+        if connue["fermee"] == "blocage" and user.get("role") != "admin" and blocages_acces.motif_blocage(
+                await blocages_acces.blocages_actifs(), user.get("id"), current_ip()):
+            raise blocages_acces.exception_suspendu()
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, MOTIFS.get(connue["fermee"], MOTIFS["compte"]))
+    # Lot 47 : compte ou adresse IP bloqué depuis l'ouverture de la session -> fermée, 403
+    await blocages_acces.controler_requete(user, sid)
     delai = await inactivite.delai_utilisateur(user)
     derniere = connue.get("derniere")
     if delai and derniere is not None and maintenant - derniere > delai + inactivite.MARGE_SECONDES:

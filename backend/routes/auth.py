@@ -11,6 +11,7 @@ from activity import current_ip, log_activity
 TERMS_VERSION = "2026-09-28"
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
+import blocages_acces
 import cycle_vie
 import sessions_comptes
 
@@ -50,6 +51,10 @@ async def register(payload: UserRegister, request: Request):
         existing_query.append({"phone": payload.phone})
     if existing_query and await db.users.find_one({"$or": existing_query}):
         raise HTTPException(status_code=409, detail="Un compte existe déjà avec cet email/téléphone")
+    # Lot 47 : adresse IP bloquée pour tous les comptes -> inscription refusée
+    # (403 « acces_suspendu », tentative inscrite au journal des connexions)
+    await blocages_acces.controler_connexion(None, "inscription", request.headers.get("user-agent"),
+                                             identifiant=payload.email or payload.phone)
 
     # Code de liaison TikTok vérifié AVANT de créer le compte (expiré -> refus)
     if payload.tiktok_lien:
@@ -82,7 +87,7 @@ async def register(payload: UserRegister, request: Request):
     # Inscription commencée par « Continuer avec TikTok » : liaison du compte TikTok
     await lier_si_demande(user.id, payload.tiktok_lien)
     # Ouverture d'une session (appareil, IP) — limite d'appareils, voir sessions_comptes.py
-    token = await sessions_comptes.ouvrir(user.id, request.headers.get("user-agent"))
+    token = await sessions_comptes.ouvrir(user.id, request.headers.get("user-agent"), methode="inscription")
     return Token(access_token=token, user=to_user_public(doc))
 
 
@@ -100,6 +105,10 @@ async def login(payload: UserLogin, request: Request):
     # Maintenance : seul l'administrateur principal peut se connecter
     await maintenance_plateforme.refuser_si_maintenance(user)
     user.pop("_id", None)
+    # Lot 47 : compte ou adresse IP bloqué par le super-administrateur -> 403
+    # « acces_suspendu » (le site affiche « Accès momentanément suspendu »)
+    await blocages_acces.controler_connexion(user, "mot_de_passe", request.headers.get("user-agent"),
+                                             identifiant=payload.identifier)
     ip = current_ip()
     await db.users.update_one(
         {"id": user["id"]},
@@ -110,7 +119,7 @@ async def login(payload: UserLogin, request: Request):
     await log_activity(user["id"], "Connexion réussie", ip)
     # Compte existant + « Continuer avec TikTok » : liaison du compte TikTok
     await lier_si_demande(user["id"], payload.tiktok_lien)
-    token = await sessions_comptes.ouvrir(user["id"], request.headers.get("user-agent"))
+    token = await sessions_comptes.ouvrir(user["id"], request.headers.get("user-agent"), methode="mot_de_passe")
     return Token(access_token=token, user=to_user_public(user))
 
 

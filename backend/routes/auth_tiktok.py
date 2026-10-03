@@ -26,6 +26,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
+import blocages_acces
 import cycle_vie
 import maintenance_plateforme
 import sessions_comptes
@@ -156,12 +157,15 @@ async def finaliser(data: Finalisation, request: Request):
             raise HTTPException(403, "Compte désactivé")
         # Maintenance : connexion refusée (sauf administrateur principal)
         await maintenance_plateforme.refuser_si_maintenance(user)
+        # Lot 47 : compte ou adresse IP bloqué -> 403 « acces_suspendu »
+        await blocages_acces.controler_connexion(user, "tiktok", request.headers.get("user-agent"),
+                                                 identifiant=user.get("email") or user.get("phone"))
         await lire_code(data.code, consommer=True)
         ip = current_ip()
         await db.users.update_one({"id": user["id"]}, {"$set": {
             "last_login_ip": ip, "last_login_at": datetime.now().astimezone().isoformat()}})
         await log_activity(user["id"], "Connexion réussie (TikTok)", ip)
-        jeton = await sessions_comptes.ouvrir(user["id"], request.headers.get("user-agent"))
+        jeton = await sessions_comptes.ouvrir(user["id"], request.headers.get("user-agent"), methode="tiktok")
         return {"access_token": jeton, "token_type": "bearer", "user": to_user_public(user)}
     # Pas encore de compte lié : infos pour pré-remplir l'inscription
     return {"inscription": {"nom": doc["display_name"], "avatar_url": doc["avatar_url"], "lien": data.code}}
