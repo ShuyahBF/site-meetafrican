@@ -418,7 +418,11 @@ def _launch(coro) -> None:
 @router.get("")
 async def test_data_status(_: dict = Depends(get_current_admin)):
     """Avancement de la dernière opération + inventaire actuel + identifiants."""
-    sample = await db.users.find({"is_test_data": True}, {"_id": 0, "email": 1, "full_name": 1, "gender": 1}).limit(6).to_list(6)
+    # Lot 53 — liste COMPLÈTE des comptes de test (demande du propriétaire : se connecter avec
+    # des profils différents sur plusieurs appareils pour simuler les tests)
+    sample = await db.users.find(
+        {"is_test_data": True}, {"_id": 0, "email": 1, "full_name": 1, "gender": 1, "city": 1, "country": 1, "verification_status": 1},
+    ).sort([("gender", 1), ("full_name", 1)]).to_list(1000)
     return {
         "job": await _job(),
         "counts": {
