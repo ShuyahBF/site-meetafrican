@@ -72,7 +72,7 @@ export default function AdminMember() {
             <dt className="text-slate-500">Inscrit le</dt><dd>{formatDateTime(u.created_at)}</dd>
             <dt className="text-slate-500">IP d'inscription</dt><dd className="font-mono text-xs">{u.registration_ip || "—"}</dd>
             <dt className="text-slate-500">Dernière connexion</dt><dd>{formatDateTime(u.last_login_at)} <span className="font-mono text-xs">{u.last_login_ip}</span></dd>
-            <dt className="text-slate-500">Mode invisible</dt><dd>{settings.invisible_mode ? "Oui" : "Non"}</dd>
+            <dt className="text-slate-500">Mode invisible</dt><dd>{settings.invisible_mode ? `Oui${settings.invisible_mode_expire_le ? ` (jusqu'au ${formatDateTime(settings.invisible_mode_expire_le)})` : ""}` : "Non"}</dd>
             <dt className="text-slate-500">Matchs / messages</dt><dd>{data.counts.matches} / {data.counts.messages_sent}</dd>
           </dl>
           {u.bio && <p className="mt-2 rounded-lg bg-slate-50 p-2 text-sm">{u.bio}</p>}

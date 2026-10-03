@@ -93,8 +93,10 @@ def _touch_last_seen(user: dict) -> None:
     chaque requête authentifiée) : largement suffisant vu le seuil "en
     ligne" de 5 minutes (models.ONLINE_THRESHOLD_SECONDS).
     Mode invisible (réglages du compte) : rien n'est enregistré, le membre
-    n'apparaît jamais "en ligne"."""
-    if (user.get("settings") or {}).get("invisible_mode"):
+    n'apparaît jamais "en ligne" (tant que ses 14 jours ne sont pas écoulés)."""
+    import mode_invisible  # import différé : mode_invisible importe db / abonnement_grace
+
+    if mode_invisible.est_actif(user):
         return
     last_seen_at = user.get("last_seen_at")
     now = datetime.now(timezone.utc)

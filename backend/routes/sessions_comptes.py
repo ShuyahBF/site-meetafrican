@@ -8,7 +8,9 @@ Membre connecté (« Sécurité & sessions ») :
   - POST   /api/auth/deconnexion                    : fermer la session courante (bouton « Se déconnecter ») ;
   - GET    /api/auth/inactivite                     : durée d'inactivité qui s'applique à lui ;
   - POST   /api/auth/activite                       : le site signale une activité (au plus 1 fois / 30 s) ;
-  - GET/PUT /api/auth/inactivite/reglage            : réduire lui-même la durée fixée par l'administrateur.
+  - GET/PUT /api/auth/inactivite/reglage            : réglage personnel de la durée — RÉSERVÉ au
+                                                      super-administrateur (403 pour les autres) ;
+                                                      la déconnexion automatique, elle, s'applique à tous.
 Administrateur principal :
   - GET  /api/admin/sessions/comptes                : nombre de sessions par compte ;
   - GET  /api/admin/membres/{id}/sessions           : sessions d'un membre ;
@@ -86,13 +88,17 @@ async def signaler_activite(_: dict = Depends(get_current_user)):
     return {"ok": True}
 
 
+# Réglage « Déconnexion si inactivité » : visible et paramétrable par le
+# super-administrateur seulement (demande du propriétaire, lot 45). Les membres
+# continuent d'être déconnectés après inactivité (GET /auth/inactivite ci-dessus
+# et contrôle serveur dans sessions_comptes.py), mais ne voient plus ce réglage.
 @compte.get("/inactivite/reglage")
-async def lire_mon_reglage(user: dict = Depends(get_current_user)):
+async def lire_mon_reglage(user: dict = Depends(get_current_super_admin)):
     return inactivite.resume(user, await inactivite.delai_plateforme(cache=False))
 
 
 @compte.put("/inactivite/reglage")
-async def regler_mon_inactivite(payload: Duree, user: dict = Depends(get_current_user)):
+async def regler_mon_inactivite(payload: Duree, user: dict = Depends(get_current_super_admin)):
     plateforme = await inactivite.delai_plateforme(cache=False)
     secondes = inactivite.reglage_membre(user, plateforme, payload.secondes)
     await db.users.update_one({"id": user["id"]}, {"$set": {"inactivite_secondes_membre": secondes}})

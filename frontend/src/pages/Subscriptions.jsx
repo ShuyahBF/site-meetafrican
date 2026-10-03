@@ -93,6 +93,13 @@ export default function Subscriptions() {
                 <p className="text-sm font-semibold text-emerald-500">Économisez {p.savings_pct}%</p>
               ) : null}
               <ul className="mt-3 flex flex-col gap-1">
+                {/* Formule qui inclut le Mode Invisible (case cochée par le super-administrateur) */}
+                {p.autorise_mode_invisible && (
+                  <li className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    <span className="material-symbols-outlined text-base text-primary">visibility_off</span>
+                    Mode Invisible inclus
+                  </li>
+                )}
                 {p.features.map((f) => (
                   <li key={f} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
                     <span className="material-symbols-outlined text-base text-primary">check</span>

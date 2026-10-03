@@ -66,18 +66,22 @@ VERSION, LOT = lire_version_lot()
 COMMIT = hash_commit_court()
 
 
+def libelle(version: int | None, lot: int | None, date: datetime) -> str:
+    """Libellé affiché (même format que le site, lot 45) : « Version 5.45 du 03/10/2026 ».
+    Date au format JJ/MM/AAAA, jour UTC (= heure de Ouagadougou). Jamais de hash."""
+    if version is None:
+        return "Version inconnue"
+    numero = f"{version}.{lot}" if lot is not None else f"{version}"
+    return f"Version {numero} du {date.astimezone(timezone.utc).strftime('%d/%m/%Y')}"
+
+
 def infos_version() -> dict:
-    """Contenu de la réponse GET /api/version."""
-    morceaux = []
-    if VERSION is not None:
-        morceaux.append(f"Version {VERSION}")
-    if LOT is not None:
-        morceaux.append(f"Lot {LOT}")
-    morceaux.append(COMMIT)
+    """Contenu de la réponse GET /api/version. Le champ `commit` reste fourni pour
+    le diagnostic technique, mais il ne fait plus partie du libellé affiché."""
     return {
         "version": VERSION,
         "lot": LOT,
         "commit": COMMIT,
         "demarrage": DEMARRAGE.isoformat(),
-        "libelle": " · ".join(morceaux),
+        "libelle": libelle(VERSION, LOT, DEMARRAGE),
     }

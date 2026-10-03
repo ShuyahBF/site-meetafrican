@@ -267,6 +267,9 @@ class SubscriptionPlan(BaseModel):
     featured: bool = False
     badge: Optional[str] = None  # "Meilleure offre", "Populaire"...
     active: bool = True
+    # Case « Autorise le Mode Invisible » (réglée par le super-administrateur) :
+    # les abonnés de cette formule peuvent activer le Mode Invisible sans acheter le bonus
+    autorise_mode_invisible: bool = False
 
 
 class Subscription(BaseModel):
@@ -302,7 +305,7 @@ class WalletTransaction(BaseModel):
     soit sa nature, pour un relevé complet côté utilisateur."""
     id: str = Field(default_factory=_uuid)
     user_id: str
-    kind: str  # "recharge" | "gift_sent" | "gift_received"
+    kind: str  # "recharge" | "gift_sent" | "gift_received" | "bonus_mode_invisible"
     amount_xof: int  # positif = crédit, négatif = débit
     related_user_id: Optional[str] = None  # expéditeur/destinataire du cadeau
     description: str

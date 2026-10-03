@@ -741,6 +741,11 @@ def test_settings_invisible_mode_and_visitors(client, make_user):
     ghost_id, ghost, _ = make_user(gender="homme")
 
     assert client.get("/api/me/settings", headers=ghost).json()["invisible_mode"] is False
+    # Droit au Mode Invisible (lot 45) : bonus valable, posé directement en base pour ce test
+    from datetime import datetime, timedelta, timezone
+    from db import db
+    fin_bonus = (datetime.now(timezone.utc) + timedelta(days=14)).isoformat()
+    client.portal.call(lambda: db.users.update_one({"id": ghost_id}, {"$set": {"mode_invisible_bonus_jusqu_au": fin_bonus}}))
     assert client.put("/api/me/settings", json={"invisible_mode": True}, headers=ghost).json()["invisible_mode"] is True
 
     client.get(f"/api/users/{target_id}", headers=visitor)

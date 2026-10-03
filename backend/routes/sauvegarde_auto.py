@@ -2,7 +2,8 @@
 
   - POST /api/sauvegarde-auto/declencher            : Cron Job Render, en-tête X-Sauvegarde-Jeton
                                                       (répond 202 tout de suite ; sauvegarde puis cycle de vie) ;
-  - GET  /api/sauvegarde-auto/derniere              : date de la dernière sauvegarde réussie (tout membre connecté) ;
+  - GET  /api/sauvegarde-auto/derniere              : date de la dernière sauvegarde réussie (super-administrateur
+                                                      seulement : les sauvegardes ne sont visibles que de lui) ;
   - GET  /api/plateforme/sauvegardes-auto           : état, alertes, liste R2, journal (administrateur principal) ;
   - POST /api/plateforme/sauvegardes-auto/lancer    : lancer la sauvegarde du jour maintenant ;
   - POST /api/plateforme/sauvegardes-auto/restaurer : restaurer une sauvegarde R2 (mode Remplacer, mot de passe
@@ -18,7 +19,7 @@ from pydantic import BaseModel, Field
 import sauvegarde_auto as service
 import transfert_donnees
 from activity import current_ip
-from auth import get_current_super_admin, get_current_user
+from auth import get_current_super_admin
 
 public = APIRouter(prefix="/sauvegarde-auto", tags=["Sauvegarde automatique"])
 admin = APIRouter(prefix="/plateforme/sauvegardes-auto", tags=["Sauvegarde automatique (administrateur)"])
@@ -36,7 +37,9 @@ async def declencher(x_sauvegarde_jeton: Optional[str] = Header(None)):
 
 
 @public.get("/derniere")
-async def derniere(_: dict = Depends(get_current_user)):
+async def derniere(_: dict = Depends(get_current_super_admin)):
+    """Réservé au super-administrateur (rôle « admin ») : 403 pour les membres et
+    les modérateurs, qui ne voient plus rien des sauvegardes."""
     d = await service.derniere_reussite()
     return {"date": d.get("fin") if d else None}
 

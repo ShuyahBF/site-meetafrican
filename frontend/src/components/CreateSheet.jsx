@@ -8,7 +8,7 @@ const CREATE_ACTIONS = [
   { to: "/temoignages", icon: "format_quote", label: "Témoignages", text: "Lire et raconter une belle rencontre", tint: "bg-amber-50 text-amber-600" },
   { to: "/support", icon: "support_agent", label: "Écrire au support", text: "Une question, un souci ? On vous répond", tint: "bg-sky-50 text-sky-600" },
   { to: "/visiteurs", icon: "visibility", label: "Qui m'a vu", text: "Visites de mon profil et vues de mes Moments", tint: "bg-purple-50 text-purple-600" },
-  { to: "/reglages", icon: "settings", label: "Réglages", text: "Notes vocales, transcription, mode invisible", tint: "bg-slate-100 text-slate-600" },
+  { to: "/reglages", icon: "settings", label: "Réglages", text: "Notes vocales, transcription, son des messages, mode invisible", tint: "bg-slate-100 text-slate-600" },
 ];
 
 /** Tiroir "Créer / Actions" ouvert par le bouton ✚. */
