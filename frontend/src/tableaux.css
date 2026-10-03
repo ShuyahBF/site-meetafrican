@@ -22,7 +22,7 @@
 /* 1. Survol : bleu clair transparent (bleu ciel à 15 % d'opacité) */
 tbody > tr:hover > td,
 tbody > tr:hover > th {
-  background-color: rgba(56, 189, 248, 0.15);
+  background-color: rgba(56, 189, 248, 0.16);
 }
 
 /* 2. Sélection : orange clair, police blanche.
@@ -37,7 +37,7 @@ tbody > tr.ligne-selectionnee > td,
 tbody > tr.ligne-selectionnee > th,
 tbody > tr:has(> td:first-child input[type="checkbox"]:checked) > td,
 tbody > tr:has(> td:first-child input[type="checkbox"]:checked) > th {
-  background-color: #f97316 !important; /* orange clair et vif (Tailwind orange-500) */
+  background-color: #f6a35b !important; /* orange clair de la règle permanente (CLAUDE.md), lot 48 */
   color: #ffffff !important;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2); /* améliore la lisibilité du blanc */
 }
