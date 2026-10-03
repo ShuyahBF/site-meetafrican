@@ -12,6 +12,7 @@ import UserActionsMenu from "@/components/UserActionsMenu";
 import Toast, { useToast } from "@/components/Toast";
 import { formatCount, formatLastSeen, responseBadge } from "@/lib/format";
 import TestBadge from "@/components/TestBadge";
+import MentionVersion from "@/components/MentionVersion";
 
 /**
  * Fiche publique d'un membre (fond blanc) : carrousel de photos, identité
@@ -246,6 +247,9 @@ export default function UserProfile() {
           <RoundAction icon="redeem" label="Cadeau" onClick={() => setShowGift(true)} disabled={busy} />
         </div>
       )}
+
+      {/* Version et lot du déploiement en cours (règle permanente) — page sans barre du bas */}
+      <MentionVersion className="py-6" />
 
       {showGift && (
         <GiftModal

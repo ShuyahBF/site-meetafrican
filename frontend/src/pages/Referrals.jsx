@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiClient, extractErrorMessage } from "@/lib/api";
+import MentionVersion from "@/components/MentionVersion";
 
 const PLATFORMS = [
   { key: "whatsapp", label: "WhatsApp", icon: "chat" },
@@ -101,6 +102,8 @@ export default function Referrals() {
           </ul>
         </div>
       )}
+      {/* Version et lot du déploiement en cours (règle permanente) — page sans barre du bas */}
+      <MentionVersion className="py-6" />
     </div>
   );
 }

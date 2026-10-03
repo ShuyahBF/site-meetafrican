@@ -1,5 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useSecureSettings } from "./SecureSettingsContext";
+// Règle permanente des tableaux (survol bleu / sélection orange), texte brut du
+// même fichier que celui du site, à injecter dans l'iframe (voir plus bas).
+import cssTableaux from "@/tableaux.css?raw";
 
 // Encapsule une maquette VIDAL (fichier HTML autonome) dans un <iframe> isolé.
 // Le contenu brut (importé via `?raw`) n'a ni <!doctype>/<html>/<body> propres
@@ -37,6 +40,10 @@ export default function SecureFrame({ html, title }) {
        le gris de cette coquille de test. Sans effet sur les maquettes qui ont déjà
        leur propre fond opaque. */
     body{ background:var(--bg) !important; }
+  </style><style>
+    /* Règle permanente des tableaux (survol bleu / sélection orange) : le CSS
+       du site ne traverse pas l'iframe, on l'injecte donc ici. */
+    ${cssTableaux}
   </style><script>
     window.addEventListener('message', function(e){
       if (!e.data || typeof e.data !== 'object') return;

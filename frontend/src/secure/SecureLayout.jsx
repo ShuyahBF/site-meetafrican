@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { SecureSettingsProvider, useSecureSettings } from "./SecureSettingsContext";
+import MentionVersion from "@/components/MentionVersion";
 
 // Coquille de la zone "/secure" : sidebar à 3 entrées (Sécurisation,
 // Posologie, Admin médecins) + la maquette active en plein cadre.
@@ -254,6 +255,8 @@ function SecureLayoutInner() {
             </button>
           </label>
         </div>
+        {/* Version et lot du déploiement en cours (règle permanente) */}
+        <MentionVersion className="mt-4" />
       </aside>
 
       <main className="secure-main" onClick={() => open && setOpen(false)}>

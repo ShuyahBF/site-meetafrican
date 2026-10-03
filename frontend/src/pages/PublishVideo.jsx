@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { apiClient, extractErrorMessage } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import MentionVersion from "@/components/MentionVersion";
 
 // Limites alignées sur le backend (config.py : max_video_*) ; le serveur
 // revérifie de toute façon.
@@ -205,6 +206,8 @@ export default function PublishVideo() {
           </button>
         </main>
       )}
+      {/* Version et lot du déploiement en cours (règle permanente) — page sans barre du bas */}
+      <MentionVersion className="py-6" />
     </div>
   );
 }

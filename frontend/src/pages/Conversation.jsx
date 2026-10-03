@@ -9,6 +9,7 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import { formatLastSeen } from "@/lib/format";
 import TestBadge from "@/components/TestBadge";
 import VoiceRecorder from "@/components/VoiceRecorder";
+import MentionVersion from "@/components/MentionVersion";
 
 // Emojis envoyables en un tap quand le champ est vide (brise-glace ludique).
 const ICEBREAKERS = ["👋🏾", "😍", "😂", "🔥", "🙏🏾"];
@@ -325,6 +326,8 @@ export default function Conversation() {
             </button>
           )}
         </form>
+        {/* Version et lot du déploiement en cours (règle permanente) — sous la zone de saisie */}
+        <MentionVersion className="pt-1 text-[9px] leading-tight" />
       </div>
     </div>
   );

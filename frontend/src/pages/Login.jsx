@@ -4,6 +4,7 @@ import BoutonTikTok from "@/components/BoutonTikTok";
 import { AvisMaintenance } from "@/components/MaintenancePlateforme";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient, extractErrorMessage, MOTIF_DECONNEXION_KEY } from "@/lib/api";
+import MentionVersion from "@/components/MentionVersion";
 
 // Messages du retour de TikTok (?tiktok_erreur=…)
 const ERREURS_TIKTOK = {
@@ -143,6 +144,9 @@ export default function Login() {
           <Link to="/cgu" className="underline">Conditions d'utilisation</Link> · <Link to="/confidentialite" className="underline">Confidentialité</Link>
         </p>
       </form>
+
+      {/* Version et lot du déploiement en cours (règle permanente) */}
+      <MentionVersion className="mt-8" />
     </div>
   );
 }
