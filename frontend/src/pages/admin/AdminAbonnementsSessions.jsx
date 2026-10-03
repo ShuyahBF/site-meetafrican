@@ -191,7 +191,9 @@ function SauvegardeAuto() {
       action={<button type="button" onClick={lancer} disabled={!etat.active} className="rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-bold text-white disabled:opacity-40">Sauvegarder maintenant</button>}>
       {etat.alerte && <Alerte couleur={etat.active ? "amber" : "rose"}>{etat.alerte}</Alerte>}
       <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm md:grid-cols-4">
-        <dt className="text-slate-500">Dernière réussite</dt><dd>{etat.derniere_reussite ? formatDateTime(etat.derniere_reussite.fin) : "—"}</dd>
+        {/* Lot 51 — date et heure de la dernière sauvegarde réussie, bien visibles */}
+        <dt className="text-slate-500">Dernière réussite</dt>
+        <dd className="font-bold text-slate-900 dark:text-white">{etat.derniere_reussite ? formatDateTime(etat.derniere_reussite.fin) : "—"}</dd>
         <dt className="text-slate-500">Rétention</dt><dd>{etat.retention.quotidiennes} j / {etat.retention.hebdomadaires} sem. / {etat.retention.mensuelles} mois</dd>
         <dt className="text-slate-500">Stockage</dt><dd>{conf.stockage ? `${conf.stockage} · ${conf.bucket}/${conf.prefixe}` : "non configuré"}</dd>
         <dt className="text-slate-500">Phrase / jeton Cron</dt><dd>{conf.phrase ? "✅" : "❌"} / {conf.jeton ? "✅" : "❌"}</dd>
@@ -216,7 +218,11 @@ function SauvegardeAuto() {
         {etat.sauvegardes.length === 0 && <p className="py-2 text-slate-400">Aucune.</p>}
         {etat.sauvegardes.map((s) => (
           <div key={s.cle} className="flex flex-wrap items-center justify-between gap-2 py-1.5">
-            <span className="font-mono text-xs">{s.cle.split("/").pop()}</span>
+            {/* Lot 51 — date et heure de la sauvegarde en évidence, nom du fichier en dessous */}
+            <span className="flex flex-col">
+              <span className="text-sm font-bold text-slate-900 dark:text-white">{s.date ? formatDateTime(s.date) : "Date inconnue"}</span>
+              <span className="font-mono text-[11px] text-slate-400">{s.cle.split("/").pop()}</span>
+            </span>
             <span className="text-xs text-slate-500">{taille(s.taille)}</span>
             <button type="button" className="text-xs font-bold text-rose-600"
               onClick={() => setRestauration({ cle: s.cle, mot_de_passe: "", confirmation: "" })}>Restaurer…</button>
