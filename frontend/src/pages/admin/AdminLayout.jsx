@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import DerniereSauvegarde from "@/components/DerniereSauvegarde";
+import MentionVersion from "@/components/MentionVersion";
 
 const NAV = [
   { to: "/admin", label: "Tableau de bord", end: true },
@@ -59,8 +60,12 @@ export default function AdminLayout() {
       <main className="mx-auto max-w-5xl px-6 py-8">
         <Outlet />
       </main>
-      {/* Pied de page discret : dernière sauvegarde générale */}
-      <footer className="pb-6 text-center"><DerniereSauvegarde /></footer>
+      {/* Pied de page discret : dernière sauvegarde générale, puis version et
+          lot du déploiement en cours (règle permanente) */}
+      <footer className="pb-6 text-center">
+        <DerniereSauvegarde />
+        <MentionVersion className="mt-2" />
+      </footer>
     </div>
   );
 }

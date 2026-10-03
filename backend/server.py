@@ -46,10 +46,13 @@ from routes import (
 )
 from seed import ensure_admin_user, seed_default_gifts, seed_default_plans
 from vidal_sync import sync_scheduler_loop
+# Version et lot de la plateforme (source unique : frontend/src/version.js)
+import version_plateforme
 
 settings = get_settings()
 
-app = FastAPI(title="beAuthentik API", version="0.1.0")
+# Le numéro affiché dans la documentation /docs suit la version de la plateforme
+app = FastAPI(title="beAuthentik API", version=version_plateforme.infos_version()["libelle"])
 
 # Journal d'activité + IP de chaque requête (cf. activity.py). Ajouté AVANT
 # CORS : il s'exécute donc à l'intérieur, sur les requêtes déjà acceptées.
@@ -107,6 +110,13 @@ api.include_router(cycle_vie.router)                 # C : cycle de vie du non-r
 @api.get("/health")
 async def health():
     return {"ok": True}
+
+
+@api.get("/version")
+async def version():
+    """Version, lot et hash du commit du backend en cours d'exécution (public,
+    sans authentification). Voir version_plateforme.py."""
+    return version_plateforme.infos_version()
 
 
 @api.get("/appearance", response_model=SiteAppearance)

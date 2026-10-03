@@ -1,0 +1,56 @@
+/* ==========================================================================
+   TABLEAUX — règle permanente du propriétaire, valable pour TOUT tableau
+   ==========================================================================
+   1. Ligne survolée par la souris  → fond bleu clair transparent.
+   2. Ligne sélectionnée            → fond orange clair + texte blanc.
+
+   Une ligne est « sélectionnée » si elle porte UN de ces marqueurs :
+     - <tr aria-selected="true">   (recommandé : accessible aux lecteurs d'écran)
+     - <tr data-selected="true">
+     - <tr className="ligne-selectionnee">
+     - ou sa 1re cellule contient une case à cocher cochée.
+
+   Le fond est posé sur les CELLULES (td/th) et non sur la ligne : ainsi une
+   couleur déjà posée sur la ligne (zébrure, ligne en erreur « bg-rose-50 »…)
+   ne peut pas masquer la règle, elle passe simplement dessous.
+
+   Fichier UNIQUE pour cette règle : importé par index.css (tout le site) ET
+   injecté par src/secure/SecureFrame.jsx dans les pages affichées dans un
+   cadre (iframe), où le CSS du site ne s'applique pas.
+   ========================================================================== */
+
+/* 1. Survol : bleu clair transparent (bleu ciel à 15 % d'opacité) */
+tbody > tr:hover > td,
+tbody > tr:hover > th {
+  background-color: rgba(56, 189, 248, 0.15);
+}
+
+/* 2. Sélection : orange clair, police blanche.
+   « !important » est ici NÉCESSAIRE : les classes Tailwind de type
+   « hover:text-… » ou « dark:text-… » sont plus prioritaires qu'un simple
+   sélecteur de tableau et rendraient sinon le texte illisible sur l'orange. */
+tbody > tr[aria-selected="true"] > td,
+tbody > tr[aria-selected="true"] > th,
+tbody > tr[data-selected="true"] > td,
+tbody > tr[data-selected="true"] > th,
+tbody > tr.ligne-selectionnee > td,
+tbody > tr.ligne-selectionnee > th,
+tbody > tr:has(> td:first-child input[type="checkbox"]:checked) > td,
+tbody > tr:has(> td:first-child input[type="checkbox"]:checked) > th {
+  background-color: #f97316 !important; /* orange clair et vif (Tailwind orange-500) */
+  color: #ffffff !important;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2); /* améliore la lisibilité du blanc */
+}
+
+/* Tous les textes À L'INTÉRIEUR d'une cellule sélectionnée (liens, badges,
+   textes gris…) passent aussi en blanc. */
+tbody > tr[aria-selected="true"] > td *,
+tbody > tr[aria-selected="true"] > th *,
+tbody > tr[data-selected="true"] > td *,
+tbody > tr[data-selected="true"] > th *,
+tbody > tr.ligne-selectionnee > td *,
+tbody > tr.ligne-selectionnee > th *,
+tbody > tr:has(> td:first-child input[type="checkbox"]:checked) > td *,
+tbody > tr:has(> td:first-child input[type="checkbox"]:checked) > th * {
+  color: #ffffff !important;
+}

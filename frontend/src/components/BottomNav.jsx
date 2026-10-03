@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import CreateSheet from "@/components/CreateSheet";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
+import MentionVersion from "@/components/MentionVersion";
 
 // Barre de navigation du bas, façon TikTok : 4 onglets + un gros bouton ✚
 // central en dégradé pour publier une vidéo. Fond blanc, pastille rouge de
@@ -43,7 +44,8 @@ export default function BottomNav() {
   };
 
   return (
-    <nav className="pb-safe sticky bottom-0 z-40 flex items-center justify-around border-t border-slate-100 bg-white pt-2">
+    // flex-wrap : la mention de version passe sur sa propre ligne, sous les onglets
+    <nav className="pb-safe sticky bottom-0 z-40 flex flex-wrap items-center justify-around border-t border-slate-100 bg-white pt-2">
       {LEFT.map(renderItem)}
       {/* Bouton ✚ "Publier" : double pastille décalée rose/orange (clin
           d'œil au bouton de création TikTok). */}
@@ -55,6 +57,9 @@ export default function BottomNav() {
         </span>
       </button>
       {RIGHT.map(renderItem)}
+      {/* Version et lot du déploiement en cours (règle permanente), en tout
+          petit sous les onglets, sur toute la largeur */}
+      <MentionVersion className="w-full basis-full pb-1 pt-0.5 text-[9px] leading-tight" />
       {createOpen && <CreateSheet onClose={() => setCreateOpen(false)} />}
     </nav>
   );

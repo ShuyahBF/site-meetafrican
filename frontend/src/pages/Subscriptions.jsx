@@ -3,6 +3,7 @@ import { apiClient, extractErrorMessage } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import PaymentReturnBanner from "@/components/PaymentReturnBanner";
 import PaymentMethods from "@/components/PaymentMethods";
+import MentionVersion from "@/components/MentionVersion";
 
 function fmtXOF(n) {
   return Number(n || 0).toLocaleString("fr-FR") + " FCFA";
@@ -159,6 +160,8 @@ export default function Subscriptions() {
           </div>
         </div>
       )}
+      {/* Version et lot du déploiement en cours (règle permanente) — page sans barre du bas */}
+      <MentionVersion className="py-6" />
     </div>
   );
 }
