@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { formatCount } from "@/lib/format";
+import Filigrane from "@/components/Filigrane"; // lot 49 — filigrane dissuasif anti-capture
 
 // Grille 3 colonnes de vignettes vidéo (profil public, "Mes Moments") —
 // comme la grille d'un profil TikTok. La vignette est l'image FLOUTÉE
@@ -38,6 +39,8 @@ export default function VideoGrid({ videos, emptyText = "Aucun Moment publié po
             ) : (
               <video src={`${v.url}#t=0.1`} preload="metadata" muted playsInline className="h-full w-full object-cover" />
             )}
+            {/* Lot 49 — filigrane dissuasif sur la vignette */}
+            <Filigrane />
             {!v.is_clear && (
               <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/40 text-white">
                 <span className="material-symbols-outlined icon-filled text-sm">lock</span>

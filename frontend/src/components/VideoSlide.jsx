@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { formatCount } from "@/lib/format";
 import TestBadge from "@/components/TestBadge";
+import Filigrane from "@/components/Filigrane"; // lot 49 — filigrane dissuasif anti-capture
 
 // Délai max entre deux taps pour qu'ils comptent comme un double-tap.
 const DOUBLE_TAP_MS = 280;
@@ -131,6 +132,8 @@ export default function VideoSlide({
           if (el.duration) setProgress((el.currentTime / el.duration) * 100);
         }}
       />
+      {/* Lot 49 — filigrane dissuasif sur la vidéo (sous les boutons, ne gêne pas les gestes) */}
+      <Filigrane />
 
       {/* Zone de tap (sous les boutons) */}
       <div className="absolute inset-0" onClick={handleTap} />

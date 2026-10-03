@@ -1,3 +1,4 @@
+import Filigrane from "@/components/Filigrane"; // lot 49 — filigrane dissuasif anti-capture
 // Photo de profil avec repli sur un buste-silhouette (homme/femme) quand
 // aucune photo approuvée n'existe, et pastille de présence en ligne
 // optionnelle superposée en haut à gauche.
@@ -24,6 +25,8 @@ export default function ProfilePhoto({ profile, showOnlineDot = false, className
         alt={profile.full_name || ""}
         className={`h-full w-full object-cover ${url ? "" : "object-contain p-2"} ${imgClassName}`}
       />
+      {/* Lot 49 — filigrane (pseudo du visiteur + date/heure) sur les vraies photos */}
+      {url && <Filigrane />}
       {showOnlineDot && (
         <span
           className={`absolute left-2 top-2 h-3.5 w-3.5 rounded-full ring-2 ring-white dark:ring-background-dark ${
