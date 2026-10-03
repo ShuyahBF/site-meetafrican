@@ -134,7 +134,8 @@ async def _author_cards(user_ids: List[str]) -> dict:
             "country": d.get("country"),
             "is_verified": d.get("verification_status") == VerificationStatus.verified.value,
             "is_online": _is_online(d.get("last_seen_at")),
-            "is_test_data": bool(d.get("is_test_data")),
+            # Lot 50 — profil de test : information réservée au back-office, jamais aux membres
+            "is_test_data": False,
             # Miniature ronde de l'avatar : version masquée si elle existe
             # (même règle que les photos du profil : visage visible en clair
             # seulement dans la fiche, pour les abonnés).

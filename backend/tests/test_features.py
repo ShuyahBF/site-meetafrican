@@ -354,10 +354,14 @@ def test_test_data_generate_then_purge_everything(client, make_user):
     assert status["job"]["status"] == "done", status["job"]
     assert status["counts"]["users"] == 12 and status["counts"]["videos"] == 2
 
-    # Les comptes de test sont visibles (badge) mais jamais comptés publiquement
+    # Les comptes de test ne sont jamais comptés publiquement
     assert client.get("/api/stats/public").json()["registered"] == counters_before["registered"]
     results = client.get("/api/search", params={"age_min": 18, "age_max": 99}, headers=real).json()["results"]
-    test_profile = next(p for p in results if p["is_test_data"])  # badge « Test » exposé
+    # Lot 50 — l'information « profil de test » est réservée au back-office : jamais transmise aux membres
+    assert results and not any(p["is_test_data"] for p in results)
+    from db import db
+    ids_test = {d["id"] for d in client.portal.call(lambda: db.users.find({"is_test_data": True}, {"_id": 0, "id": 1}).to_list(1000))}
+    test_profile = next(p for p in results if p["id"] in ids_test)
 
     # On peut se connecter avec un compte de test (mot de passe commun)
     email = status["credentials"]["sample_accounts"][0]["email"]
