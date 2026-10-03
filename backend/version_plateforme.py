@@ -72,7 +72,8 @@ def libelle(version: int | None, lot: int | None, date: datetime) -> str:
     if version is None:
         return "Version inconnue"
     numero = f"{version}.{lot}" if lot is not None else f"{version}"
-    return f"Version {numero} du {date.astimezone(timezone.utc).strftime('%d/%m/%Y')}"
+    # Lot 46 — l'heure suit la date (heure de Ouagadougou = UTC)
+    return f"Version {numero} du {date.astimezone(timezone.utc).strftime('%d/%m/%Y à %H:%M')}"
 
 
 def infos_version() -> dict:

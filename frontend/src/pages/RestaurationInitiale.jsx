@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiClient, extractErrorMessage } from "@/lib/api";
 import { BarreProgression, Champ, EXTENSION, PHRASE_MIN, RapportImport, useSuiviTache } from "@/components/transfert/commun";
+import ChampMotDePasse from "@/components/ChampMotDePasse"; // lot 46 — œil pour voir la saisie
 
 export default function RestaurationInitiale() {
   const [disponibilite, setDisponibilite] = useState(null);
@@ -102,13 +103,13 @@ export default function RestaurationInitiale() {
                 onChange={(e) => maj("fichier", e.target.files?.[0] || null)} />
             </Champ>
             <Champ label="Phrase secrète choisie lors de l'export">
-              <input className="admin-input" type="password" autoComplete="off" value={form.phrase} onChange={(e) => maj("phrase", e.target.value)} />
+              <ChampMotDePasse className="admin-input" autoComplete="off" value={form.phrase} onChange={(e) => maj("phrase", e.target.value)} />
             </Champ>
             <Champ label="E-mail ou téléphone de l'administrateur (ancienne base)">
               <input className="admin-input" autoComplete="username" value={form.identifiant} onChange={(e) => maj("identifiant", e.target.value)} />
             </Champ>
             <Champ label="Mot de passe de cet administrateur" aide="Vérifié dans la sauvegarde avant toute écriture.">
-              <input className="admin-input" type="password" autoComplete="current-password" value={form.mot_de_passe}
+              <ChampMotDePasse className="admin-input" autoComplete="current-password" value={form.mot_de_passe}
                 onChange={(e) => maj("mot_de_passe", e.target.value)} />
             </Champ>
             <p className="rounded-xl bg-slate-50 p-3 text-xs text-slate-600">

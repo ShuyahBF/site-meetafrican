@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient, extractErrorMessage } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
+import ChampMotDePasse from "@/components/ChampMotDePasse"; // lot 46 — œil pour voir la saisie
 
 const STATUTS = {
   ENVOYE: "bg-emerald-50 text-emerald-700",
@@ -17,7 +18,10 @@ function Champ({ label, aide, ...props }) {
   return (
     <label className="text-sm font-semibold text-slate-700">
       {label}
-      <input {...props} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-normal" />
+      {/* Lot 46 — champ secret : pictogramme œil pour voir la saisie */}
+      {props.type === "password"
+        ? <span className="mt-1 block"><ChampMotDePasse {...props} className="w-full rounded-lg border border-slate-200 px-3 py-2 font-normal" /></span>
+        : <input {...props} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 font-normal" />}
       {aide && <span className="mt-0.5 block text-xs font-normal text-slate-500">{aide}</span>}
     </label>
   );

@@ -5,6 +5,8 @@ import { AvisMaintenance } from "@/components/MaintenancePlateforme";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient, extractErrorMessage, MOTIF_DECONNEXION_KEY } from "@/lib/api";
 import MentionVersion from "@/components/MentionVersion";
+import EtatServeur from "@/components/EtatServeur"; // lot 46 — état du serveur sous le formulaire
+import ChampMotDePasse from "@/components/ChampMotDePasse"; // lot 46 — œil pour voir la saisie
 
 // Messages du retour de TikTok (?tiktok_erreur=…)
 const ERREURS_TIKTOK = {
@@ -78,8 +80,15 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col justify-center bg-background-light px-6 py-10 font-display dark:bg-background-dark">
-      <h1 className="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Se connecter</h1>
+    // Lot 46 — page CENTRÉE (comme Ster) : une carte de largeur limitée au milieu de l'écran,
+    // logo en tête, formulaire, puis état du serveur et version en pied de carte.
+    <div className="flex min-h-screen w-full items-center justify-center bg-background-light px-4 py-10 font-display dark:bg-background-dark">
+      <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-white/10">
+      {/* Logo beAuthentik en tête de carte */}
+      <div className="mb-4 flex flex-col items-center gap-2">
+        <img src="/icone-beauthentik.svg" alt="beAuthentik" className="h-16 w-16" />
+        <h1 className="text-center text-2xl font-bold text-slate-900 dark:text-white">Se connecter</h1>
+      </div>
 
       {motif && (
         <div role="alert" className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">{motif}</div>
@@ -117,7 +126,7 @@ export default function Login() {
         </label>
         <label className="flex flex-col gap-1 text-sm font-semibold text-slate-700 dark:text-slate-200">
           Mot de passe
-          <input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input" />
+          <ChampMotDePasse required value={password} onChange={(e) => setPassword(e.target.value)} className="input" />
         </label>
 
         {error && <p className="text-sm text-red-400">{error}</p>}
@@ -145,8 +154,10 @@ export default function Login() {
         </p>
       </form>
 
-      {/* Version et lot du déploiement en cours (règle permanente) */}
-      <MentionVersion className="mt-8" />
+      {/* Lot 46 — état du serveur, puis version et lot du déploiement en cours (règle permanente) */}
+      <EtatServeur className="mt-6" />
+      <MentionVersion className="mt-2" />
+      </div>
     </div>
   );
 }

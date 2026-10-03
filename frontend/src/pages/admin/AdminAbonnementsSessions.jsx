@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { apiClient, extractErrorMessage } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { dureeTexte } from "@/lib/inactivite";
+import ChampMotDePasse from "@/components/ChampMotDePasse"; // lot 46 — œil pour voir la saisie
 
 /** Bloc titré. */
 function Bloc({ titre, children, action }) {
@@ -227,7 +228,7 @@ function SauvegardeAuto() {
           <p className="font-semibold text-rose-800">
             Restaurer {restauration.cle.split("/").pop()} : TOUTES les données actuelles seront remplacées (mode « Remplacer »).
           </p>
-          <input type="password" required placeholder="Votre mot de passe" value={restauration.mot_de_passe}
+          <ChampMotDePasse required placeholder="Votre mot de passe" value={restauration.mot_de_passe}
             onChange={(e) => setRestauration({ ...restauration, mot_de_passe: e.target.value })} className="w-full rounded-lg border px-3 py-2" />
           <input required placeholder="Tapez REMPLACER" value={restauration.confirmation}
             onChange={(e) => setRestauration({ ...restauration, confirmation: e.target.value })} className="w-full rounded-lg border px-3 py-2" />
@@ -354,7 +355,7 @@ function CycleVie() {
             <input type="checkbox" checked={reouverture.frais_encaisses}
               onChange={(e) => setReouverture({ ...reouverture, frais_encaisses: e.target.checked })} /> Frais encaissés
           </label>
-          <input type="password" required placeholder="Votre mot de passe" value={reouverture.mot_de_passe}
+          <ChampMotDePasse required placeholder="Votre mot de passe" value={reouverture.mot_de_passe}
             onChange={(e) => setReouverture({ ...reouverture, mot_de_passe: e.target.value })} className="w-full rounded-lg border px-3 py-2" />
           <div className="flex gap-2">
             <button type="submit" className="rounded-lg bg-primary px-3 py-1.5 font-bold text-white">Rouvrir</button>

@@ -19,16 +19,17 @@
 // (voir vite.config.js) : rien à saisir.
 //
 // Libellé affiché partout (format demandé par le propriétaire, lot 45) :
-//   « Version VERSION.LOT du JJ/MM/AAAA »   ex. « Version 5.45 du 03/10/2026 »
+//   « Version VERSION.LOT du JJ/MM/AAAA à HH:MM »   ex. « Version 6.46 du 03/10/2026 à 21:30 »
+// (lot 46 : l'heure de compilation suit la date, demande du propriétaire)
 // La date est celle de la compilation, au fuseau Africa/Ouagadougou (= UTC).
 // Aucun hash de commit n'est affiché (ni dans le libellé, ni au survol).
 // ============================================================================
 
 // Compteur de déploiements : +1 à chaque déploiement.
-export const VERSION = 5;
+export const VERSION = 6;
 
 // Numéro de la PR GitHub fusionnée pour ce déploiement.
-export const LOT = 45;
+export const LOT = 46;
 
 // Hash court du commit compilé (RENDER_GIT_COMMIT sur Render, sinon `git`),
 // injecté par vite.config.js. "dev" si introuvable. Gardé pour le diagnostic
@@ -44,10 +45,12 @@ function dateFrancaise(iso) {
   const d = new Date(iso);
   if (!iso || Number.isNaN(d.getTime())) return "";
   const deuxChiffres = (n) => String(n).padStart(2, "0");
-  return `${deuxChiffres(d.getUTCDate())}/${deuxChiffres(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`;
+  // Lot 46 — l'heure (HH:MM, heure de Ouagadougou = UTC) suit la date
+  return `${deuxChiffres(d.getUTCDate())}/${deuxChiffres(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`
+    + ` à ${deuxChiffres(d.getUTCHours())}:${deuxChiffres(d.getUTCMinutes())}`;
 }
 export const DATE_BUILD_FR = dateFrancaise(DATE_BUILD);
 
-// Texte prêt à afficher : « Version 5.45 du 03/10/2026 »
+// Texte prêt à afficher : « Version 6.46 du 03/10/2026 à 21:30 »
 // (sans date connue, par ex. hors compilation : « Version 5.45 »)
 export const LIBELLE_VERSION = `Version ${VERSION}.${LOT}${DATE_BUILD_FR ? ` du ${DATE_BUILD_FR}` : ""}`;
