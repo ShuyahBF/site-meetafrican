@@ -169,3 +169,6 @@ async def on_startup():
     # déjà publiées au floutage "visage seul" (s'arrête quand tout est fait).
     from media_migration import migration_loop
     asyncio.create_task(migration_loop())
+    # Lot 53 — « Me suivre » : alerte « signal perdu » (aucune position depuis 10 min)
+    # à la personne de confiance et aux administrateurs, vérifiée chaque minute.
+    asyncio.create_task(tracking.boucle_alertes_suivi())

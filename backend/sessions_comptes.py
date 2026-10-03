@@ -192,6 +192,12 @@ async def controler(user: dict, contenu: dict, request: Optional[Request] = None
     delai = await inactivite.delai_utilisateur(user)
     derniere = connue.get("derniere")
     if delai and derniere is not None and maintenant - derniere > delai + inactivite.MARGE_SECONDES:
+        # Lot 53 — pendant un suivi « Me suivre » actif, ni le membre suivi ni la personne de
+        # confiance ne sont déconnectés pour inactivité : la requête compte comme une activité.
+        from routes.tracking import suivi_en_cours  # import différé (évite une boucle d'imports)
+        if await suivi_en_cours(user.get("id")):
+            derniere = None
+    if delai and derniere is not None and maintenant - derniere > delai + inactivite.MARGE_SECONDES:
         await fermer(sid, "inactivite", par=None)
         await log_activity(user.get("id"), "Session fermée après inactivité", current_ip())
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, MOTIFS["inactivite"])

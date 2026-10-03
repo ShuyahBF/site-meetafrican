@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient, FOND, MOTIF_DECONNEXION_KEY } from "@/lib/api";
 import { CLE_DECONNEXION, useInactivite } from "@/lib/inactivite";
+import { useExemptionInactivite } from "@/lib/suivi";
 
 const MESSAGE = "Session expirée après inactivité. Reconnectez-vous.";
 
@@ -37,8 +38,13 @@ export default function DeconnexionInactivite() {
     window.location.assign("/connexion");
   }, [logout]);
 
+  // Lot 53 — pendant un suivi « Me suivre » actif (membre suivi ou carte ouverte par la
+  // personne de confiance), pas de déconnexion pour inactivité ; le compte à rebours
+  // repart de zéro à la fin du suivi.
+  const exempte = useExemptionInactivite();
+
   const { restant, resterConnecte } = useInactivite({
-    secondes: user ? Number(reglage.secondes) || 0 : 0,
+    secondes: user && !exempte ? Number(reglage.secondes) || 0 : 0,
     avertissement: Number(reglage.avertissement_secondes) || 0,
     onDeconnexion: deconnecter,
   });

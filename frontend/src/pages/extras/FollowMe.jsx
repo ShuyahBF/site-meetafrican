@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { apiClient, extractErrorMessage, FOND } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import PageShell from "@/components/PageShell";
+import { etatSignal, lireFile, useMaintenant } from "@/lib/suivi";
 
 const DURATIONS = [
   { value: 30, label: "30 minutes" },
@@ -41,6 +42,27 @@ export default function FollowMe() {
 
   const active = data.mine.find((s) => s.status === "active");
 
+  // Lot 53 — positions gardées dans le téléphone pendant une coupure d'Internet
+  const [enAttente, setEnAttente] = useState(0);
+  const [horsLigne, setHorsLigne] = useState(navigator.onLine === false);
+  useEffect(() => {
+    if (!active) return undefined;
+    setEnAttente(lireFile(active.id).length);
+    const surFile = (e) => { if (e.detail?.sessionId === active.id) setEnAttente(e.detail.enAttente); };
+    const surReseau = () => setHorsLigne(navigator.onLine === false);
+    window.addEventListener("suivi:file", surFile);
+    window.addEventListener("online", surReseau);
+    window.addEventListener("offline", surReseau);
+    return () => {
+      window.removeEventListener("suivi:file", surFile);
+      window.removeEventListener("online", surReseau);
+      window.removeEventListener("offline", surReseau);
+    };
+  }, [active?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // État du signal des suivis partagés avec moi (recalculé chaque seconde)
+  const maintenant = useMaintenant();
+
   // Démarrer : on demande d'abord l'autorisation de géolocalisation
   const start = async (e) => {
     e.preventDefault();
@@ -76,6 +98,20 @@ export default function FollowMe() {
     notifyBeacon();
   };
 
+  // Lot 53 — « Je suis arrivé·e » : fin du suivi, la personne de confiance et l'administrateur sont prévenus
+  const [arrivee, setArrivee] = useState("");
+  const arrive = async () => {
+    setError("");
+    try {
+      await apiClient.post(`/tracking/sessions/${active.id}/arrive`);
+      setArrivee(`${active.guardian_name} est prévenu·e que vous êtes bien arrivé·e.`);
+      await load();
+      notifyBeacon();
+    } catch (err) {
+      setError(extractErrorMessage(err, "Impossible de signaler votre arrivée"));
+    }
+  };
+
   const watchingActive = data.watching.filter((s) => s.status === "active");
 
   return (
@@ -91,11 +127,19 @@ export default function FollowMe() {
                 <span className="block text-xs text-slate-500">
                   {s.last_point ? `Dernière position : ${formatDateTime(s.last_point.at)}` : "En attente de la première position"}
                 </span>
+                {/* Lot 53 — état du signal : vert, orange (> 2 min), rouge (> 5 min) */}
+                <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ${etatSignal(s, maintenant).classes}`}>
+                  {etatSignal(s, maintenant).texte}
+                </span>
               </span>
               <span className="material-symbols-outlined text-slate-400">chevron_right</span>
             </Link>
           ))}
         </section>
+      )}
+
+      {arrivee && !active && (
+        <p className="mt-4 rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800 ring-1 ring-emerald-100">✅ {arrivee}</p>
       )}
 
       {active ? (
@@ -112,9 +156,19 @@ export default function FollowMe() {
           <p className="mt-2 text-xs text-emerald-800/80">
             Gardez beAuthentik ouvert et l'écran allumé : un navigateur ne peut pas envoyer votre position site fermé.
           </p>
-          <button onClick={stop} className="mt-4 h-11 w-full rounded-full bg-white text-sm font-extrabold text-rose-600 ring-1 ring-rose-100">
+          {/* Lot 53 — coupure d'Internet : positions gardées et renvoyées au retour du réseau */}
+          {(horsLigne || enAttente > 0) && (
+            <p className="mt-2 rounded-xl bg-amber-100 px-3 py-2 text-xs font-bold text-amber-800">
+              Hors connexion : {enAttente} position{enAttente > 1 ? "s" : ""} en attente — elles seront envoyées dès le retour d'Internet.
+            </p>
+          )}
+          <button onClick={arrive} className="mt-4 h-11 w-full rounded-full bg-emerald-600 text-sm font-extrabold text-white shadow-sm">
+            ✅ Je suis arrivé·e
+          </button>
+          <button onClick={stop} className="mt-2 h-11 w-full rounded-full bg-white text-sm font-extrabold text-rose-600 ring-1 ring-rose-100">
             Arrêter le suivi
           </button>
+          {error && <p className="mt-2 text-xs font-semibold text-rose-600">{error}</p>}
         </section>
       ) : (
         <form onSubmit={start} className="card mt-4 space-y-3 p-4">
@@ -183,6 +237,7 @@ export default function FollowMe() {
             .map((s) => (
               <p key={s.id} className="mb-2 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">
                 Avec {s.guardian_name} · du {formatDateTime(s.started_at)} {s.stopped_at ? `au ${formatDateTime(s.stopped_at)}` : "(terminé)"}
+                {s.motif_fin === "arrive" ? " · ✅ bien arrivé·e" : ""}
               </p>
             ))}
         </section>

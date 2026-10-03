@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { apiClient, extractErrorMessage, FOND } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import PageShell from "@/components/PageShell";
+import { bipAlerte, etatSignal, exempterInactivite, useMaintenant } from "@/lib/suivi";
 
 const REFRESH_MS = 10000;
 
@@ -17,6 +18,11 @@ function OsmMap({ lat, lng }) {
  * Vue du compte désigné (ou de l'équipe) : position en direct d'un membre
  * qui a activé « Me suivre », rafraîchie toutes les 10 s, avec le trajet
  * horodaté.
+ *
+ * Lot 53 : état du signal (vert « en direct », orange au-delà de 2 min sans
+ * position, rouge « signal perdu » au-delà de 5 min, avec un bip), arrivée
+ * signalée par le membre, et pas de déconnexion pour inactivité tant que la
+ * carte d'un suivi actif est ouverte.
  */
 export default function TrackingView() {
   const { sessionId } = useParams();
@@ -34,13 +40,38 @@ export default function TrackingView() {
     return () => clearInterval(t);
   }, [sessionId]);
 
+  // Carte d'un suivi actif ouverte : pas de déconnexion pour inactivité
+  const live = session?.status === "active";
+  useEffect(() => {
+    exempterInactivite("suivi-carte", live);
+    return () => exempterInactivite("suivi-carte", false);
+  }, [live]);
+
+  // État du signal, recalculé chaque seconde ; bip au passage en « signal perdu »
+  const maintenant = useMaintenant();
+  const signal = etatSignal(session, maintenant);
+  const niveauPrecedent = useRef(null);
+  useEffect(() => {
+    if (signal.niveau === "perdu" && niveauPrecedent.current && niveauPrecedent.current !== "perdu") bipAlerte();
+    niveauPrecedent.current = signal.niveau;
+  }, [signal.niveau]);
+
   if (error) return <PageShell title="Suivi" back="/me-suivre"><p className="mt-6 text-sm text-slate-500">{error}</p></PageShell>;
   if (!session) return null;
   const p = session.last_point;
-  const live = session.status === "active";
 
   return (
     <PageShell title={`Position de ${session.owner_name}`} subtitle={live ? "En direct · actualisé toutes les 10 s" : "Suivi terminé"} back="/me-suivre">
+      {/* Lot 53 — état du signal (ou arrivée) bien visible en haut de la carte */}
+      {signal.texte && <p className={`mt-2 rounded-xl px-3 py-2 text-sm font-bold ring-1 ${signal.classes}`}>{signal.texte}</p>}
+      {session.motif_fin === "arrive" && session.arrive_le && (
+        <p className="mt-1 text-xs text-emerald-700">Arrivée signalée le {formatDateTime(session.arrive_le)}.</p>
+      )}
+      {live && session.alerte_signal && (
+        <p className="mt-1 text-xs text-rose-700">
+          Alerte envoyée le {formatDateTime(session.alerte_signal.alerte_le)} (à vous et à l'administrateur beAuthentik).
+        </p>
+      )}
       {session.note && <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-800">📝 {session.note}</p>}
       {p ? (
         <>
@@ -73,7 +104,7 @@ export default function TrackingView() {
           <ul className="space-y-1 text-xs text-slate-600">
             {[...session.points].reverse().slice(0, 30).map((pt) => (
               <li key={pt.at} className="flex justify-between rounded-lg bg-slate-50 px-3 py-1.5">
-                <span>{formatDateTime(pt.at)}</span>
+                <span>{formatDateTime(pt.at)}{pt.hors_connexion ? " · reçue après une coupure" : ""}</span>
                 <a className="font-semibold text-primary" href={`https://www.google.com/maps?q=${pt.lat},${pt.lng}`} target="_blank" rel="noreferrer">
                   {pt.lat.toFixed(5)}, {pt.lng.toFixed(5)}
                 </a>
