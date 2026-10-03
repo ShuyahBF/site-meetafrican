@@ -5,7 +5,7 @@ import { useUnreadCount } from "@/hooks/useUnreadCount";
 import MentionVersion from "@/components/MentionVersion";
 
 // Barre de navigation du bas, façon TikTok : 4 onglets + un gros bouton
-// central (un cauri, à la place du ✚) en dégradé pour publier une vidéo. Fond blanc, pastille rouge de
+// central (un cauri sur fond blanc, à la place du ✚) pour publier une vidéo. Fond blanc, pastille rouge de
 // messages non lus.
 const LEFT = [
   { to: "/moments", icon: "play_circle", label: "Moments" },
@@ -47,14 +47,13 @@ export default function BottomNav() {
     // flex-wrap : la mention de version passe sur sa propre ligne, sous les onglets
     <nav className="pb-safe sticky bottom-0 z-40 flex flex-wrap items-center justify-around border-t border-slate-100 bg-white pt-2">
       {LEFT.map(renderItem)}
-      {/* Bouton ✚ "Publier" : double pastille décalée rose/orange (clin
-          d'œil au bouton de création TikTok). */}
+      {/* Bouton central "Publier" : cauri sur fond blanc. */}
       <button onClick={() => setCreateOpen(true)} aria-label="Créer et autres actions" className="relative mx-1 h-9 w-12 active:scale-95">
-        <span className="absolute inset-y-0 left-0 w-10 rounded-xl bg-sunset" />
-        <span className="absolute inset-y-0 right-0 w-10 rounded-xl bg-primary" />
-        <span className="absolute inset-y-0 left-1 right-1 flex items-center justify-center rounded-xl bg-ink text-white">
-          {/* Cauri à la place du « + » : dessin détouré (fond transparent, traits blancs) */}
-          <img src="/images/cauri-blanc.png" alt="" aria-hidden="true" className="h-auto w-8 select-none" draggable="false" />
+        {/* Fond du bouton entièrement blanc (demande du propriétaire), avec un fin
+            contour gris pour qu'il reste visible sur la barre blanche */}
+        <span className="absolute inset-0 flex items-center justify-center rounded-xl bg-white ring-1 ring-slate-200 shadow-sm">
+          {/* Cauri à la place du « + » : dessin détouré, traits noirs sur fond transparent */}
+          <img src="/images/cauri-noir.png" alt="" aria-hidden="true" className="h-auto w-9 select-none" draggable="false" />
         </span>
       </button>
       {RIGHT.map(renderItem)}
