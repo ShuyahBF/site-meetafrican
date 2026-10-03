@@ -4,8 +4,8 @@ import CreateSheet from "@/components/CreateSheet";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import MentionVersion from "@/components/MentionVersion";
 
-// Barre de navigation du bas, façon TikTok : 4 onglets + un gros bouton ✚
-// central en dégradé pour publier une vidéo. Fond blanc, pastille rouge de
+// Barre de navigation du bas, façon TikTok : 4 onglets + un gros bouton
+// central (un cauri, à la place du ✚) en dégradé pour publier une vidéo. Fond blanc, pastille rouge de
 // messages non lus.
 const LEFT = [
   { to: "/moments", icon: "play_circle", label: "Moments" },
@@ -53,7 +53,8 @@ export default function BottomNav() {
         <span className="absolute inset-y-0 left-0 w-10 rounded-xl bg-sunset" />
         <span className="absolute inset-y-0 right-0 w-10 rounded-xl bg-primary" />
         <span className="absolute inset-y-0 left-1 right-1 flex items-center justify-center rounded-xl bg-ink text-white">
-          <span className="material-symbols-outlined text-xl">add</span>
+          {/* Cauri à la place du « + » : dessin détouré (fond transparent, traits blancs) */}
+          <img src="/images/cauri-blanc.png" alt="" aria-hidden="true" className="h-auto w-8 select-none" draggable="false" />
         </span>
       </button>
       {RIGHT.map(renderItem)}
