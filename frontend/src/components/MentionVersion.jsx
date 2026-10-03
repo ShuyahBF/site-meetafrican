@@ -1,24 +1,20 @@
-import { DATE_BUILD, LIBELLE_VERSION } from "@/version";
+import { LIBELLE_VERSION } from "@/version";
 
 /**
- * Mention discrète « Version X · Lot N · hash » (règle permanente : version et
+ * Mention discrète « Version 5.45 du JJ/MM/AAAA » (règle permanente : version et
  * lot visibles sur la page de connexion et dans tout le portail).
  *
- * Les valeurs viennent toutes de src/version.js (source unique).
- * Survol de la souris : la date de compilation s'affiche en info-bulle.
+ * Le libellé vient de src/version.js (source unique). Aucun hash de commit
+ * n'est affiché, ni dans le texte ni au survol (demande du propriétaire) :
+ * l'info-bulle reprend seulement le même libellé.
  *
  * `className` : classes supplémentaires (marges, couleur sur fond sombre…).
  */
 export default function MentionVersion({ className = "" }) {
-  // Date de compilation lisible en français (ex. « 03/10/2026 14:05 »), si connue
-  const dateLisible = DATE_BUILD
-    ? new Date(DATE_BUILD).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })
-    : "";
-
   return (
     <p
       className={`select-text text-center text-[10px] font-medium tracking-wide text-slate-400 ${className}`}
-      title={dateLisible ? `Compilé le ${dateLisible}` : undefined}
+      title={LIBELLE_VERSION}
       data-testid="mention-version"
     >
       {LIBELLE_VERSION}

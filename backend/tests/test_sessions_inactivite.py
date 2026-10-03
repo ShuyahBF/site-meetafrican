@@ -150,14 +150,17 @@ def test_reglages_inactivite_bornes(client, make_user):
     uid, membre, _ = make_user()
     r = client.get("/api/auth/inactivite", headers=membre).json()
     assert r == {"secondes": 600, "avertissement_secondes": 60}
-    # Le membre peut seulement réduire
-    assert client.put("/api/auth/inactivite/reglage", json={"secondes": 900}, headers=membre).status_code == 400
-    assert client.put("/api/auth/inactivite/reglage", json={"secondes": 0}, headers=membre).status_code == 400
-    assert client.put("/api/auth/inactivite/reglage", json={"secondes": 300}, headers=membre).json()["effective"] == 300
-    assert client.get("/api/auth/inactivite", headers=membre).json()["secondes"] == 300
+    # Réglage personnel réservé au super-administrateur (lot 45) : 403 pour le membre
+    assert client.get("/api/auth/inactivite/reglage", headers=membre).status_code == 403
+    assert client.put("/api/auth/inactivite/reglage", json={"secondes": 300}, headers=membre).status_code == 403
+    # Le super-administrateur peut seulement réduire sa propre durée
+    assert client.put("/api/auth/inactivite/reglage", json={"secondes": 900}, headers=admin).status_code == 400
+    assert client.put("/api/auth/inactivite/reglage", json={"secondes": 0}, headers=admin).status_code == 400
+    assert client.put("/api/auth/inactivite/reglage", json={"secondes": 300}, headers=admin).json()["effective"] == 300
+    assert client.get("/api/auth/inactivite", headers=admin).json()["secondes"] == 300
     # Surcharge de l'administrateur pour ce membre (0 = désactivée pour lui)
     r = client.put(f"/api/admin/membres/{uid}/inactivite", json={"secondes": 0}, headers=admin)
-    assert r.status_code == 200 and r.json()["plafond"] == 0 and r.json()["effective"] == 300
+    assert r.status_code == 200 and r.json()["plafond"] == 0 and r.json()["effective"] == 0
 
 
 def test_inactivite_controle_serveur(client, make_user, monkeypatch):

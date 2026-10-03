@@ -43,6 +43,7 @@ import AdminEnvoiEmails from "@/pages/admin/AdminEnvoiEmails";
 // Abonnement (grâce, suspension), sessions et déconnexion après inactivité
 import BandeauAbonnement from "@/components/BandeauAbonnement";
 import DeconnexionInactivite from "@/components/DeconnexionInactivite";
+import BipNouveauMessage from "@/components/BipNouveauMessage";
 import SecuriteSessions from "@/pages/extras/SecuriteSessions";
 // Restauration initiale (nouvelle base sans aucun compte) et maintenance
 import RestaurationInitiale from "@/pages/RestaurationInitiale";
@@ -79,6 +80,8 @@ export default function App() {
         {/* Abonnement expiré (grâce, suspension) et déconnexion après inactivité */}
         <BandeauAbonnement />
         <DeconnexionInactivite />
+        {/* Bip sonore à l'arrivée d'un nouveau message (réglable dans « Réglages ») */}
+        <BipNouveauMessage />
         <Routes>
           <Route path="/" element={<Welcome />} />
           <Route path="/inscription" element={<Register />} />

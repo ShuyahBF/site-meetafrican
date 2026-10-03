@@ -382,7 +382,7 @@ export default function Profile() {
             <AccountRow to="/matchs" icon="local_fire_department" label="Mes matchs" />
             <AccountRow to="/visiteurs" icon="visibility" label="Qui m'a vu" />
             <AccountRow to="/me-suivre" icon="share_location" label="Me suivre (sécurité)" />
-            <AccountRow to="/reglages" icon="settings" label="Réglages (vocal, mode invisible)" />
+            <AccountRow to="/reglages" icon="settings" label="Réglages (vocal, son, mode invisible)" />
             <AccountRow to="/securite" icon="devices" label="Sécurité & sessions" />
             <AccountRow to="/support" icon="support_agent" label="Écrire au support" />
             <AccountRow to="/temoignages" icon="format_quote" label="Témoignages" />

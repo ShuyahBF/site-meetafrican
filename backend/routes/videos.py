@@ -53,6 +53,7 @@ from models import (
     _age_from_birthdate,
     _is_online,
 )
+import mode_invisible
 from activity import current_ip
 from storage import presigned_document_url, save_photo, save_private_media, save_public_media
 from video_processing import VideoProcessingError, process_video
@@ -461,7 +462,7 @@ async def record_view(video_id: str, user: dict = Depends(get_current_user)):
         {"video_id": video_id, "user_id": user["id"]},
         # invisible : vue faite en mode invisible -> absente de l'historique de l'auteur
         {"$setOnInsert": {"video_id": video_id, "user_id": user["id"], "created_at": _now(),
-                          "invisible": bool((user.get("settings") or {}).get("invisible_mode"))}},
+                          "invisible": mode_invisible.est_actif(user)}},
         upsert=True,
     )
     if result.upserted_id is not None:

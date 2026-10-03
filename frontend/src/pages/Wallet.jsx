@@ -11,6 +11,7 @@ const KIND_LABEL = {
   recharge: "Recharge",
   gift_sent: "Cadeau envoyé",
   gift_received: "Cadeau reçu",
+  bonus_mode_invisible: "Bonus Mode Invisible",
 };
 
 function fmtXOF(n) {

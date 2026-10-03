@@ -82,18 +82,26 @@ async def list_all_plans(_: dict = Depends(get_current_admin)):
 
 
 @router.post("/subscription-plans", response_model=SubscriptionPlan, status_code=201)
-async def create_plan(payload: SubscriptionPlan, _: dict = Depends(get_current_admin)):
-    await db.subscription_plans.insert_one(payload.model_dump())
-    return payload
+async def create_plan(payload: SubscriptionPlan, adm: dict = Depends(get_current_admin)):
+    doc = payload.model_dump()
+    # Case « Autorise le Mode Invisible » : seul le super-administrateur peut la cocher
+    if adm.get("role") != "admin":
+        doc["autorise_mode_invisible"] = False
+    await db.subscription_plans.insert_one(dict(doc))
+    return doc
 
 
 @router.put("/subscription-plans/{plan_id}", response_model=SubscriptionPlan)
-async def update_plan(plan_id: str, payload: SubscriptionPlan, _: dict = Depends(get_current_admin)):
+async def update_plan(plan_id: str, payload: SubscriptionPlan, adm: dict = Depends(get_current_admin)):
     existing = await db.subscription_plans.find_one({"id": plan_id})
     if not existing:
         raise HTTPException(status_code=404, detail="Formule introuvable")
     doc = payload.model_dump()
     doc["id"] = plan_id
+    # Case « Autorise le Mode Invisible » : un modérateur ne peut pas la changer
+    # (la valeur enregistrée est conservée)
+    if adm.get("role") != "admin":
+        doc["autorise_mode_invisible"] = bool(existing.get("autorise_mode_invisible"))
     await db.subscription_plans.update_one({"id": plan_id}, {"$set": doc})
     return doc
 

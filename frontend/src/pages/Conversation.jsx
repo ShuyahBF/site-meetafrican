@@ -10,6 +10,7 @@ import { formatLastSeen } from "@/lib/format";
 import TestBadge from "@/components/TestBadge";
 import VoiceRecorder from "@/components/VoiceRecorder";
 import MentionVersion from "@/components/MentionVersion";
+import { bipNouveauMessage, noterBipConversation } from "@/lib/bipMessage";
 
 // Emojis envoyables en un tap quand le champ est vide (brise-glace ludique).
 const ICEBREAKERS = ["👋🏾", "😍", "😂", "🔥", "🙏🏾"];
@@ -61,9 +62,16 @@ export default function Conversation() {
     [user?.id],
   );
 
+  // Message reçu en temps réel : bip s'il vient de l'autre personne (jamais pour
+  // mes propres messages), selon mes préférences de son (voir lib/bipMessage.js)
+  const recevoirMessage = useCallback((message) => {
+    appendMessage(message);
+    if (message.sender_id !== user?.id && bipNouveauMessage()) noterBipConversation();
+  }, [appendMessage, user?.id]);
+
   const { connected, otherTyping, presentUserIds, sendMessage: sendOverSocket, notifyTyping, markRead } =
     useConversationSocket(conversationId, {
-      onMessage: appendMessage,
+      onMessage: recevoirMessage,
       onRead: applyRead,
       onError: (detail) => {
         setNotice(detail);

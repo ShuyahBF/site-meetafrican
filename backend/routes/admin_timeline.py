@@ -117,6 +117,9 @@ async def member_file(user_id: str, _: dict = Depends(get_current_admin)):
     user = await db.users.find_one({"id": user_id}, {"_id": 0, "password_hash": 0})
     if not user:
         raise HTTPException(status_code=404, detail="Membre introuvable")
+    # Mode Invisible tel qu'il s'applique maintenant (éteint après ses 14 jours)
+    import mode_invisible
+    user["settings"] = {**(user.get("settings") or {}), "invisible_mode": mode_invisible.est_actif(user)}
     videos = await db.videos.find({"user_id": user_id}, {"_id": 0, "clear_key": 0}).sort("created_at", -1).to_list(100)
     payments = await db.payments.find({"user_id": user_id}, {"_id": 0}).sort("created_at", -1).to_list(100)
     reports_received = await db.reports.find({"reported_user_id": user_id}, {"_id": 0}).sort("created_at", -1).to_list(100)

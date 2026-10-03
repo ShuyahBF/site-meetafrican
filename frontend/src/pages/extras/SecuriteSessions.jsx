@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import PageShell from "@/components/PageShell";
 import DerniereSauvegarde from "@/components/DerniereSauvegarde";
+import { useAuth } from "@/context/AuthContext";
 import { apiClient, extractErrorMessage } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { dureeTexte } from "@/lib/inactivite";
@@ -10,8 +11,14 @@ import { dureeTexte } from "@/lib/inactivite";
  * ouverture, dernière activité) avec « Fermer », déconnexion après inactivité
  * (le membre peut seulement réduire la durée fixée par l'administrateur) et date
  * de la dernière sauvegarde générale.
+ *
+ * Les blocs « Déconnexion après inactivité » et « Sauvegardes » ne sont montrés
+ * qu'au SUPER-ADMINISTRATEUR (rôle « admin ») ; les membres ne voient que leurs
+ * sessions. La déconnexion automatique continue malgré tout de s'appliquer à eux.
  */
 export default function SecuriteSessions() {
+  const { user } = useAuth();
+  const superAdmin = user?.role === "admin";
   const [sessions, setSessions] = useState(null);
   const [max, setMax] = useState(5);
   const [inact, setInact] = useState(null);
@@ -20,11 +27,13 @@ export default function SecuriteSessions() {
 
   const charger = useCallback(() => {
     apiClient.get("/auth/sessions").then((r) => { setSessions(r.data.sessions); setMax(r.data.max); }).catch(() => setSessions([]));
+    // Réglage de l'inactivité : lu seulement pour le super-administrateur
+    if (!superAdmin) return;
     apiClient.get("/auth/inactivite/reglage").then((r) => {
       setInact(r.data);
       setSaisie(r.data.membre ? String(r.data.membre) : "");
     }).catch(() => {});
-  }, []);
+  }, [superAdmin]);
   useEffect(() => { charger(); }, [charger]);
 
   const fermer = async (id) => {
@@ -57,7 +66,7 @@ export default function SecuriteSessions() {
   };
 
   return (
-    <PageShell title="Sécurité & sessions" subtitle="Appareils connectés et déconnexion automatique">
+    <PageShell title="Sécurité & sessions" subtitle={superAdmin ? "Appareils connectés et déconnexion automatique" : "Appareils connectés"}>
       <section className="mt-2">
         <h2 className="section-title">Sessions ouvertes ({sessions?.length ?? "…"} / {max})</h2>
         <p className="mb-3 text-xs text-slate-500">
@@ -87,7 +96,7 @@ export default function SecuriteSessions() {
         )}
       </section>
 
-      {inact && (
+      {superAdmin && inact && (
         <section className="mt-8">
           <h2 className="section-title">Déconnexion après inactivité</h2>
           <p className="text-sm text-slate-600">
@@ -106,10 +115,12 @@ export default function SecuriteSessions() {
       )}
       {message && <p className="mt-3 text-sm text-slate-600">{message}</p>}
 
-      <section className="mt-8">
-        <h2 className="section-title">Sauvegardes</h2>
-        <DerniereSauvegarde className="text-sm" />
-      </section>
+      {superAdmin && (
+        <section className="mt-8">
+          <h2 className="section-title">Sauvegardes</h2>
+          <DerniereSauvegarde className="text-sm" />
+        </section>
+      )}
     </PageShell>
   );
 }

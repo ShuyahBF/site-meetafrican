@@ -66,7 +66,10 @@ def test_desactivee_sans_phrase_avec_alerte(client, make_user, monkeypatch, tmp_
 
 def test_sauvegarde_par_le_cron_puis_idempotence(client, make_user, configuree):
     _, membre, _ = make_user()
-    assert client.get("/api/sauvegarde-auto/derniere", headers=membre).json() == {"date": None}
+    admin = _admin(client, make_user)
+    assert client.get("/api/sauvegarde-auto/derniere", headers=admin).json() == {"date": None}
+    # Lot 45 : la date de sauvegarde n'est plus visible des membres
+    assert client.get("/api/sauvegarde-auto/derniere", headers=membre).status_code == 403
     r = client.post("/api/sauvegarde-auto/declencher", headers={"X-Sauvegarde-Jeton": JETON})
     assert r.status_code == 202
     ligne = _attendre(client, lambda: db.sauvegardes_auto.find_one({"statut": {"$in": ["REUSSIE", "ECHEC"]}}))
@@ -80,8 +83,8 @@ def test_sauvegarde_par_le_cron_puis_idempotence(client, make_user, configuree):
     # Même journée : pas de seconde sauvegarde
     assert client.portal.call(sauvegarde_auto.executer)["statut"] == "DEJA_FAITE_OU_EN_COURS"
     assert len(list((configuree / "sauvegardes-beauthentik" / "generales").glob("*.baexport"))) == 1
-    # D : date visible par chaque membre
-    assert client.get("/api/sauvegarde-auto/derniere", headers=membre).json()["date"] == ligne["fin"]
+    # D : date visible par le super-administrateur seulement
+    assert client.get("/api/sauvegarde-auto/derniere", headers=admin).json()["date"] == ligne["fin"]
     # Administration : pas d'alerte, liste des sauvegardes R2
     etat = client.get("/api/plateforme/sauvegardes-auto", headers=_admin(client, make_user)).json()
     assert etat["active"] and etat["alerte"] is None and len(etat["sauvegardes"]) == 1
