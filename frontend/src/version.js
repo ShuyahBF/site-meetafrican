@@ -19,17 +19,17 @@
 // (voir vite.config.js) : rien à saisir.
 //
 // Libellé affiché partout (format demandé par le propriétaire, lot 45) :
-//   « Version VERSION.LOT du JJ/MM/AAAA à HH:MM »   ex. « Version 6.46 du 03/10/2026 à 21:30 »
+//   « Version VERSION.LOT du JJ/MM/AAAA à HH:MM »   ex. « Version 7.47 du 03/10/2026 à 21:30 »
 // (lot 46 : l'heure de compilation suit la date, demande du propriétaire)
 // La date est celle de la compilation, au fuseau Africa/Ouagadougou (= UTC).
 // Aucun hash de commit n'est affiché (ni dans le libellé, ni au survol).
 // ============================================================================
 
 // Compteur de déploiements : +1 à chaque déploiement.
-export const VERSION = 6;
+export const VERSION = 7;
 
 // Numéro de la PR GitHub fusionnée pour ce déploiement.
-export const LOT = 46;
+export const LOT = 47;
 
 // Hash court du commit compilé (RENDER_GIT_COMMIT sur Render, sinon `git`),
 // injecté par vite.config.js. "dev" si introuvable. Gardé pour le diagnostic
@@ -51,6 +51,6 @@ function dateFrancaise(iso) {
 }
 export const DATE_BUILD_FR = dateFrancaise(DATE_BUILD);
 
-// Texte prêt à afficher : « Version 6.46 du 03/10/2026 à 21:30 »
+// Texte prêt à afficher : « Version 7.47 du 03/10/2026 à 21:30 »
 // (sans date connue, par ex. hors compilation : « Version 5.45 »)
 export const LIBELLE_VERSION = `Version ${VERSION}.${LOT}${DATE_BUILD_FR ? ` du ${DATE_BUILD_FR}` : ""}`;

@@ -33,10 +33,20 @@ export const MOTIF_DECONNEXION_KEY = "ba_motif_deconnexion";
 // appareil ou par l'administrateur, inactivité) : le jeton est effacé et le
 // membre revient à la page de connexion avec le motif.
 const PREFIXES_SESSION_FERMEE = ["Session fermée", "Session expirée après inactivité"];
+
+// Lot 47 — accès bloqué par le super-administrateur (adresse IP ou compte, onglet
+// « Usage ») : le serveur répond 403 avec { code: "acces_suspendu" }. Le jeton est
+// effacé et le visiteur est envoyé sur la page aimable « Accès momentanément suspendu ».
+export const PAGE_ACCES_SUSPENDU = "/acces-suspendu";
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     const detail = error?.response?.data?.detail;
+    if (error?.response?.status === 403 && detail && typeof detail === "object" && detail.code === "acces_suspendu") {
+      try { localStorage.removeItem("maf_token"); } catch { /* stockage indisponible */ }
+      if (window.location.pathname !== PAGE_ACCES_SUSPENDU) window.location.assign(PAGE_ACCES_SUSPENDU);
+      return Promise.reject(error);
+    }
     if (
       error?.response?.status === 401 &&
       typeof detail === "string" &&
@@ -84,6 +94,8 @@ export function extractErrorMessage(err, fallback = "Une erreur est survenue") {
     if (GENERIC_FRAMEWORK_MESSAGES.has(detail.trim().toLowerCase())) return fallback;
     return detail;
   }
+  // Lot 47 : réponse structurée { code, message } (ex. accès suspendu)
+  if (detail && typeof detail === "object" && typeof detail.message === "string") return detail.message;
   // Erreurs de validation Pydantic : toujours en anglais et très techniques
   // (ex. "value is not a valid email address") — pas pensées pour
   // l'utilisateur final, on retombe donc sur le message français fourni.

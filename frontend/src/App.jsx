@@ -40,6 +40,9 @@ import AdminMember from "@/pages/admin/AdminMember";
 import AdminDonneesMaintenance from "@/pages/admin/AdminDonneesMaintenance";
 import AdminAbonnementsSessions from "@/pages/admin/AdminAbonnementsSessions";
 import AdminEnvoiEmails from "@/pages/admin/AdminEnvoiEmails";
+// Lot 47 — onglet « Usage » (connexions, présence, blocages) et page de l'accès suspendu
+import AdminUsage from "@/pages/admin/AdminUsage";
+import AccesSuspendu from "@/pages/AccesSuspendu";
 // Abonnement (grâce, suspension), sessions et déconnexion après inactivité
 import BandeauAbonnement from "@/components/BandeauAbonnement";
 import DeconnexionInactivite from "@/components/DeconnexionInactivite";
@@ -89,6 +92,8 @@ export default function App() {
           <Route path="/" element={<Welcome />} />
           <Route path="/inscription" element={<Register />} />
           <Route path="/connexion" element={<Login />} />
+          {/* Lot 47 — compte ou adresse IP bloqué par le super-administrateur */}
+          <Route path="/acces-suspendu" element={<AccesSuspendu />} />
           <Route path="/restauration-initiale" element={<RestaurationInitiale />} />
           <Route path="/cgu" element={<Cgu />} />
           <Route path="/confidentialite" element={<Confidentialite />} />
@@ -139,6 +144,7 @@ export default function App() {
             <Route path="donnees-maintenance" element={<AdminDonneesMaintenance />} />
             <Route path="abonnements-sessions" element={<AdminAbonnementsSessions />} />
             <Route path="envoi-emails" element={<AdminEnvoiEmails />} />
+            <Route path="usage" element={<AdminUsage />} />
           </Route>
 
           {/* Route cachée (non liée dans la navigation du site) : accessible

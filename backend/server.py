@@ -40,6 +40,7 @@ from routes import (
     test_data,
     subscriptions,
     uploads,
+    usage_connexions,
     verification,
     videos,
     vidal,
@@ -105,6 +106,9 @@ api.include_router(parametres_plateforme.router)     # réglages de l'administra
 api.include_router(sauvegarde_auto.public)           # E : sauvegarde automatique (Cron Job) + D
 api.include_router(sauvegarde_auto.admin)
 api.include_router(cycle_vie.router)                 # C : cycle de vie du non-renouvellement
+# Lot 47 — onglet « Usage » : journal des connexions, présence, blocages IP / comptes
+api.include_router(usage_connexions.admin)
+api.include_router(usage_connexions.public)          # contact de la page « Accès suspendu »
 
 
 @api.get("/health")

@@ -124,3 +124,12 @@ async def ensure_indexes() -> None:
     await db.emails_journal.create_index([("date", -1)])
     await db.emails_journal.create_index("user_id", sparse=True)
     await db.email_reglages_journal.create_index([("date", -1)])
+    # Lot 47 — onglet « Usage » : journal des connexions (tri chronologique,
+    # recherche par compte / IP, purge automatique après 180 jours), blocages
+    # d'IP / de comptes et journal des actions du super-administrateur
+    await db.connexions_journal.create_index([("date", -1)])
+    await db.connexions_journal.create_index("user_id")
+    await db.connexions_journal.create_index("ip")
+    await db.connexions_journal.create_index("date_dt", expireAfterSeconds=180 * 24 * 3600)
+    await db.blocages.create_index([("actif", 1), ("type", 1)])
+    await db.blocages_journal.create_index([("date", -1)])

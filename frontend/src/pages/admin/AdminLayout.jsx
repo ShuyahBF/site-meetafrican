@@ -22,6 +22,8 @@ const NAV = [
   { to: "/admin/donnees-maintenance", label: "Données & maintenance", adminOnly: true },
   { to: "/admin/abonnements-sessions", label: "Sessions, sauvegardes & cycle de vie", adminOnly: true },
   { to: "/admin/envoi-emails", label: "Envoi des e-mails", adminOnly: true },
+  // Lot 47 — historique des connexions, présence en ligne, blocage d'IP / de comptes
+  { to: "/admin/usage", label: "Usage", adminOnly: true },
 ];
 
 export default function AdminLayout() {
