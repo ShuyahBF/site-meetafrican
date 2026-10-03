@@ -243,6 +243,9 @@ def to_user_public(doc: dict) -> "UserPublic":
     data = {k: v for k, v in doc.items() if k in UserPublic.model_fields}
     data["age"] = _age_from_birthdate(doc.get("birthdate"))
     data["is_online"] = _is_online(doc.get("last_seen_at"))
+    # Lot 50 — « profil de test » : information réservée au back-office
+    # (super-administrateur). Jamais transmise aux membres.
+    data["is_test_data"] = False
     return UserPublic(**data)
 
 

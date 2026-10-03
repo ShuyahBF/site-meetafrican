@@ -42,10 +42,12 @@ export default function Filigrane({ className = "" }) {
   const fond = useMemo(() => {
     if (!pseudo) return null;
     const texte = echapper(`${pseudo} · ${quand}`);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="260" height="150">`
-      + `<text x="130" y="80" text-anchor="middle" transform="rotate(-30 130 75)" `
-      + `font-family="Arial, sans-serif" font-size="13" font-weight="700" `
-      + `fill="rgba(255,255,255,0.32)" stroke="rgba(0,0,0,0.18)" stroke-width="0.5">${texte}</text></svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200">`
+      + `<text x="160" y="105" text-anchor="middle" transform="rotate(-30 160 100)" `
+      // Lot 50 — rendu encore plus discret (demande du propriétaire) : texte plus
+      // petit, plus transparent, sans contour, motif plus espacé.
+      + `font-family="Arial, sans-serif" font-size="11" font-weight="600" `
+      + `fill="rgba(255,255,255,0.14)">${texte}</text></svg>`;
     return `url("data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}")`;
   }, [pseudo, quand]);
 

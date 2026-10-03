@@ -149,6 +149,12 @@ export default function Login() {
         <p className="text-center text-sm text-slate-500 dark:text-slate-400">
           Pas encore de compte ? <Link to="/inscription" className="font-semibold text-primary">Créer un compte</Link>
         </p>
+        {/* Lot 50 — retour à la page d'accueil du site */}
+        <p className="text-center text-sm">
+          <Link to="/" className="inline-flex items-center gap-1 font-semibold text-primary">
+            <span className="material-symbols-outlined text-base">arrow_back</span> Retour à l'accueil
+          </Link>
+        </p>
         <p className="text-center text-xs text-slate-400">
           <Link to="/cgu" className="underline">Conditions d'utilisation</Link> · <Link to="/confidentialite" className="underline">Confidentialité</Link>
         </p>

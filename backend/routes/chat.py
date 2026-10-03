@@ -127,7 +127,8 @@ async def list_conversations(user: dict = Depends(get_current_user)):
                 "last_seen_at": other.get("last_seen_at"),
                 "is_online": _is_online(other.get("last_seen_at")),
                 "is_verified": other.get("verification_status") == "verified",
-                "is_test_data": bool(other.get("is_test_data")),
+                # Lot 50 — profil de test : information réservée au back-office, jamais aux membres
+                "is_test_data": False,
                 # Accepte les notes vocales ? (masque le micro sinon)
                 "accepts_voice_notes": user_settings(other)["voice_notes"],
             },
