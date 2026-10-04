@@ -133,3 +133,9 @@ async def ensure_indexes() -> None:
     await db.connexions_journal.create_index("date_dt", expireAfterSeconds=180 * 24 * 3600)
     await db.blocages.create_index([("actif", 1), ("type", 1)])
     await db.blocages_journal.create_index([("date", -1)])
+    # Transmission WA Universelle Liluvine : retours de SAWALI (clé unique =
+    # idempotence) et journal des envois (mis à jour par les statuts reçus)
+    await db.liluvine_retours.create_index("cle", unique=True)
+    await db.liluvine_retours.create_index([("recu_le", -1)])
+    await db.liluvine_envois.create_index("id", unique=True)
+    await db.liluvine_envois.create_index("message_id", sparse=True)

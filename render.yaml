@@ -86,7 +86,10 @@ services:
       - key: WHATSAPP_OTP_TEMPLATE_LANG
         value: fr
       # Transmission WA Universelle Liluvine (SAWALI) : utilisée pour les
-      # WhatsApp UNIQUEMENT si les paramètres WABA ci-dessus ne sont pas saisis.
+      # WhatsApp si les paramètres WABA ci-dessus ne sont pas saisis, ET en
+      # repli si le WABA échoue (fenêtre de 24 h…) sans que le numéro soit en cause.
+      # URL de retour à saisir dans SAWALI (même clé LILUVINE_WA_HMAC) :
+      #   https://<backend beAuthentik>/api/webhooks/liluvine-retour
       # Adresse du service SAWALI : https://<domaine SAWALI>/api/webhook/liluvine-send
       - key: LILUVINE_WA_URL
         sync: false

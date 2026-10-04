@@ -5,7 +5,10 @@ l'administrateur) avec les mécanismes d'envoi EXISTANTS de beAuthentik
   1. WhatsApp, par transmission_wa.envoyer_whatsapp : WhatsApp Cloud API propre
      à beAuthentik s'il est configuré (message texte : il n'est remis que si la
      personne a écrit au numéro beAuthentik dans les dernières 24 h — règle de
-     Meta), sinon Transmission WA Universelle Liluvine (SAWALI) ;
+     Meta), sinon Transmission WA Universelle Liluvine (SAWALI). Si le WABA
+     propre échoue (fenêtre de 24 h, modèle requis…) sans que le numéro soit en
+     cause, transmission_wa repasse automatiquement par Liluvine : pour
+     « Me suivre », l'ordre est donc WABA → Liluvine → SMS ;
   2. en repli, SMS (Orange SMS API puis OVH, ou l'inverse hors Burkina).
 
 EN PLUS (jamais à la place) : un e-mail par le service d'envoi choisi par
