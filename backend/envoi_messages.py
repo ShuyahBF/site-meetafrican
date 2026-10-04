@@ -2,8 +2,10 @@
 l'administrateur) avec les mécanismes d'envoi EXISTANTS de beAuthentik
 (otp_senders.py, mêmes variables d'environnement) :
 
-  1. WhatsApp Cloud API (message texte : il n'est remis que si la personne a
-     écrit au numéro beAuthentik dans les dernières 24 h — règle de Meta) ;
+  1. WhatsApp, par transmission_wa.envoyer_whatsapp : WhatsApp Cloud API propre
+     à beAuthentik s'il est configuré (message texte : il n'est remis que si la
+     personne a écrit au numéro beAuthentik dans les dernières 24 h — règle de
+     Meta), sinon Transmission WA Universelle Liluvine (SAWALI) ;
   2. en repli, SMS (Orange SMS API puis OVH, ou l'inverse hors Burkina).
 
 EN PLUS (jamais à la place) : un e-mail par le service d'envoi choisi par
@@ -17,9 +19,8 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-import httpx
-
 import otp_senders
+import transmission_wa
 from config import get_settings
 
 
@@ -36,18 +37,10 @@ def numero(user: dict) -> Optional[str]:
 
 
 async def _whatsapp_texte(msisdn: str, texte: str) -> bool:
-    s = get_settings()
-    if not otp_senders.whatsapp_configured():
-        return False
-    url = otp_senders.WA_GRAPH_URL.format(phone_number_id=s.whatsapp_phone_number_id)
-    try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            r = await client.post(url, json={"messaging_product": "whatsapp", "to": msisdn, "type": "text",
-                                             "text": {"body": texte}},
-                                  headers={"Authorization": f"Bearer {s.whatsapp_access_token}"})
-        return r.status_code == 200
-    except httpx.HTTPError:
-        return False
+    """WhatsApp par le point d'entrée unique transmission_wa.py : WABA propre de
+    beAuthentik s'il est configuré, sinon Transmission WA Universelle Liluvine."""
+    resultat = await transmission_wa.envoyer_whatsapp(msisdn, texte)
+    return bool(resultat.get("ok"))
 
 
 async def _sms(msisdn: str, texte: str) -> bool:

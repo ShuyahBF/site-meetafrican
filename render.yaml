@@ -85,6 +85,17 @@ services:
         sync: false
       - key: WHATSAPP_OTP_TEMPLATE_LANG
         value: fr
+      # Transmission WA Universelle Liluvine (SAWALI) : utilisée pour les
+      # WhatsApp UNIQUEMENT si les paramètres WABA ci-dessus ne sont pas saisis.
+      # Adresse du service SAWALI : https://<domaine SAWALI>/api/webhook/liluvine-send
+      - key: LILUVINE_WA_URL
+        sync: false
+      # Clé secrète propre à beAuthentik, générée dans SAWALI (saisie par le propriétaire)
+      - key: LILUVINE_WA_HMAC
+        sync: false
+      # Code émetteur de beAuthentik côté SAWALI (pas secret)
+      - key: LILUVINE_WA_EMETTEUR
+        value: "beauthentik"
       # Orange SMS API (developer.orange.com)
       - key: ORANGE_SMS_CLIENT_ID
         sync: false
