@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiClient, extractErrorMessage } from "@/lib/api";
 import { uploadFile } from "@/lib/upload";
+import MentionVersion from "@/components/MentionVersion";
 
 export default function AdminSettings() {
   return (
@@ -10,6 +11,9 @@ export default function AdminSettings() {
         <p className="mt-1 text-sm text-slate-500">
           Réglages globaux de la plateforme — modérables sans redéploiement.
         </p>
+        {/* Page de paramétrage : libellé DÉTAILLÉ de la version déployée
+            (version, lot, commit, date/heure de déploiement) */}
+        <MentionVersion className="mt-2 !text-left !text-xs !text-slate-500" detaille />
       </div>
       <AppearanceSection />
       <ReferralPointsSection />
