@@ -112,6 +112,7 @@ api.include_router(usage_connexions.admin)
 api.include_router(usage_connexions.public)          # contact de la page « Accès suspendu »
 # Transmission WhatsApp : état et essai (WABA propre, sinon Transmission WA Universelle Liluvine)
 api.include_router(transmission_wa.router)
+api.include_router(transmission_wa.public)            # retours signés de SAWALI (Liluvine)
 
 
 @api.get("/health")

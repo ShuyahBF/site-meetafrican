@@ -66,9 +66,20 @@ def sms_configured() -> bool:
 # ---------------------------------------------------------------------------
 
 async def send_whatsapp_code(msisdn: str, code: str) -> Tuple[bool, Optional[str]]:
-    """msisdn : chiffres uniquement, indicatif compris (ex. 22670000000)."""
+    """msisdn : chiffres uniquement, indicatif compris (ex. 22670000000).
+
+    Sans WABA propre configuré, ou si le WABA échoue pour une raison qui ne
+    tient pas au numéro, le code part par la Transmission WA Universelle
+    Liluvine (SAWALI) quand elle est configurée (transmission_wa.py)."""
+    # Import local : transmission_wa importe déjà ce module (évite la boucle d'import)
+    import transmission_wa
     s = get_settings()
+    # Texte du code (le même pour le message texte du WABA et pour Liluvine)
+    texte_code = f"beAuthentik — votre code de vérification : {code}. Valable 10 minutes. Ne le communiquez à personne."
     if not whatsapp_configured():
+        # Pas de WABA propre : Transmission universelle si elle est configurée
+        if transmission_wa.liluvine_configure():
+            return await transmission_wa.envoyer_code_liluvine(msisdn, texte_code)
         return False, "WhatsApp n'est pas encore configuré sur le serveur"
     url = WA_GRAPH_URL.format(phone_number_id=s.whatsapp_phone_number_id)
     headers = {"Authorization": f"Bearer {s.whatsapp_access_token}"}
@@ -86,6 +97,7 @@ async def send_whatsapp_code(msisdn: str, code: str) -> Tuple[bool, Optional[str
                              "components": components}}
 
     errors = []
+    derniere = None  # dernière réponse d'erreur du WABA (pour décider du repli)
     async with httpx.AsyncClient(timeout=15) as client:
         if template:
             order = ["authentication", "utility"]
@@ -99,12 +111,19 @@ async def send_whatsapp_code(msisdn: str, code: str) -> Tuple[bool, Optional[str
                 errors.append(f"{category}: HTTP {r.status_code} {r.text[:200]}")
         # Repli : message texte (ne passe que si la personne a écrit au numéro dans les 24 h)
         text = {"messaging_product": "whatsapp", "to": msisdn, "type": "text",
-                "text": {"body": f"beAuthentik — votre code de vérification : {code}. Valable 10 minutes. Ne le communiquez à personne."}}
+                "text": {"body": texte_code}}
         r = await client.post(url, json=text, headers=headers)
         if r.status_code == 200:
             return True, None
+        derniere = r
         errors.append(f"texte: HTTP {r.status_code} {r.text[:200]}")
     print(f"[otp] échec WhatsApp vers {msisdn[:5]}… : {' | '.join(errors)}")
+    # Repli par la Transmission universelle (protocole v3, section 4) : seulement
+    # si l'échec ne tient pas au numéro lui-même et si Liluvine est configurée
+    if transmission_wa.liluvine_configure():
+        code_meta, message_meta = transmission_wa._erreur_meta(derniere)  # noqa: SLF001
+        if not transmission_wa.erreur_numero_invalide(code_meta, message_meta):
+            return await transmission_wa.envoyer_code_liluvine(msisdn, texte_code)
     return False, "Envoi WhatsApp impossible. Vérifiez que ce numéro utilise WhatsApp, ou choisissez le SMS."
 
 
