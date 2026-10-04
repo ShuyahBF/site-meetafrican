@@ -29,6 +29,7 @@ from routes import (
     payments_pawapay,
     tracking,
     transfert_donnees,
+    transmission_wa,
     phone_verification,
     photos,
     profiles,
@@ -109,6 +110,8 @@ api.include_router(cycle_vie.router)                 # C : cycle de vie du non-r
 # Lot 47 — onglet « Usage » : journal des connexions, présence, blocages IP / comptes
 api.include_router(usage_connexions.admin)
 api.include_router(usage_connexions.public)          # contact de la page « Accès suspendu »
+# Transmission WhatsApp : état et essai (WABA propre, sinon Transmission WA Universelle Liluvine)
+api.include_router(transmission_wa.router)
 
 
 @api.get("/health")
