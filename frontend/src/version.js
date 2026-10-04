@@ -3,7 +3,7 @@
 // ============================================================================
 //
 // Règle permanente du propriétaire : version et lot TOUJOURS à jour à chaque
-// déploiement, et affichés sur la page de connexion et dans le portail.
+// déploiement, et version + date/heure de déploiement toujours affichées.
 //
 // À FAIRE À CHAQUE DÉPLOIEMENT (donc dans chaque PR fusionnée sur `main`) :
 //   1. VERSION : ajouter 1 au nombre ci-dessous (compteur de déploiements).
@@ -15,42 +15,63 @@
 // fichier change à chaque PR, le site (frontend) est TOUJOURS reconstruit, et
 // le numéro affiché est donc toujours celui du dernier déploiement.
 //
-// La date de compilation, elle, est calculée AUTOMATIQUEMENT à la compilation
+// La date/heure de déploiement (= date de compilation du site) et le hash
+// court du commit sont calculés AUTOMATIQUEMENT à la compilation
 // (voir vite.config.js) : rien à saisir.
 //
-// Libellé affiché partout (format demandé par le propriétaire, lot 45) :
-//   « Version VERSION.LOT du JJ/MM/AAAA à HH:MM »   ex. « Version 7.47 du 03/10/2026 à 21:30 »
-// (lot 46 : l'heure de compilation suit la date, demande du propriétaire)
-// La date est celle de la compilation, au fuseau Africa/Ouagadougou (= UTC).
-// Aucun hash de commit n'est affiché (ni dans le libellé, ni au survol).
+// Libellés affichés (règle commune à toutes les plateformes, lot 54) :
+//   - court    (connexion + portail) :
+//       « Version 14 · déployée le 04/10/2026 21:10 »   (ni lot ni commit)
+//   - détaillé (pages d'administration / paramétrage uniquement) :
+//       « Version 14 · Lot 54 · 1a2b3c4 · déployée le 04/10/2026 21:10 »
+// La date est affichée à l'heure de Ouagadougou (Africa/Ouagadougou = UTC).
 // ============================================================================
 
 // Compteur de déploiements : +1 à chaque déploiement.
-export const VERSION = 13;
+export const VERSION = 14;
 
 // Numéro de la PR GitHub fusionnée pour ce déploiement.
-export const LOT = 53;
+export const LOT = 54;
 
 // Hash court du commit compilé (RENDER_GIT_COMMIT sur Render, sinon `git`),
-// injecté par vite.config.js. "dev" si introuvable. Gardé pour le diagnostic
-// technique uniquement : il n'est JAMAIS affiché à l'écran.
+// injecté par vite.config.js. "dev" si introuvable. Affiché UNIQUEMENT dans le
+// libellé détaillé des pages d'administration (jamais sur la connexion ni
+// dans le portail, pas même au survol).
 export const COMMIT = import.meta.env.VITE_COMMIT_BUILD || "dev";
 
 // Date et heure de compilation (ISO, UTC), injectées par vite.config.js.
 export const DATE_BUILD = import.meta.env.VITE_DATE_BUILD || "";
 
-// Date de compilation au format français JJ/MM/AAAA. Ouagadougou est à UTC+0
-// toute l'année : on lit donc simplement le jour UTC de la date ISO.
-function dateFrancaise(iso) {
+// Date/heure de déploiement au format français court « JJ/MM/AAAA HH:MM »
+// (ex. « 04/10/2026 21:10 »). Renvoie "" si la date est absente ou invalide
+// (par ex. hors compilation).
+function dateHeureFrancaise(iso) {
   const d = new Date(iso);
   if (!iso || Number.isNaN(d.getTime())) return "";
-  const deuxChiffres = (n) => String(n).padStart(2, "0");
-  // Lot 46 — l'heure (HH:MM, heure de Ouagadougou = UTC) suit la date
-  return `${deuxChiffres(d.getUTCDate())}/${deuxChiffres(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`
-    + ` à ${deuxChiffres(d.getUTCHours())}:${deuxChiffres(d.getUTCMinutes())}`;
+  return d.toLocaleString("fr-FR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    // Heure de Ouagadougou (UTC toute l'année) : même affichage pour tous
+    timeZone: "Africa/Ouagadougou",
+  });
 }
-export const DATE_BUILD_FR = dateFrancaise(DATE_BUILD);
+export const DATE_BUILD_FR = dateHeureFrancaise(DATE_BUILD);
 
-// Texte prêt à afficher : « Version 7.47 du 03/10/2026 à 21:30 »
-// (sans date connue, par ex. hors compilation : « Version 5.45 »)
-export const LIBELLE_VERSION = `Version ${VERSION}.${LOT}${DATE_BUILD_FR ? ` du ${DATE_BUILD_FR}` : ""}`;
+// ----------------------------------------------------------------------------
+// libelleVersion(detaille) : texte prêt à afficher.
+//   detaille = false (par défaut) → « Version 14 · déployée le 04/10/2026 21:10 »
+//   detaille = true               → « Version 14 · Lot 54 · 1a2b3c4 · déployée le 04/10/2026 21:10 »
+// Sans date connue, la partie « déployée le … » est simplement omise.
+// ----------------------------------------------------------------------------
+export function libelleVersion(detaille = false) {
+  const morceaux = [`Version ${VERSION}`];
+  if (detaille) {
+    // Lot et commit : réservés aux pages d'administration / paramétrage
+    morceaux.push(`Lot ${LOT}`, COMMIT);
+  }
+  if (DATE_BUILD_FR) morceaux.push(`déployée le ${DATE_BUILD_FR}`);
+  return morceaux.join(" · ");
+}
+
+// Libellé court (connexion et portail), gardé pour compatibilité.
+export const LIBELLE_VERSION = libelleVersion(false);

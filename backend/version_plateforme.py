@@ -66,23 +66,36 @@ VERSION, LOT = lire_version_lot()
 COMMIT = hash_commit_court()
 
 
-def libelle(version: int | None, lot: int | None, date: datetime) -> str:
-    """Libellé affiché (même format que le site, lot 45) : « Version 5.45 du 03/10/2026 ».
-    Date au format JJ/MM/AAAA, jour UTC (= heure de Ouagadougou). Jamais de hash."""
+def libelle(version: int | None, lot: int | None, date: datetime,
+            commit: str | None = None, detaille: bool = False) -> str:
+    """Libellé de version (règle commune à toutes les plateformes, lot 54).
+
+    - court (par défaut)  : « Version 14 · déployée le 04/10/2026 21:10 »
+      → ni lot ni commit (connexion, portail) ;
+    - détaillé (detaille) : « Version 14 · Lot 54 · 1a2b3c4 · déployée le 04/10/2026 21:10 »
+      → réservé aux pages d'administration / paramétrage.
+    Date au format JJ/MM/AAAA HH:MM, heure UTC (= heure de Ouagadougou)."""
     if version is None:
         return "Version inconnue"
-    numero = f"{version}.{lot}" if lot is not None else f"{version}"
-    # Lot 46 — l'heure suit la date (heure de Ouagadougou = UTC)
-    return f"Version {numero} du {date.astimezone(timezone.utc).strftime('%d/%m/%Y à %H:%M')}"
+    morceaux = [f"Version {version}"]
+    if detaille:
+        # Lot et commit uniquement dans le libellé détaillé
+        if lot is not None:
+            morceaux.append(f"Lot {lot}")
+        if commit:
+            morceaux.append(commit)
+    morceaux.append(f"déployée le {date.astimezone(timezone.utc).strftime('%d/%m/%Y %H:%M')}")
+    return " · ".join(morceaux)
 
 
 def infos_version() -> dict:
-    """Contenu de la réponse GET /api/version. Le champ `commit` reste fourni pour
-    le diagnostic technique, mais il ne fait plus partie du libellé affiché."""
+    """Contenu de la réponse GET /api/version : `libelle` = libellé court (sans
+    lot ni commit), `libelle_detaille` = libellé complet pour l'administration."""
     return {
         "version": VERSION,
         "lot": LOT,
         "commit": COMMIT,
         "demarrage": DEMARRAGE.isoformat(),
         "libelle": libelle(VERSION, LOT, DEMARRAGE),
+        "libelle_detaille": libelle(VERSION, LOT, DEMARRAGE, COMMIT, detaille=True),
     }

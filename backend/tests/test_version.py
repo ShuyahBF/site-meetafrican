@@ -16,16 +16,26 @@ def test_api_version_reprend_le_fichier_source_unique(client):
     assert corps["lot"] == attendu_lot
     assert corps["commit"]
     assert corps["demarrage"]
-    # Libellé « Version 6.46 du JJ/MM/AAAA à HH:MM » : sans hash de commit
-    jour = version_plateforme.DEMARRAGE.strftime("%d/%m/%Y à %H:%M")
-    assert corps["libelle"] == f"Version {attendu_version}.{attendu_lot} du {jour}"
+    # Libellé court « Version X · déployée le JJ/MM/AAAA HH:MM » : ni lot ni commit
+    jour = version_plateforme.DEMARRAGE.strftime("%d/%m/%Y %H:%M")
+    assert corps["libelle"] == f"Version {attendu_version} · déployée le {jour}"
     assert corps["commit"] not in corps["libelle"]
+    assert "Lot" not in corps["libelle"]
+    # Libellé détaillé (administration) : version, lot, commit, date/heure
+    assert corps["libelle_detaille"] == (
+        f"Version {attendu_version} · Lot {attendu_lot} · {corps['commit']} · déployée le {jour}"
+    )
 
 
 def test_format_du_libelle():
     from datetime import datetime, timezone
     date = datetime(2026, 10, 3, 23, 30, tzinfo=timezone.utc)
-    assert version_plateforme.libelle(5, 45, date) == "Version 5.45 du 03/10/2026 à 23:30"
+    # Libellé court (connexion, portail)
+    assert version_plateforme.libelle(5, 45, date, "252c6a7") == "Version 5 · déployée le 03/10/2026 23:30"
+    # Libellé détaillé (administration / paramétrage)
+    assert version_plateforme.libelle(5, 45, date, "252c6a7", detaille=True) == (
+        "Version 5 · Lot 45 · 252c6a7 · déployée le 03/10/2026 23:30"
+    )
 
 
 def test_lecture_robuste_si_fichier_absent_ou_invalide(tmp_path):

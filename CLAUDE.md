@@ -20,9 +20,17 @@ méthode de travail par défaut, sans qu'il soit nécessaire de les redemander.
 ## Version et lot (règles 1 et 2)
 1. À chaque déploiement, le numéro de version ET le numéro de lot sont mis à
    jour (jamais une constante figée qui n'est plus incrémentée).
-2. Version et lot sont toujours affichés sur les pages de connexion et dans
-   le portail (barre latérale, en-tête ou pied de page de toutes les pages
-   connectées), au format « Version X · Lot N (commit) ».
+2. La version et la date/heure de déploiement sont toujours affichées :
+   - page de connexion ET portail (barre latérale, en-tête ou pied de page de
+     toutes les pages connectées) : « Version X · déployée le JJ/MM/AAAA HH:MM »
+     (ex. « Version 1.84 · déployée le 04/10/2026 01:35 ») — sans lot ni commit,
+     ni dans le texte ni au survol ;
+   - pages d'administration / paramétrage : libellé complet
+     « Version X · Lot N · commit · déployée le JJ/MM/AAAA HH:MM »
+     (ex. « Version 1.84 · Lot 57.1 · 252c6a7 · déployée le 04/10/2026 01:35 »).
+   Date/heure au format français court (`toLocaleString("fr-FR",
+   { dateStyle: "short", timeStyle: "short" })`). Règle appliquée à toutes les
+   plateformes déployées sur Render, beAuthentik compris.
 - Une seule source par plateforme :
   - SAWALI : `backend/lot.py` (LOT, LOT_LIBELLE), exposé par `/api/version` ;
     version = compteur de déploiements `1.N`. Modifier `lot.py` à chaque
@@ -30,7 +38,14 @@ méthode de travail par défaut, sans qu'il soit nécessaire de les redemander.
     un service à `rootDir` que si un fichier de son dossier change).
   - Ster : `frontend/src/version.js` (VERSION +1 à chaque déploiement,
     LOT = numéro de la PR fusionnée).
-  - adLyn, beAuthentik : même principe (lot = numéro de la PR fusionnée).
+  - adLyn : même principe (lot = numéro de la PR fusionnée).
+  - beAuthentik : `frontend/src/version.js` (VERSION +1 à chaque déploiement,
+    LOT = numéro de la PR fusionnée ; date de déploiement = date de
+    compilation et commit court injectés par `vite.config.js`). Libellés
+    produits par `libelleVersion(detaille)` et le composant `MentionVersion`
+    (prop `detaille` sur les pages d'administration). beAuthentik suit
+    désormais la règle commune ci-dessus (l'ancien libellé « Version X.N du
+    JJ/MM/AAAA » est abandonné).
 - Nouveau projet : prévoir dès le départ cette source unique et l'affichage.
 
 ## Tableaux (règle 3)

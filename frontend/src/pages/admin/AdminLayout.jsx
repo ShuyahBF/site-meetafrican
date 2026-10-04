@@ -62,11 +62,12 @@ export default function AdminLayout() {
       <main className="mx-auto max-w-5xl px-6 py-8">
         <Outlet />
       </main>
-      {/* Pied de page discret : dernière sauvegarde générale, puis version et
-          lot du déploiement en cours (règle permanente) */}
+      {/* Pied de page discret : dernière sauvegarde générale, puis libellé
+          DÉTAILLÉ de la version (pages d'administration : version, lot, commit
+          et date/heure de déploiement — règle permanente) */}
       <footer className="pb-6 text-center">
         <DerniereSauvegarde />
-        <MentionVersion className="mt-2" />
+        <MentionVersion className="mt-2" detaille />
       </footer>
     </div>
   );
