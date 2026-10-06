@@ -176,3 +176,8 @@ async def on_startup():
     # Lot 53 — « Me suivre » : alerte « signal perdu » (aucune position depuis 10 min)
     # à la personne de confiance et aux administrateurs, vérifiée chaque minute.
     asyncio.create_task(tracking.boucle_alertes_suivi())
+    # Règle 4 — présence auprès de SAWALI : signal 10 s après le démarrage puis
+    # toutes les 5 minutes (jamais bloquant ; désactivable par PRESENCE_SAWALI=0).
+    # Voir presence_sawali.py.
+    from presence_sawali import boucle_presence
+    asyncio.create_task(boucle_presence())
