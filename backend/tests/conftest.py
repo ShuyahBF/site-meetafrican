@@ -15,6 +15,8 @@ os.environ.update({
     "JWT_SECRET": "test-secret",
     "ADMIN_BOOTSTRAP_EMAIL": "",
     "ADMIN_BOOTSTRAP_PASSWORD": "",
+    # Pas de signal de présence SAWALI pendant les tests (aucun réseau)
+    "PRESENCE_SAWALI": "0",
 })
 # Permet "import server" depuis backend/tests/
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
