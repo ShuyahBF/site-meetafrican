@@ -139,3 +139,11 @@ async def ensure_indexes() -> None:
     await db.liluvine_retours.create_index([("recu_le", -1)])
     await db.liluvine_envois.create_index("id", unique=True)
     await db.liluvine_envois.create_index("message_id", sparse=True)
+    # Lot 57 — statistiques du jour demandées par SAWALI (stats_sawali.py) :
+    # comptages par date rapides (réponse attendue en moins de 8 s)
+    await db.users.create_index("created_at")
+    await db.matches.create_index("created_at")
+    await db.messages.create_index("created_at")
+    await db.reports.create_index("created_at")
+    await db.payments.create_index([("status", 1), ("updated_at", 1)])
+    await db.sessions.create_index("derniere_activite")
