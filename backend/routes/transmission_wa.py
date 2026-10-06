@@ -22,6 +22,10 @@ Route PUBLIQUE (appelée par SAWALI, protocole v3, section 2) :
         (collection `liluvine_retours`, clé unique `cle`).
         Une RÉPONSE d'un client est signalée aux administrateurs par e-mail
         (jamais par WhatsApp, pour ne pas créer de boucle).
+        Lot 57 — type « stats_du_jour » {"debut", "fin"} (ISO UTC, [debut, fin),
+        31 jours au plus, sinon 422) : SAWALI demande les statistiques internes
+        du jour ; réponse {"indicateurs", "faits_marquants",
+        "utilisateurs_connectes"} calculée en lecture seule (stats_sawali.py).
 """
 from __future__ import annotations
 
@@ -34,6 +38,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
+import stats_sawali
 import transmission_wa as service
 from activity import current_ip, log_activity
 from auth import get_current_super_admin
@@ -49,6 +54,8 @@ public = APIRouter(prefix="/webhooks", tags=["Transmission WhatsApp (retours SAW
 FENETRE_SECONDES = 300
 # Types de retour prévus par le protocole v3
 TYPES_RETOUR = ("statut", "reponse", "desinscription")
+# Lot 57 — demande des statistiques internes quotidiennes (voir stats_sawali.py)
+TYPE_STATS = "stats_du_jour"
 
 # Texte du message d'essai (imposé)
 MESSAGE_TEST = "Test de transmission WhatsApp depuis beAuthentik"
@@ -125,7 +132,8 @@ async def _signaler_reponse(document: dict) -> None:
 
 @public.post("/liluvine-retour", include_in_schema=False)
 async def liluvine_retour(request: Request, taches: BackgroundTasks):
-    """Reçoit un retour signé de SAWALI (statut, réponse, désinscription)."""
+    """Reçoit un retour signé de SAWALI (statut, réponse, désinscription) ou une
+    demande de statistiques du jour (type « stats_du_jour »)."""
     cle = service.cle_hmac()
     # Sans clé, impossible de vérifier quoi que ce soit : service non configuré
     if not cle:
@@ -149,6 +157,14 @@ async def liluvine_retour(request: Request, taches: BackgroundTasks):
         donnees = json.loads(corps_brut.decode("utf-8"))
     except (ValueError, UnicodeDecodeError):
         raise HTTPException(status_code=422, detail="Corps JSON invalide")
+    # 3 bis. Lot 57 — demande des statistiques internes du jour par SAWALI :
+    # lecture seule, réponse JSON immédiate (aucun stockage, pas d'idempotence)
+    if isinstance(donnees, dict) and donnees.get("type") == TYPE_STATS:
+        try:
+            debut, fin = stats_sawali.lire_periode(donnees)
+        except stats_sawali.PeriodeInvalide as exc:
+            raise HTTPException(status_code=422, detail=f"Période invalide : {exc}")
+        return await stats_sawali.stats_du_jour(debut, fin)
     if not isinstance(donnees, dict) or donnees.get("type") not in TYPES_RETOUR:
         raise HTTPException(status_code=422, detail="Type de retour inconnu")
     type_retour = donnees["type"]
