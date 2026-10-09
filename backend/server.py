@@ -50,6 +50,8 @@ from seed import ensure_admin_user, seed_default_gifts, seed_default_plans
 from vidal_sync import sync_scheduler_loop
 # Version et lot de la plateforme (source unique : frontend/src/version.js)
 import version_plateforme
+# Assistance SAWALI (SAWALI lot 90) : relais signé vers le support SAWALI
+import support_sawali
 
 settings = get_settings()
 
@@ -113,6 +115,8 @@ api.include_router(usage_connexions.public)          # contact de la page « Acc
 # Transmission WhatsApp : état et essai (WABA propre, sinon Transmission WA Universelle Liluvine)
 api.include_router(transmission_wa.router)
 api.include_router(transmission_wa.public)            # retours signés de SAWALI (Liluvine)
+# Assistance SAWALI (membre connecté) : /api/support-sawali/etat|messages|fil
+api.include_router(support_sawali.router)
 
 
 @api.get("/health")
