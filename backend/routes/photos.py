@@ -21,7 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from ai_moderation import analyze_image
-from auth import get_current_super_admin, get_current_user
+from auth import get_current_admin, get_current_user
 from db import db
 from image_processing import apply_face_mask, apply_watermark, mask_version
 from models import DEFAULT_PHOTO_MODERATION_PROMPT, ModerationSettings, Photo, PhotoStatus
@@ -183,9 +183,9 @@ async def delete_photo(photo_id: str, user: dict = Depends(get_current_user)):
 
 
 @router.get("/admin/photos/pending")
-async def pending_photos(_: dict = Depends(get_current_super_admin)):
-    """09/10/2026 — réservé au SUPER-ADMINISTRATEUR (rôle admin) : les modérateurs ne valident pas les photos.
-    File d'attente de revue humaine — utilisateurs ayant au moins une
+async def pending_photos(_: dict = Depends(get_current_admin)):
+    """09/10/2026 — administrateurs ET modérateurs : ils tranchent les doutes et peuvent forcer une décision de l'IA
+    sur une photo (pas sur une pièce d'identité : routes/verification.py). File d'attente de revue humaine — utilisateurs ayant au moins une
     photo needs_review ou rejected en attente d'un second regard."""
     # Photos "à revoir" + photos refusées d'office mais soumises quand même
     # à un modérateur (trop de visages).
@@ -211,8 +211,8 @@ async def pending_photos(_: dict = Depends(get_current_super_admin)):
 
 
 @router.post("/admin/photos/{user_id}/{photo_id}/review")
-async def review_photo(user_id: str, photo_id: str, approve: bool, admin: dict = Depends(get_current_super_admin)):
-    """Validation ou refus d'une photo : SUPER-ADMINISTRATEUR uniquement (09/10/2026)."""
+async def review_photo(user_id: str, photo_id: str, approve: bool, admin: dict = Depends(get_current_admin)):
+    """Validation ou refus (forcé) d'une photo : administrateurs et modérateurs (09/10/2026)."""
     owner = await db.users.find_one({"id": user_id, "photos.id": photo_id}, {"_id": 0, "photos": 1})
     if not owner:
         raise HTTPException(status_code=404, detail="Photo introuvable")
@@ -277,8 +277,8 @@ async def liberer_photos_conformes() -> int:
 
 
 @router.get("/admin/photos/decisions-ia")
-async def decisions_ia_photos(limit: int = 60, _: dict = Depends(get_current_super_admin)):
-    """Dernières photos approuvées ou refusées par l'IA : le super-administrateur peut FORCER la décision inverse
+async def decisions_ia_photos(limit: int = 60, _: dict = Depends(get_current_admin)):
+    """Dernières photos approuvées ou refusées par l'IA : administrateurs et modérateurs peuvent FORCER la décision inverse
     (POST /admin/photos/{user_id}/{photo_id}/review). Les plus récentes d'abord."""
     limit = min(max(limit, 1), 200)
     users = await db.users.find(

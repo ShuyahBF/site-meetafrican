@@ -455,12 +455,13 @@ function ModerationSection() {
           checked={form.validation_admin_systematique ?? false}
           onChange={(e) => setForm({ ...form, validation_admin_systematique: e.target.checked })}
         />
-        Validation systématique des photos par le super-administrateur
+        Validation systématique des photos par l'équipe (administrateur ou modérateur)
       </label>
       <p className="mt-1 text-xs text-slate-500">
-        Désactivée (recommandé) : l'IA valide ou refuse seule les photos et les pièces d'identité ; vous ne
-        tranchez que les doutes, et pouvez forcer n'importe quelle décision de l'IA (Admin → Photos / Vérifications,
-        « Décisions de l'IA »). Activée : chaque nouvelle photo attend en plus votre validation.
+        Désactivée (recommandé) : l'IA valide ou refuse seule les photos et les pièces d'identité ; l'équipe ne
+        tranche que les doutes et peut forcer une décision de l'IA (« Décisions de l'IA ») — photos : administrateurs
+        et modérateurs ; pièces d'identité : super-administrateur seulement. Activée : chaque nouvelle photo attend
+        en plus une validation de l'équipe.
       </p>
 
       {/* 09/10/2026 — façon de cacher le visage aux membres qui n'ont pas matché (logo beAuthentik au centre).

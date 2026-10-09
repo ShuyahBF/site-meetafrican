@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from ai_moderation import analyze_image
-from auth import get_current_admin, get_current_user
+from auth import get_current_admin, get_current_super_admin, get_current_user
 from db import db
 from verification_log import log_verification
 from models import (
@@ -88,7 +88,8 @@ async def my_verifications(user: dict = Depends(get_current_user)):
 
 
 @router.get("/admin/verification/pending")
-async def pending_verifications(_: dict = Depends(get_current_admin)):
+async def pending_verifications(_: dict = Depends(get_current_super_admin)):
+    """09/10/2026 — pièces d'identité : décisions réservées au SUPER-ADMINISTRATEUR (pas aux modérateurs)."""
     items = await db.identity_verifications.find(
         {"status": VerificationStatus.pending.value}, {"_id": 0}
     ).sort("created_at", 1).to_list(200)
@@ -98,7 +99,7 @@ async def pending_verifications(_: dict = Depends(get_current_admin)):
 
 
 @router.get("/admin/verification/decisions-ia")
-async def decisions_ia_verifications(limit: int = 60, _: dict = Depends(get_current_admin)):
+async def decisions_ia_verifications(limit: int = 60, _: dict = Depends(get_current_super_admin)):
     """09/10/2026 — « C'est l'agent IA qui force la validation de l'identité ; l'Admin ne force que s'il le veut. »
     Dernières pièces validées ou refusées par l'IA, sans décision humaine : l'administrateur peut forcer la décision
     inverse (POST /admin/verification/{id}/review). Les plus récentes d'abord."""
@@ -115,7 +116,8 @@ async def decisions_ia_verifications(limit: int = 60, _: dict = Depends(get_curr
 
 
 @router.post("/admin/verification/{verification_id}/review")
-async def review_verification(verification_id: str, approve: bool, admin: dict = Depends(get_current_admin)):
+async def review_verification(verification_id: str, approve: bool, admin: dict = Depends(get_current_super_admin)):
+    """Valider ou refuser (forcer) une pièce d'identité : super-administrateur seulement (09/10/2026)."""
     record = await db.identity_verifications.find_one({"id": verification_id})
     if not record:
         raise HTTPException(status_code=404, detail="Vérification introuvable")

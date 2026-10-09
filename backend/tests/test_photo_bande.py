@@ -43,7 +43,7 @@ def _admin(client, make_user, role="admin"):
 
 
 def test_l_ia_decide_l_admin_force_s_il_le_veut(client, make_user, monkeypatch):
-    """Règle du 09/10/2026 : l'IA valide seule ; le super-administrateur peut forcer une décision (pas un modérateur).
+    """Règle du 09/10/2026 : l'IA valide seule ; administrateurs ET modérateurs peuvent forcer une décision sur une photo.
     Option « validation systématique » : la photo attend alors le super-administrateur, aperçu masqué prêt."""
     import routes.photos as ph
 
@@ -75,14 +75,13 @@ def test_l_ia_decide_l_admin_force_s_il_le_veut(client, make_user, monkeypatch):
     photo = client.post("/api/me/photos", json={"url": "https://x/moi.jpg", "is_primary": True}, headers=membre).json()
     assert photo["status"] == "approved" and photo["masked_url"] == "https://x/masque-final.jpg"
 
-    # 2) Elle figure dans « Décisions de l'IA » du super-administrateur (pas pour un modérateur)…
-    assert client.get("/api/admin/photos/decisions-ia", headers=moderateur).status_code == 403
-    decisions = client.get("/api/admin/photos/decisions-ia", headers=admin).json()
+    # 2) Elle figure dans « Décisions de l'IA », que le modérateur voit aussi…
+    decisions = client.get("/api/admin/photos/decisions-ia", headers=moderateur).json()
     item = next(p for p in decisions if p["id"] == photo["id"])
-    # … qui peut FORCER le refus ; le modérateur ne le peut pas
+    # … et le modérateur peut FORCER le refus, puis l'administrateur rétablir l'approbation
     url = f"/api/admin/photos/{item['user_id']}/{photo['id']}/review"
-    assert client.post(url, params={"approve": False}, headers=moderateur).status_code == 403
-    assert client.post(url, params={"approve": False}, headers=admin).json()["status"] == "rejected"
+    assert client.post(url, params={"approve": False}, headers=moderateur).json()["status"] == "rejected"
+    assert client.post(url, params={"approve": True}, headers=admin).json()["status"] == "approved"
 
     # 3) Option « validation systématique » : la photo attend le super-administrateur, avec son aperçu masqué
     reglages["validation_admin_systematique"] = True
@@ -90,8 +89,7 @@ def test_l_ia_decide_l_admin_force_s_il_le_veut(client, make_user, monkeypatch):
     try:
         r2 = client.post("/api/me/photos", json={"url": "https://x/moi2.jpg"}, headers=membre).json()
         assert r2["status"] == "needs_review" and r2["masked_url"] == "https://x/masque.jpg"
-        assert client.get("/api/admin/photos/pending", headers=moderateur).status_code == 403
-        assert any(p["id"] == r2["id"] for p in client.get("/api/admin/photos/pending", headers=admin).json())
+        assert any(p["id"] == r2["id"] for p in client.get("/api/admin/photos/pending", headers=moderateur).json())
     finally:
         reglages["validation_admin_systematique"] = False
         client.put("/api/admin/settings/moderation", json=reglages, headers=admin)
@@ -122,3 +120,13 @@ def test_visage_en_clair_seulement_apres_un_match(client, make_user):
     client.portal.call(lambda: db.matches.insert_one({"id": "m-clair", "user_a": a, "user_b": b, "created_at": "2026-10-09T00:00:00+00:00"}))
     vue = client.get(f"/api/users/{proprio}", headers=h_visiteur).json()
     assert vue["profile"]["photos"][0]["url"] == "https://x/clair.jpg"
+
+
+def test_piece_d_identite_super_admin_seulement(client, make_user):
+    """Pièces d'identité : seul le super-administrateur tranche ou force une décision (pas un modérateur)."""
+    admin = _admin(client, make_user)
+    moderateur = _admin(client, make_user, role="moderator")
+    for chemin in ("/api/admin/verification/pending", "/api/admin/verification/decisions-ia"):
+        assert client.get(chemin, headers=moderateur).status_code == 403
+        assert client.get(chemin, headers=admin).status_code == 200
+    assert client.post("/api/admin/verification/inconnue/review", params={"approve": True}, headers=moderateur).status_code == 403

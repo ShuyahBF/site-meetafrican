@@ -6,10 +6,10 @@ import MentionVersion from "@/components/MentionVersion";
 const NAV = [
   { to: "/admin", label: "Tableau de bord", end: true },
   { to: "/admin/chronologie", label: "Chronologie" },
-  // 09/10/2026 — la validation des photos est réservée au super-administrateur (les modérateurs ne la voient pas)
-  { to: "/admin/photos", label: "Photos", adminOnly: true },
+  { to: "/admin/photos", label: "Photos" },
   { to: "/admin/videos", label: "Vidéos" },
-  { to: "/admin/verifications", label: "Vérifications" },
+  // 09/10/2026 — pièces d'identité : décisions réservées au super-administrateur (menu masqué aux modérateurs)
+  { to: "/admin/verifications", label: "Vérifications", adminOnly: true },
   { to: "/admin/journal-verifications", label: "Journal" },
   { to: "/admin/paiements", label: "Paiements" },
   { to: "/admin/signalements", label: "Signalements" },
