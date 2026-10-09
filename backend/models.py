@@ -211,6 +211,8 @@ class UserPublic(BaseModel):
     likes_received: int = 0
     # Profil fictif généré pour tester le site (badge « Test » à l'écran).
     is_test_data: bool = False
+    # Lot 66 — accord pour paraître (photo masquée + bio) sur la page Facebook de beAuthentik
+    partage_facebook: bool = False
     # Numéros confirmés par code OTP (badges) — jamais le numéro lui-même.
     phone_verified: bool = False
     whatsapp_verified: bool = False

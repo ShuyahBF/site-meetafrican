@@ -72,6 +72,8 @@ const SECTIONS = [
     body: (
       <>
         <p>Les autres membres peuvent voir : votre nom affiché, votre âge (jamais la date de naissance exacte), votre ville et votre pays, votre bio et vos informations de profil, vos photos approuvées (visage caché par un bandeau ou un masque tant que vous n'avez pas matché), vos vidéos (visage flouté et sans son, sauf accès accordé), une distance approximative en km si vous utilisez « Autour de moi », votre statut « en ligne » ou votre dernière connexion, votre réactivité aux messages et vos compteurs (J'aime, coups de cœur).</p>
+        {/* Lot 66 — page Facebook animée par Liluvine : uniquement avec l'accord du membre */}
+        <p>Page Facebook de beAuthentik : uniquement si vous l'acceptez (case à cocher de votre profil, révocable à tout moment), votre photo <strong>avec le visage masqué</strong>, votre prénom, votre âge, votre ville et votre bio relue par l'IA peuvent y être publiés. Votre nom complet, vos coordonnées et vos photos en clair ne le sont jamais.</p>
         <p>Ils ne voient <strong>jamais</strong> : votre email, votre téléphone, votre pièce d'identité, votre position exacte, votre adresse IP ni vos paiements.</p>
       </>
     ),

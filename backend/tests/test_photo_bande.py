@@ -130,3 +130,44 @@ def test_piece_d_identite_super_admin_seulement(client, make_user):
         assert client.get(chemin, headers=moderateur).status_code == 403
         assert client.get(chemin, headers=admin).status_code == 200
     assert client.post("/api/admin/verification/inconnue/review", params={"approve": True}, headers=moderateur).status_code == 403
+
+
+def test_partage_facebook_candidats_et_publication(client, make_user):
+    """Lot 66 — seuls les membres consentants (photo masquée approuvée + bio) sont proposés à SAWALI,
+    par le canal signé ; prénom seul, jamais le nom complet ; pas de republication avant 60 jours."""
+    import json
+    import time
+
+    import transmission_wa as service
+    from db import db
+
+    os_env = __import__("os").environ
+    os_env["LILUVINE_WA_HMAC"] = "cle-de-test"
+    try:
+        def appel(corps):
+            brut = json.dumps(corps)
+            ts = str(int(time.time()))
+            return client.post("/api/webhooks/liluvine-retour", content=brut, headers={
+                "Content-Type": "application/json", "X-Timestamp": ts,
+                "X-Signature": service.signer("cle-de-test", ts, brut)})
+
+        photo = {"id": "pf1", "url": "https://x/f.jpg", "masked_url": "https://x/fm.jpg", "status": "approved", "is_primary": True}
+        oui, h_oui, _ = make_user(bio="J'aime la musique et les voyages", city="Ouagadougou")
+        non, _, _ = make_user(bio="Discret")
+        client.portal.call(lambda: db.users.update_many({"id": {"$in": [oui, non]}}, {"$set": {"photos": [photo]}}))
+        # Le membre donne son accord depuis son profil
+        assert client.put("/api/me/profile", json={"partage_facebook": True}, headers=h_oui).json()["partage_facebook"] is True
+
+        cands = appel({"type": "facebook_candidats", "nombre": 10}).json()["candidats"]
+        ids = [c["membre_id"] for c in cands]
+        assert oui in ids and non not in ids
+        c = next(c for c in cands if c["membre_id"] == oui)
+        assert c["photo_url"] == "https://x/fm.jpg" and " " not in c["prenom"] and c["bio"].startswith("J'aime")
+
+        # Publication notée : plus proposé ensuite (60 jours)
+        assert appel({"type": "facebook_publie", "membre_id": oui, "post_id": "123_456"}).json()["ok"] is True
+        assert oui not in [x["membre_id"] for x in appel({"type": "facebook_candidats"}).json()["candidats"]]
+        # Sans signature : refusé
+        assert client.post("/api/webhooks/liluvine-retour", json={"type": "facebook_candidats"}).status_code == 401
+    finally:
+        os_env.pop("LILUVINE_WA_HMAC", None)
