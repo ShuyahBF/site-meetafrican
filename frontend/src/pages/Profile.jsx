@@ -247,7 +247,7 @@ export default function Profile() {
             <input ref={cameraInputRef} type="file" accept="image/*" capture="user" hidden onChange={addPhoto} />
           </div>
           <p className="mt-2 text-xs text-slate-400">
-            Chaque photo est contrôlée par IA puis validée par l'administrateur avant publication : votre visage doit
+            Chaque photo est contrôlée par IA avant publication (l'administrateur tranche en cas de doute) : votre visage doit
             être visible, tenue correcte, rien de trop suggestif.
           </p>
           {/* 09/10/2026 — aperçu de ce que voient les membres qui n'ont pas matché avec vous (bandeau ou masque + logo) */}

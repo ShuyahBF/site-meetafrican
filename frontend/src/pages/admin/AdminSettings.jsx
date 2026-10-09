@@ -452,15 +452,15 @@ function ModerationSection() {
       <label className="mt-3 flex items-center gap-2 text-sm font-semibold">
         <input
           type="checkbox"
-          checked={form.validation_admin_obligatoire ?? true}
-          onChange={(e) => setForm({ ...form, validation_admin_obligatoire: e.target.checked })}
+          checked={form.validation_admin_systematique ?? false}
+          onChange={(e) => setForm({ ...form, validation_admin_systematique: e.target.checked })}
         />
-        Validation des photos par un administrateur obligatoire
+        Validation systématique des photos par le super-administrateur
       </label>
       <p className="mt-1 text-xs text-slate-500">
-        Activée : chaque nouvelle photo attend votre validation (Admin → Photos, réservé au super-administrateur),
-        même jugée conforme par l'IA ; vous voyez la photo d'origine et sa version masquée. Désactivée : une photo
-        jugée conforme par l'IA est publiée aussitôt.
+        Désactivée (recommandé) : l'IA valide ou refuse seule les photos et les pièces d'identité ; vous ne
+        tranchez que les doutes, et pouvez forcer n'importe quelle décision de l'IA (Admin → Photos / Vérifications,
+        « Décisions de l'IA »). Activée : chaque nouvelle photo attend en plus votre validation.
       </p>
 
       {/* 09/10/2026 — façon de cacher le visage aux membres qui n'ont pas matché (logo beAuthentik au centre).
@@ -470,7 +470,7 @@ function ModerationSection() {
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
           {[
             { valeur: "bandeau", titre: "Bandeau noir", texte: "Des sourcils jusqu'un peu au-dessus du menton." },
-            { valeur: "masque_sanitaire", titre: "Masque sanitaire", texte: "Bleu clair, du nez au menton : les yeux restent visibles." },
+            { valeur: "masque_sanitaire", titre: "Masque sanitaire", texte: "Blanc, du nez au menton : le logo ressort mieux ; les yeux restent visibles." },
           ].map((o) => (
             <label
               key={o.valeur}
@@ -491,7 +491,7 @@ function ModerationSection() {
                 <ellipse cx="20" cy="21" rx="13" ry="16" fill="#e9c7a8" />
                 {o.valeur === "bandeau"
                   ? <rect x="5" y="13" width="30" height="17" rx="2" fill="#0e0c0c" />
-                  : <path d="M8 22 Q20 18 32 22 L31 30 Q20 38 9 30 Z" fill="#a8d6ee" stroke="#80b2cd" />}
+                  : <path d="M8 22 Q20 18 32 22 L31 30 Q20 38 9 30 Z" fill="#fafafa" stroke="#c8c8c8" />}
                 <circle cx="20" cy={o.valeur === "bandeau" ? 21.5 : 26} r="3" fill="#f4256a" />
               </svg>
               <span>

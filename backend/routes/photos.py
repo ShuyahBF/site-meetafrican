@@ -134,10 +134,10 @@ async def add_photo(payload: PhotoCreate, user: dict = Depends(get_current_user)
             # aucun visage -> un modérateur humain tranche.
             photo.status = PhotoStatus.needs_review
             photo.moderation_notes = f"{result.reason} — aucun visage détecté automatiquement, à vérifier"
-        elif result.decision == "approved" and settings.validation_admin_obligatoire:
-            # 09/10/2026 — l'IA la juge conforme, mais un administrateur valide toujours (son avis est affiché)
+        elif result.decision == "approved" and settings.validation_admin_systematique:
+            # Option (désactivée par défaut) : l'IA la juge conforme, mais le super-administrateur valide aussi
             photo.status = PhotoStatus.needs_review
-            photo.moderation_notes = f"Conforme selon l'IA : {result.reason} — en attente de validation par l'administrateur"
+            photo.moderation_notes = f"Conforme selon l'IA : {result.reason} — {NOTE_ATTENTE_ADMIN}"
         elif result.decision == "approved":
             photo.status = PhotoStatus.approved
             photo.url, photo.masked_url = await _generate_approved_variants(payload.url, settings.style_masque)
@@ -240,3 +240,52 @@ async def review_photo(user_id: str, photo_id: str, approve: bool, admin: dict =
 
     await db.users.update_one({"id": user_id, "photos.id": photo_id}, {"$set": update})
     return {"ok": True, "status": update["photos.$.status"]}
+
+
+# ---------------------------------------------------------------------------
+# 09/10/2026 — « C'est l'agent IA qui force la validation. L'Admin ne force que s'il le veut ou lève un doute. »
+# ---------------------------------------------------------------------------
+NOTE_ATTENTE_ADMIN = "en attente de validation par l'administrateur"
+
+
+async def liberer_photos_conformes() -> int:
+    """Photos jugées conformes par l'IA mais retenues par l'ancienne règle « validation obligatoire » (lot 62) :
+    elles sont publiées, sauf si la validation systématique est réactivée dans les Paramètres. Renvoie leur nombre."""
+    settings = await _moderation_settings()
+    if settings.validation_admin_systematique:
+        return 0
+    n = 0
+    async for u in db.users.find({"photos": {"$elemMatch": {"status": PhotoStatus.needs_review.value, "ai_decision": "approved",
+                                                           "moderation_notes": {"$regex": NOTE_ATTENTE_ADMIN}}}},
+                                 {"_id": 0, "id": 1, "photos": 1}):
+        for p in u.get("photos", []):
+            if p.get("status") != PhotoStatus.needs_review.value or NOTE_ATTENTE_ADMIN not in (p.get("moderation_notes") or ""):
+                continue
+            try:
+                url, masked = await _generate_approved_variants(p["url"], settings.style_masque)
+            except Exception as exc:  # noqa: BLE001 — photo illisible : elle reste dans la file de l'administrateur
+                print(f"[photos] libération impossible de {p['id']} : {exc!r}")
+                continue
+            await db.users.update_one({"id": u["id"], "photos.id": p["id"]}, {"$set": {
+                "photos.$.status": PhotoStatus.approved.value, "photos.$.url": url, "photos.$.masked_url": masked,
+                "photos.$.mask_version": mask_version(settings.style_masque),
+                "photos.$.moderation_notes": (p.get("moderation_notes") or "").replace(
+                    f" — {NOTE_ATTENTE_ADMIN}", "").replace("Conforme selon l'IA : ", ""),
+            }})
+            n += 1
+    return n
+
+
+@router.get("/admin/photos/decisions-ia")
+async def decisions_ia_photos(limit: int = 60, _: dict = Depends(get_current_super_admin)):
+    """Dernières photos approuvées ou refusées par l'IA : le super-administrateur peut FORCER la décision inverse
+    (POST /admin/photos/{user_id}/{photo_id}/review). Les plus récentes d'abord."""
+    limit = min(max(limit, 1), 200)
+    users = await db.users.find(
+        {"photos.ai_decision": {"$in": ["approved", "rejected"]}}, {"_id": 0, "id": 1, "full_name": 1, "photos": 1},
+    ).to_list(1000)
+    items = [{"user_id": u["id"], "full_name": u.get("full_name"), **p}
+             for u in users for p in u.get("photos", [])
+             if p.get("ai_decision") in ("approved", "rejected") and p.get("status") in ("approved", "rejected")]
+    items.sort(key=lambda p: p.get("ai_checked_at") or p.get("created_at") or "", reverse=True)
+    return items[:limit]

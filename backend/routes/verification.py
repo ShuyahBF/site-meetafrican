@@ -97,6 +97,23 @@ async def pending_verifications(_: dict = Depends(get_current_admin)):
     return items
 
 
+@router.get("/admin/verification/decisions-ia")
+async def decisions_ia_verifications(limit: int = 60, _: dict = Depends(get_current_admin)):
+    """09/10/2026 — « C'est l'agent IA qui force la validation de l'identité ; l'Admin ne force que s'il le veut. »
+    Dernières pièces validées ou refusées par l'IA, sans décision humaine : l'administrateur peut forcer la décision
+    inverse (POST /admin/verification/{id}/review). Les plus récentes d'abord."""
+    limit = min(max(limit, 1), 200)
+    items = await db.identity_verifications.find(
+        {"ai_decision": {"$in": ["approved", "rejected"]}, "reviewed_by": {"$in": [None]}}, {"_id": 0}
+    ).sort("created_at", -1).to_list(limit)
+    noms = {u["id"]: u.get("full_name") async for u in db.users.find(
+        {"id": {"$in": [i["user_id"] for i in items]}}, {"_id": 0, "id": 1, "full_name": 1})}
+    for item in items:
+        item["full_name"] = noms.get(item["user_id"])
+        item["document_view_url"] = await presigned_document_url(item["document_key"])
+    return items
+
+
 @router.post("/admin/verification/{verification_id}/review")
 async def review_verification(verification_id: str, approve: bool, admin: dict = Depends(get_current_admin)):
     record = await db.identity_verifications.find_one({"id": verification_id})
