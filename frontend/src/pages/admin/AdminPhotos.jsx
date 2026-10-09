@@ -28,8 +28,9 @@ export default function AdminPhotos() {
     <div>
       <h1 className="text-2xl font-bold">Modération des photos</h1>
       <p className="mt-1 text-sm text-slate-500">
-        Photos que l'IA n'a pas pu trancher, et photos refusées d'office (plus de 2 visages) soumises quand même à
-        une revue humaine. Chaque décision est horodatée.
+        Nouvelles photos à valider (l'avis de l'IA est indiqué), et photos refusées d'office (plus de 2 visages)
+        soumises quand même à une revue humaine. À droite : ce que verront les membres sans abonnement (bande des
+        yeux au nez). Chaque décision est horodatée.
       </p>
 
       {loading ? (
@@ -40,7 +41,19 @@ export default function AdminPhotos() {
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
             <div key={item.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-              <img src={item.url} alt="" className="aspect-square w-full object-cover" />
+              {/* 09/10/2026 — photo d'origine et version masquée (bande des yeux au nez) côte à côte */}
+              <div className="grid grid-cols-2 gap-px bg-slate-200">
+                <figure className="bg-white">
+                  <img src={item.url} alt="Photo d'origine" className="aspect-square w-full object-cover" />
+                  <figcaption className="px-2 py-1 text-center text-[11px] text-slate-500">Photo d'origine</figcaption>
+                </figure>
+                <figure className="bg-white">
+                  {item.masked_url
+                    ? <img src={item.masked_url} alt="Photo masquée" className="aspect-square w-full object-cover" />
+                    : <div className="grid aspect-square w-full place-items-center text-[11px] text-slate-400">Aperçu indisponible</div>}
+                  <figcaption className="px-2 py-1 text-center text-[11px] text-slate-500">Vue par les autres (masquée)</figcaption>
+                </figure>
+              </div>
               <div className="p-3">
                 <p className="font-semibold">{item.full_name}</p>
                 <p className="text-xs text-slate-400">
@@ -54,7 +67,7 @@ export default function AdminPhotos() {
                 )}
                 {item.moderation_notes && (
                   <p className="mt-1 text-xs text-slate-500">
-                    Raison : {item.moderation_notes}
+                    Avis : {item.moderation_notes}
                     {item.ai_checked_at && <> (IA, le {formatDateTime(item.ai_checked_at)})</>}
                   </p>
                 )}

@@ -111,6 +111,70 @@ def blur_faces_in_photo(rgb: np.ndarray) -> Optional[np.ndarray]:
 
 
 # ---------------------------------------------------------------------------
+# Photos : BANDE opaque des yeux au nez (demande du propriétaire, 09/10/2026)
+# ---------------------------------------------------------------------------
+# « L'IA devait afficher ma photo avec une bande des yeux au nez afin qu'on ne soit pas reconnaissable. »
+# YuNet renvoie, pour chaque visage, 5 repères : œil droit, œil gauche, bout du nez, coins de la bouche.
+# La bande couvre des sourcils jusqu'au bout du nez, un peu plus large que les deux yeux, et suit
+# l'inclinaison de la tête (angle de la ligne des yeux). Elle est OPAQUE : rien n'est récupérable dessous.
+BANDE_COULEUR_BGR = (12, 4, 20)    # aubergine très foncé (couleur de la marque), opaque
+BANDE_MARGE_COTES = 0.75           # débord de chaque côté des yeux (fraction de l'écart entre les yeux)
+BANDE_MARGE_HAUT = 0.55            # au-dessus des yeux : sourcils (fraction de l'écart entre les yeux)
+BANDE_MARGE_BAS = 0.30             # sous le bout du nez (fraction de l'écart entre les yeux)
+
+
+def detect_faces_landmarks(bgr: np.ndarray) -> List[Tuple[Box, np.ndarray]]:
+    """Visages détectés avec leurs 5 repères (en pixels de l'image d'origine) : [(cadre brut, repères 5x2)]."""
+    h, w = bgr.shape[:2]
+    scale = min(1.0, DETECT_MAX_WIDTH / w)
+    small = cv2.resize(bgr, (max(1, int(w * scale)), max(1, int(h * scale)))) if scale < 1 else bgr
+    sh, sw = small.shape[:2]
+    detector = cv2.FaceDetectorYN.create(str(MODEL_PATH), "", (sw, sh), SCORE_THRESHOLD, 0.3, 50)
+    _, faces = detector.detect(small)
+    out: List[Tuple[Box, np.ndarray]] = []
+    for face in faces if faces is not None else []:
+        x, y, fw, fh = (float(v) / scale for v in face[:4])
+        reperes = np.array(face[4:14], dtype=np.float64).reshape(5, 2) / scale
+        out.append(((int(x), int(y), int(x + fw), int(y + fh)), reperes))
+    return out
+
+
+def polygone_bande(cadre: Box, reperes: np.ndarray) -> np.ndarray:
+    """Les 4 coins de la bande (yeux → nez) d'un visage, inclinée comme la ligne des yeux."""
+    oeil_d, oeil_g, nez = reperes[0], reperes[1], reperes[2]
+    vecteur = oeil_g - oeil_d
+    ecart = float(np.hypot(*vecteur))
+    x0, y0, x1, y1 = cadre
+    if ecart < 2:   # repères inutilisables : bande horizontale déduite du cadre du visage
+        hauteur = y1 - y0
+        return np.array([[x0, y0 + 0.18 * hauteur], [x1, y0 + 0.18 * hauteur],
+                         [x1, y0 + 0.68 * hauteur], [x0, y0 + 0.68 * hauteur]], dtype=np.int32)
+    axe = vecteur / ecart                       # direction de la ligne des yeux
+    normale = np.array([-axe[1], axe[0]])       # vers le bas du visage
+    centre_yeux = (oeil_d + oeil_g) / 2
+    descente_nez = max(float(np.dot(nez - centre_yeux, normale)), 0.35 * ecart)
+    gauche = oeil_d - axe * ecart * BANDE_MARGE_COTES
+    droite = oeil_g + axe * ecart * BANDE_MARGE_COTES
+    haut = -normale * ecart * BANDE_MARGE_HAUT
+    bas = normale * (descente_nez + ecart * BANDE_MARGE_BAS)
+    coins = [gauche + haut, droite + haut, droite + bas, gauche + bas]
+    return np.array([[round(c[0]), round(c[1])] for c in coins], dtype=np.int32)
+
+
+def band_faces_in_photo(rgb: np.ndarray) -> Optional[np.ndarray]:
+    """Photo (tableau RGB) avec une bande opaque des yeux au nez sur chaque visage, ou None si aucun
+    visage n'est détecté (l'appelant applique alors le floutage complet : en cas de doute, tout est masqué)."""
+    bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+    visages = detect_faces_landmarks(bgr)
+    if not visages:
+        return None
+    out = bgr.copy()
+    for cadre, reperes in visages:
+        cv2.fillConvexPoly(out, polygone_bande(cadre, reperes), BANDE_COULEUR_BGR, lineType=cv2.LINE_AA)
+    return cv2.cvtColor(out, cv2.COLOR_BGR2RGB)
+
+
+# ---------------------------------------------------------------------------
 # Vidéos
 # ---------------------------------------------------------------------------
 

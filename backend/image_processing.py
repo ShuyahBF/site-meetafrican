@@ -67,19 +67,19 @@ def apply_watermark(image_bytes: bytes) -> bytes:
 
 # Version du masquage : les photos masquées plus anciennes (ou d'une autre
 # version) sont régénérées automatiquement (voir media_migration.py).
-MASK_VERSION = "face-v1"
+MASK_VERSION = "bande-v1"   # 09/10/2026 : bande des yeux au nez (au lieu du flou du visage)
 
 
 def apply_face_mask(image_bytes: bytes) -> bytes:
-    """Version servie aux visiteurs sans abonnement : visage flouté, reste
-    net ; image entièrement floutée si aucun visage n'est détecté."""
+    """Version servie aux visiteurs sans abonnement : BANDE opaque des yeux au nez sur chaque visage,
+    reste net ; image entièrement floutée si aucun visage n'est détecté (en cas de doute, tout est masqué)."""
     img = _load_rgb(image_bytes)
     try:
         import numpy as np
 
-        from face_blur import blur_faces_in_photo
+        from face_blur import band_faces_in_photo
 
-        faces_blurred = blur_faces_in_photo(np.asarray(img))
+        faces_blurred = band_faces_in_photo(np.asarray(img))
     except Exception as exc:  # détecteur indisponible -> repli sûr
         print(f"[image_processing] détection de visage impossible : {exc}")
         faces_blurred = None
@@ -89,11 +89,11 @@ def apply_face_mask(image_bytes: bytes) -> bytes:
 
 
 def _face_only_mask(img: Image.Image) -> bytes:
-    """Visage déjà flouté : on ajoute une petite étiquette en bas."""
+    """Visage déjà masqué (bande des yeux au nez) : on ajoute une petite étiquette en bas."""
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
     font = _font(max(12, img.width // 28))
-    text = "Visage flouté · abonnez-vous pour le voir"
+    text = "Visage masqué · abonnez-vous pour le voir"
     text_w = draw.textlength(text, font=font)
     pad = max(6, img.width // 60)
     x0 = (img.width - text_w) / 2 - pad

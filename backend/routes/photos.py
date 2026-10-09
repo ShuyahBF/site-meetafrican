@@ -40,6 +40,19 @@ async def _moderation_settings() -> ModerationSettings:
     return ModerationSettings(**doc) if doc else ModerationSettings()
 
 
+async def _generate_masked(original_url: str) -> Optional[str]:
+    """Aperçu masqué (bande des yeux au nez) dès l'envoi : le membre voit comment les autres le verront, et
+    l'administrateur valide en connaissance de cause. Jamais bloquant : None en cas d'échec."""
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            r = await client.get(original_url)
+            r.raise_for_status()
+        return await save_photo(await asyncio.to_thread(apply_face_mask, r.content), "image/jpeg")
+    except Exception as exc:  # noqa: BLE001 — l'aperçu ne bloque jamais l'envoi de la photo
+        print(f"[photos] aperçu masqué impossible : {exc}")
+        return None
+
+
 async def _generate_approved_variants(original_url: str) -> Tuple[str, str]:
     """Télécharge la photo brute (déjà publique sur R2/local) et produit ses
     deux versions dérivées, chacune ré-uploadée comme une photo normale."""
@@ -121,6 +134,10 @@ async def add_photo(payload: PhotoCreate, user: dict = Depends(get_current_user)
             # aucun visage -> un modérateur humain tranche.
             photo.status = PhotoStatus.needs_review
             photo.moderation_notes = f"{result.reason} — aucun visage détecté automatiquement, à vérifier"
+        elif result.decision == "approved" and settings.validation_admin_obligatoire:
+            # 09/10/2026 — l'IA la juge conforme, mais un administrateur valide toujours (son avis est affiché)
+            photo.status = PhotoStatus.needs_review
+            photo.moderation_notes = f"Conforme selon l'IA : {result.reason} — en attente de validation par l'administrateur"
         elif result.decision == "approved":
             photo.status = PhotoStatus.approved
             photo.url, photo.masked_url = await _generate_approved_variants(payload.url)
@@ -132,6 +149,13 @@ async def add_photo(payload: PhotoCreate, user: dict = Depends(get_current_user)
             photo.status = PhotoStatus.needs_review
     else:
         photo.status = PhotoStatus.needs_review
+
+    # 09/10/2026 — aperçu masqué dès l'envoi (photo pas encore approuvée) : visible par le membre et par
+    # l'administrateur ; il n'est servi aux autres membres qu'après approbation (routes/matching.py).
+    if photo.status != PhotoStatus.approved and not photo.masked_url:
+        photo.masked_url = await _generate_masked(payload.url)
+        if photo.masked_url:
+            photo.mask_version = MASK_VERSION
 
     current = await db.users.find_one({"id": user["id"]}, {"_id": 0, "photos": 1})
     existing_photos = (current or {}).get("photos", [])
@@ -173,6 +197,13 @@ async def pending_photos(_: dict = Depends(get_current_admin)):
     for u in users:
         for p in u.get("photos", []):
             if to_review(p):
+                # 09/10/2026 — photo envoyée avant l'aperçu masqué : il est produit ici, une seule fois, pour que
+                # l'administrateur voie ce que verront les autres membres (bande des yeux au nez)
+                if not p.get("masked_url"):
+                    p["masked_url"] = await _generate_masked(p["url"])
+                    if p["masked_url"]:
+                        await db.users.update_one({"id": u["id"], "photos.id": p["id"]}, {"$set": {
+                            "photos.$.masked_url": p["masked_url"], "photos.$.mask_version": MASK_VERSION}})
                 items.append({"user_id": u["id"], "full_name": u["full_name"], **p})
     return sorted(items, key=lambda p: p.get("created_at", ""))
 
