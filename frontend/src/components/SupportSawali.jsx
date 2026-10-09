@@ -1,18 +1,25 @@
 // ============================================================================
-// ASSISTANCE SAWALI — pictogramme + fenêtre de discussion avec le support
-// technique SAWALI (SAWALI lot 90, demande du propriétaire du 09/10/2026).
+// ASSISTANCE SAWALI — fenêtre de discussion avec le support technique SAWALI
+// (SAWALI lot 90, demande du propriétaire du 09/10/2026).
 // ============================================================================
-// « Pour ne pas être encombrant, un petit pictogramme représentant une
-// assistance » : placé dans la barre du bas de l'espace membre (BottomNav), à
-// droite de la mention de version. Un clic ouvre une petite fenêtre de chat :
+// Lot 60 (demande du propriétaire du 09/10/2026) : « le bouton 'Assistance
+// Sawali' est hors du cadre. En faire une option quand on clique sur le
+// cauris : 'Chat instantané avec le support' ». Le pictogramme de la barre du
+// bas est donc SUPPRIMÉ : ce composant n'affiche plus de bouton, seulement la
+// fenêtre de discussion. C'est la barre du bas (BottomNav) qui le pilote :
+//   - prop `ouvert`   : la fenêtre est-elle affichée ?
+//   - prop `onFermer` : appelée par le bouton × de la fenêtre ;
+//   - prop `onEtat`   : reçoit { actif, nonLus } pour que le tiroir du cauri
+//     affiche (ou cache) l'option et sa pastille de réponses non lues.
+// Fonctionnement de la fenêtre (inchangé) :
 //   - les messages partent vers le serveur beAuthentik (/api/support-sawali/…),
 //     qui les relaie à SAWALI par une requête signée (AUCUN secret ici) ;
 //   - fenêtre ouverte : lecture des réponses toutes les 5 s ;
 //   - fenêtre fermée : vérification des réponses non lues toutes les 60 s
 //     (pastille rouge) et un SON à chaque nouvelle réponse ;
 //   - la requête est numérotée par SAWALI (SUP-…) et son état est affiché.
-// Le pictogramme reste caché si la plateforme n'est pas reliée à SAWALI (clé
-// absente) ou si le membre n'est pas connecté.
+// L'option du cauri reste cachée si la plateforme n'est pas reliée à SAWALI
+// (clé absente) ou si le membre n'est pas connecté (onEtat renvoie actif=false).
 //
 // À NE PAS CONFONDRE avec la page /support (« Écrire au support » : tickets
 // internes avec l'équipe beAuthentik), qui reste inchangée.
@@ -71,9 +78,9 @@ const detailErreur = (e, defaut) => {
   return typeof d === "string" ? d : defaut;
 };
 
-export default function SupportSawali({ className = "" }) {
+export default function SupportSawali({ ouvert = false, onFermer, onEtat }) {
   const [actif, setActif] = useState(false);       // plateforme reliée à SAWALI ?
-  const [ouvert, setOuvert] = useState(false);
+  // (l'état « ouvert » vient désormais du parent : BottomNav, via le cauri)
   const [messages, setMessages] = useState([]);
   const [requete, setRequete] = useState(null);
   const [nonLus, setNonLus] = useState(nonLusSignales);
@@ -84,7 +91,7 @@ export default function SupportSawali({ className = "" }) {
   const dernierRef = useRef("");                   // date du dernier message reçu (lecture incrémentale)
   const filRef = useRef(null);
 
-  // --- Le pictogramme n'apparaît que pour un membre connecté, plateforme reliée à SAWALI
+  // --- L'option du cauri n'apparaît que pour un membre connecté, plateforme reliée à SAWALI
   useEffect(() => {
     let vivant = true;
     if (!localStorage.getItem("maf_token")) return undefined;
@@ -144,6 +151,12 @@ export default function SupportSawali({ className = "" }) {
     return () => clearInterval(minuterie);
   }, [actif, ouvert, lireFil, verifierNonLus]);
 
+  // --- Remontée de l'état vers la barre du bas (option du cauri + pastille)
+  //     à chaque changement : plateforme reliée ? combien de réponses non lues ?
+  useEffect(() => {
+    if (onEtat) onEtat({ actif, nonLus });
+  }, [actif, nonLus, onEtat]);
+
   // --- Défilement automatique vers le dernier message
   useEffect(() => {
     if (filRef.current) filRef.current.scrollTop = filRef.current.scrollHeight;
@@ -170,22 +183,8 @@ export default function SupportSawali({ className = "" }) {
   if (!actif) return null;
   return (
     <>
-      {/* Pictogramme discret (casque-micro) + pastille des réponses non lues */}
-      <button
-        type="button"
-        onClick={() => setOuvert((v) => !v)}
-        title="Assistance SAWALI"
-        aria-label="Assistance SAWALI — écrire au support technique"
-        className={`relative inline-flex h-6 w-6 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-ink ${className}`}
-      >
-        <span className="material-symbols-outlined text-[18px]" aria-hidden="true">headset_mic</span>
-        {nonLus > 0 && (
-          <span className="absolute -right-1 -top-1 min-w-[16px] rounded-full bg-primary px-1 text-center text-[9px] font-bold leading-[16px] text-white ring-2 ring-white">
-            {nonLus > 9 ? "9+" : nonLus}
-          </span>
-        )}
-      </button>
-
+      {/* Plus de pictogramme ici (lot 60) : la fenêtre s'ouvre depuis l'option
+          « Chat instantané avec le support » du tiroir du cauri (CreateSheet). */}
       {/* Attente longue (ouverture du fil, envoi) : toast « Patientez… » + jauge */}
       <Patientez actif={ouvert && (envoi || (chargement && messages.length === 0))} />
 
@@ -207,7 +206,7 @@ export default function SupportSawali({ className = "" }) {
                   : "Support technique de la plateforme : posez votre question ici."}
               </p>
             </div>
-            <button type="button" onClick={() => setOuvert(false)} aria-label="Fermer"
+            <button type="button" onClick={() => onFermer && onFermer()} aria-label="Fermer"
                     className="rounded-lg px-2 py-1 text-lg leading-none hover:bg-white/10">×</button>
           </div>
 

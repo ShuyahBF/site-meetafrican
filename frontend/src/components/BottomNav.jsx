@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import CreateSheet from "@/components/CreateSheet";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
@@ -22,6 +22,19 @@ export default function BottomNav() {
   const unread = useUnreadCount();
   // Le bouton ✚ ouvre le tiroir des actions (publier, me suivre, support…)
   const [createOpen, setCreateOpen] = useState(false);
+
+  // --- Assistance SAWALI (lot 60) : plus de pictogramme dans la barre du bas.
+  //     La fenêtre de discussion s'ouvre depuis l'option « Chat instantané avec
+  //     le support » du tiroir du cauri. On mémorise ici :
+  //       - supportOuvert : fenêtre de discussion affichée ou non ;
+  //       - support       : { actif, nonLus } remonté par SupportSawali
+  //                         (actif=false → option cachée dans le tiroir).
+  const [supportOuvert, setSupportOuvert] = useState(false);
+  const [support, setSupport] = useState({ actif: false, nonLus: 0 });
+  // useCallback : fonction stable, pour ne pas relancer l'effet de SupportSawali à chaque affichage
+  const majSupport = useCallback((etat) => {
+    setSupport((avant) => (avant.actif === etat.actif && avant.nonLus === etat.nonLus ? avant : etat));
+  }, []);
 
   const renderItem = (item) => {
     const active = pathname.startsWith(item.to);
@@ -56,18 +69,31 @@ export default function BottomNav() {
           {/* Cauri à la place du « + » : dessin détouré, traits noirs sur fond transparent */}
           <img src="/images/cauri-noir.png" alt="" aria-hidden="true" className="h-auto w-9 select-none" draggable="false" />
         </span>
+        {/* Pastille rouge sur le cauri : réponses du support SAWALI non lues (lot 60) */}
+        {support.actif && support.nonLus > 0 && (
+          <span className="absolute -right-1.5 -top-1.5 min-w-[18px] rounded-full bg-primary px-1 text-center text-[10px] font-bold leading-[18px] text-white ring-2 ring-white">
+            {support.nonLus > 9 ? "9+" : support.nonLus}
+          </span>
+        )}
       </button>
       {RIGHT.map(renderItem)}
       {/* Version et lot du déploiement en cours (règle permanente), en tout
           petit sous les onglets, sur toute la largeur */}
-      {/* Ligne du bas : mention de version centrée + pictogramme « Assistance SAWALI »
-          (support technique de la plateforme, SAWALI lot 90) discret à droite.
-          Caché si le membre n'est pas connecté ou si SAWALI n'est pas relié. */}
-      <div className="relative w-full basis-full">
-        <MentionVersion className="w-full pb-1 pt-0.5 text-[9px] leading-tight" />
-        <SupportSawali className="absolute bottom-0.5 right-2" />
-      </div>
-      {createOpen && <CreateSheet onClose={() => setCreateOpen(false)} />}
+      {/* Ligne du bas : uniquement la mention de version, centrée. Le pictogramme
+          « Assistance SAWALI » qui débordait du cadre a été retiré (lot 60). */}
+      <MentionVersion className="w-full basis-full pb-1 pt-0.5 text-[9px] leading-tight" />
+      {/* Fenêtre de discussion avec le support SAWALI : toujours montée (pour la
+          vérification des non-lus et le son), mais sans bouton ; elle s'affiche
+          quand le membre choisit l'option du cauri. */}
+      <SupportSawali ouvert={supportOuvert} onFermer={() => setSupportOuvert(false)} onEtat={majSupport} />
+      {/* Tiroir du cauri : reçoit l'état du support pour afficher l'option
+          « Chat instantané avec le support » et sa pastille de non-lus */}
+      {createOpen && (
+        <CreateSheet
+          onClose={() => setCreateOpen(false)}
+          support={{ ...support, ouvrir: () => setSupportOuvert(true) }}
+        />
+      )}
     </nav>
   );
 }
