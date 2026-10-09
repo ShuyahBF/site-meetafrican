@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import CreateSheet from "@/components/CreateSheet";
 import { useUnreadCount } from "@/hooks/useUnreadCount";
 import MentionVersion from "@/components/MentionVersion";
+import SupportSawali from "@/components/SupportSawali";
 
 // Barre de navigation du bas, façon TikTok : 4 onglets + un gros bouton
 // central (un cauri sur fond blanc, à la place du ✚) pour publier une vidéo. Fond blanc, pastille rouge de
@@ -59,7 +60,13 @@ export default function BottomNav() {
       {RIGHT.map(renderItem)}
       {/* Version et lot du déploiement en cours (règle permanente), en tout
           petit sous les onglets, sur toute la largeur */}
-      <MentionVersion className="w-full basis-full pb-1 pt-0.5 text-[9px] leading-tight" />
+      {/* Ligne du bas : mention de version centrée + pictogramme « Assistance SAWALI »
+          (support technique de la plateforme, SAWALI lot 90) discret à droite.
+          Caché si le membre n'est pas connecté ou si SAWALI n'est pas relié. */}
+      <div className="relative w-full basis-full">
+        <MentionVersion className="w-full pb-1 pt-0.5 text-[9px] leading-tight" />
+        <SupportSawali className="absolute bottom-0.5 right-2" />
+      </div>
       {createOpen && <CreateSheet onClose={() => setCreateOpen(false)} />}
     </nav>
   );
