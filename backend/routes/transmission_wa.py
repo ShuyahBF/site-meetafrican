@@ -38,6 +38,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
+import partage_facebook
 import stats_sawali
 import transmission_wa as service
 from activity import current_ip, log_activity
@@ -165,6 +166,9 @@ async def liluvine_retour(request: Request, taches: BackgroundTasks):
         except stats_sawali.PeriodeInvalide as exc:
             raise HTTPException(status_code=422, detail=f"Période invalide : {exc}")
         return await stats_sawali.stats_du_jour(debut, fin)
+    # 3 ter. Lot 66 — page Facebook animée par Liluvine : candidats (photo masquée + bio) et publication faite
+    if isinstance(donnees, dict) and donnees.get("type") in (partage_facebook.TYPE_CANDIDATS, partage_facebook.TYPE_PUBLIE):
+        return await partage_facebook.traiter(donnees)
     if not isinstance(donnees, dict) or donnees.get("type") not in TYPES_RETOUR:
         raise HTTPException(status_code=422, detail="Type de retour inconnu")
     type_retour = donnees["type"]

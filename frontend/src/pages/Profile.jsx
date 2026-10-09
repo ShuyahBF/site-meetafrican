@@ -128,6 +128,21 @@ export default function Profile() {
     }
   };
 
+  // Lot 66 — accord pour la page Facebook de beAuthentik : enregistré dès que la case change
+  const [partageFb, setPartageFb] = useState(Boolean(user?.partage_facebook));
+  useEffect(() => { setPartageFb(Boolean(user?.partage_facebook)); }, [user?.partage_facebook]);
+  const changerPartageFb = async (valeur) => {
+    setPartageFb(valeur);
+    try {
+      await apiClient.put("/me/profile", { partage_facebook: valeur });
+      await refresh();
+      showToast(valeur ? "Merci ! Vous pourrez paraître sur notre page Facebook (visage masqué)." : "Accord retiré : vous ne paraîtrez plus sur notre page Facebook.");
+    } catch (err) {
+      setPartageFb(!valeur);
+      setError(extractErrorMessage(err, "Enregistrement impossible"));
+    }
+  };
+
   const addPhoto = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -261,6 +276,14 @@ export default function Profile() {
               </div>
             </div>
           )}
+          {/* Lot 66 — accord (révocable) pour paraître sur la page Facebook de beAuthentik, animée par Liluvine */}
+          <label className="mt-4 flex items-start gap-2 rounded-2xl bg-slate-50 p-3 text-xs text-slate-600">
+            <input type="checkbox" className="mt-0.5" checked={partageFb} onChange={(e) => changerPartageFb(e.target.checked)} />
+            <span>
+              J'accepte que beAuthentik publie ma photo <b>avec le visage masqué</b>, mon prénom, mon âge, ma ville et ma
+              bio (relue par l'IA) sur sa page Facebook. Je peux retirer cet accord à tout moment en décochant cette case.
+            </span>
+          </label>
           {/* Suivi horodaté des photos refusées ou en revue */}
           {photos.some((p) => p.status !== "approved") && (
             <ul className="mt-3 space-y-1.5">

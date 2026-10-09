@@ -74,6 +74,8 @@ class ProfileUpdate(BaseModel):
     interests: Optional[List[str]] = Field(None, max_length=10)
     relationship_goal: Optional[RelationshipGoal] = None
     children: Optional[ChildrenStatus] = None
+    # Lot 66 — accord du membre : sa photo MASQUÉE et sa bio (modérée par l'IA) peuvent paraître sur la page Facebook
+    partage_facebook: Optional[bool] = None
 
     @field_validator("interests")
     @classmethod
@@ -116,6 +118,9 @@ async def update_my_profile(payload: ProfileUpdate, user: dict = Depends(get_cur
     for key in ("bio", "city", "country", "profession"):
         if key in changes and changes[key] == "":
             changes[key] = None
+    if "partage_facebook" in changes:
+        changes["partage_facebook"] = bool(changes["partage_facebook"])
+        changes["partage_facebook_le"] = _now()     # date de l'accord (ou du retrait), pour la preuve
     if changes:
         changes["updated_at"] = _now()
         await db.users.update_one({"id": user["id"]}, {"$set": changes})
