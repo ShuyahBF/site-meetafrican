@@ -33,7 +33,7 @@ export default function AdminVerifications() {
     <div>
       <h1 className="text-2xl font-bold">Vérification d'identité</h1>
       <p className="mt-1 text-sm text-slate-500">
-        L'IA valide ou refuse seule les pièces d'identité. Ici : celles qu'elle n'a pas pu juger (doute), ou soumises
+        Réservé au super-administrateur. L'IA valide ou refuse seule les pièces d'identité. Ici : celles qu'elle n'a pas pu juger (doute), ou soumises
         alors que l'IA était désactivée. En bas, vous pouvez forcer n'importe quelle décision de l'IA.
       </p>
 

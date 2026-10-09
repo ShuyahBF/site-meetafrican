@@ -4,9 +4,9 @@ import { apiClient } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 
 const CARDS = [
-  // 09/10/2026 — photos : validation réservée au super-administrateur (carte masquée pour les modérateurs)
-  { key: "photos", label: "Photos en attente", to: "/admin/photos", fetch: (c) => c.get("/admin/photos/pending"), adminOnly: true },
-  { key: "verifications", label: "Vérifications en attente", to: "/admin/verifications", fetch: (c) => c.get("/admin/verification/pending") },
+  { key: "photos", label: "Photos en attente", to: "/admin/photos", fetch: (c) => c.get("/admin/photos/pending") },
+  // 09/10/2026 — pièces d'identité : réservées au super-administrateur (carte masquée pour les modérateurs)
+  { key: "verifications", label: "Vérifications en attente", to: "/admin/verifications", fetch: (c) => c.get("/admin/verification/pending"), adminOnly: true },
   { key: "proofs", label: "Preuves de paiement en attente", to: "/admin/paiements", fetch: (c) => c.get("/subscriptions/payment-proofs/pending") },
   { key: "reports", label: "Signalements ouverts", to: "/admin/signalements", fetch: (c) => c.get("/admin/reports", { params: { status: "open" } }) },
 ];

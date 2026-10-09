@@ -31,7 +31,7 @@ export default function AdminPhotos() {
     <div>
       <h1 className="text-2xl font-bold">Modération des photos</h1>
       <p className="mt-1 text-sm text-slate-500">
-        Réservé au super-administrateur. L'IA valide ou refuse seule ; ici, vous tranchez les doutes (photos que l'IA
+        Administrateurs et modérateurs. L'IA valide ou refuse seule ; ici, vous tranchez les doutes (photos que l'IA
         n'a pas pu juger, refus d'office pour plus de 2 visages) et vous pouvez forcer n'importe quelle décision de
         l'IA (en bas). À droite : ce que verront les membres qui n'ont pas matché (bandeau noir ou masque sanitaire,
         au choix dans Paramètres). Chaque décision est horodatée.
