@@ -6,10 +6,12 @@ export default function AdminPhotos() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
+  const [decisions, setDecisions] = useState([]);   // dernières décisions de l'IA (que l'on peut forcer)
 
   const load = () => {
     setLoading(true);
     apiClient.get("/admin/photos/pending").then((r) => setItems(r.data)).finally(() => setLoading(false));
+    apiClient.get("/admin/photos/decisions-ia").then((r) => setDecisions(r.data)).catch(() => setDecisions([]));
   };
 
   useEffect(load, []);
@@ -19,6 +21,7 @@ export default function AdminPhotos() {
     try {
       await apiClient.post(`/admin/photos/${item.user_id}/${item.id}/review`, null, { params: { approve } });
       setItems((prev) => prev.filter((p) => p.id !== item.id));
+      apiClient.get("/admin/photos/decisions-ia").then((r) => setDecisions(r.data)).catch(() => {});
     } finally {
       setBusyId(null);
     }
@@ -28,9 +31,10 @@ export default function AdminPhotos() {
     <div>
       <h1 className="text-2xl font-bold">Modération des photos</h1>
       <p className="mt-1 text-sm text-slate-500">
-        Réservé au super-administrateur. Nouvelles photos à valider (l'avis de l'IA est indiqué), et photos refusées
-        d'office (plus de 2 visages) soumises quand même à votre revue. À droite : ce que verront les membres qui n'ont
-        pas matché avec ce membre (bandeau noir ou masque sanitaire, au choix dans Paramètres). Chaque décision est horodatée.
+        Réservé au super-administrateur. L'IA valide ou refuse seule ; ici, vous tranchez les doutes (photos que l'IA
+        n'a pas pu juger, refus d'office pour plus de 2 visages) et vous pouvez forcer n'importe quelle décision de
+        l'IA (en bas). À droite : ce que verront les membres qui n'ont pas matché (bandeau noir ou masque sanitaire,
+        au choix dans Paramètres). Chaque décision est horodatée.
       </p>
 
       {loading ? (
@@ -87,6 +91,38 @@ export default function AdminPhotos() {
                     Refuser
                   </button>
                 </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 09/10/2026 — « L'Admin ne force que s'il le veut » : dernières décisions de l'IA, à inverser si besoin */}
+      <h2 className="mt-10 text-lg font-bold">Décisions de l'IA</h2>
+      <p className="mt-1 text-sm text-slate-500">Les plus récentes d'abord. Forcer la décision inverse si l'IA s'est trompée.</p>
+      {decisions.length === 0 ? (
+        <p className="mt-4 text-sm text-slate-500">Aucune décision de l'IA pour l'instant.</p>
+      ) : (
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {decisions.map((d) => (
+            <div key={d.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <img src={d.url} alt={d.full_name || "Photo"} className="aspect-square w-full object-cover" />
+              <div className="p-2 text-xs">
+                <p className="truncate font-semibold">{d.full_name}</p>
+                <p className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                  d.status === "approved" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+                  {d.status === "approved" ? "Approuvée" : "Refusée"}{d.reviewed_by ? " (forcé)" : " par l'IA"}
+                </p>
+                {d.moderation_notes && <p className="mt-1 line-clamp-2 text-slate-500">{d.moderation_notes}</p>}
+                <p className="mt-1 text-slate-400">{formatDateTime(d.ai_checked_at || d.created_at)}</p>
+                <button
+                  onClick={() => review(d, d.status !== "approved")}
+                  disabled={busyId === d.id}
+                  className={`mt-2 w-full rounded-lg py-1.5 font-semibold text-white disabled:opacity-50 ${
+                    d.status === "approved" ? "bg-red-600" : "bg-emerald-600"}`}
+                >
+                  {d.status === "approved" ? "Forcer le refus" : "Forcer l'approbation"}
+                </button>
               </div>
             </div>
           ))}

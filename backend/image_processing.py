@@ -76,7 +76,7 @@ STYLES_MASQUE = ("bandeau", "masque_sanitaire")
 
 def mask_version(style: str = STYLE_PAR_DEFAUT) -> str:
     """Identifiant de version du masquage pour un style (ex. « bandeau-v2 », « masque_sanitaire-v2 »)."""
-    return f"{style if style in STYLES_MASQUE else STYLE_PAR_DEFAUT}-v2"
+    return f"{style if style in STYLES_MASQUE else STYLE_PAR_DEFAUT}-v3"   # v3 : masque sanitaire blanc
 
 
 MASK_VERSION = mask_version()   # 09/10/2026 : bandeau noir jusqu'au-dessus du menton, avec le logo

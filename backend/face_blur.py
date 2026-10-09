@@ -130,9 +130,10 @@ BANDE_MARGE_COTES = 0.75                  # débord de chaque côté des yeux (e
 BANDE_MARGE_HAUT = 0.55                   # au-dessus des yeux : sourcils
 BANDE_MARGE_SOUS_BOUCHE = 0.30            # sous la bouche : s'arrête un peu au-dessus du menton
 
-MASQUE_COULEUR_BGR = (238, 214, 168)      # bleu clair « masque chirurgical »
-MASQUE_PLIS_BGR = (205, 178, 128)         # plis du masque, un ton plus foncé
-MASQUE_ELASTIQUE_BGR = (246, 246, 246)    # élastiques blancs
+# 09/10/2026 — « Un fond blanc pour le masque. Le logo ressortira mieux »
+MASQUE_COULEUR_BGR = (250, 250, 250)      # blanc
+MASQUE_PLIS_BGR = (200, 200, 200)         # plis et contour gris clair (le masque reste visible sur peau claire)
+MASQUE_ELASTIQUE_BGR = (228, 228, 228)    # élastiques gris très clair
 
 LOGO_PATH = Path(__file__).parent / "assets" / "images" / "logo-beauthentik.png"
 

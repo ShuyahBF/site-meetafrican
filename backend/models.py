@@ -522,9 +522,11 @@ class ModerationSettings(BaseModel):
     humaine)."""
     id: str = "global"
     ai_auto_enabled: bool = True
-    # 09/10/2026 — « l'administrateur doit valider mon inscription et voir ma photo masquée » : toute nouvelle
-    # photo attend la validation d'un administrateur, même quand l'IA la juge conforme (son avis est affiché).
-    validation_admin_obligatoire: bool = True
+    # 09/10/2026 — règle du propriétaire : « C'est l'agent IA qui force la validation des photos ou de l'identité.
+    # L'Admin ne force que s'il le veut ou lève un doute. » Par défaut, une photo jugée conforme par l'IA est donc
+    # publiée aussitôt ; l'administrateur peut revenir sur toute décision (Admin > Photos > Décisions de l'IA).
+    # Activé : toute nouvelle photo attend en plus la validation du super-administrateur.
+    validation_admin_systematique: bool = False
     # 09/10/2026 — façon de cacher le visage pour les membres qui n'ont pas matché : « bandeau » (noir, des sourcils
     # à un peu au-dessus du menton) ou « masque_sanitaire » ; logo beAuthentik au centre dans les deux cas.
     style_masque: Literal["bandeau", "masque_sanitaire"] = "bandeau"

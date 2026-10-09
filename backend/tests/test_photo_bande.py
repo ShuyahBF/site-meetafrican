@@ -42,8 +42,9 @@ def _admin(client, make_user, role="admin"):
     return headers
 
 
-def test_photo_conforme_attend_la_validation_admin(client, make_user, monkeypatch):
-    """L'IA approuve, mais la photo attend l'administrateur ; l'aperçu masqué est prêt dès l'envoi."""
+def test_l_ia_decide_l_admin_force_s_il_le_veut(client, make_user, monkeypatch):
+    """Règle du 09/10/2026 : l'IA valide seule ; le super-administrateur peut forcer une décision (pas un modérateur).
+    Option « validation systématique » : la photo attend alors le super-administrateur, aperçu masqué prêt."""
     import routes.photos as ph
 
     # Analyse simulée : 1 visage, avis IA « conforme », génération des images sans réseau
@@ -65,43 +66,41 @@ def test_photo_conforme_attend_la_validation_admin(client, make_user, monkeypatc
     monkeypatch.setattr(ph, "_generate_approved_variants", variantes)
 
     admin = _admin(client, make_user)
-    reglages = client.get("/api/admin/settings/moderation", headers=admin).json()
-    assert reglages["validation_admin_obligatoire"] is True          # valeur par défaut
-
-    # 1) Réglage par défaut : la photo attend l'administrateur, avec son aperçu masqué
-    _, membre, _ = make_user()
-    r = client.post("/api/me/photos", json={"url": "https://x/moi.jpg", "is_primary": True}, headers=membre)
-    assert r.status_code == 201, r.text
-    photo = r.json()
-    assert photo["status"] == "needs_review"
-    assert photo["masked_url"] == "https://x/masque.jpg"
-    assert "administrateur" in photo["moderation_notes"]
-
-    # 2) Elle apparaît dans la file d'attente du SUPER-ADMINISTRATEUR ; un modérateur n'y a pas accès
     moderateur = _admin(client, make_user, role="moderator")
-    assert client.get("/api/admin/photos/pending", headers=moderateur).status_code == 403
-    file_attente = client.get("/api/admin/photos/pending", headers=admin).json()
-    item = next(p for p in file_attente if p["id"] == photo["id"])
-    assert item["masked_url"] == "https://x/masque.jpg"
+    reglages = client.get("/api/admin/settings/moderation", headers=admin).json()
+    assert reglages["validation_admin_systematique"] is False        # valeur par défaut : l'IA décide
 
-    # 3) Le modérateur ne peut pas valider ; le super-administrateur oui
-    refus = client.post(f"/api/admin/photos/{item['user_id']}/{photo['id']}/review", params={"approve": True}, headers=moderateur)
-    assert refus.status_code == 403
-    # Validation par le super-administrateur : photo approuvée, version masquée définitive
-    v = client.post(f"/api/admin/photos/{item['user_id']}/{photo['id']}/review", params={"approve": True}, headers=admin)
-    assert v.status_code == 200 and v.json()["status"] == "approved"
+    # 1) L'IA juge la photo conforme : publiée aussitôt
+    _, membre, _ = make_user()
+    photo = client.post("/api/me/photos", json={"url": "https://x/moi.jpg", "is_primary": True}, headers=membre).json()
+    assert photo["status"] == "approved" and photo["masked_url"] == "https://x/masque-final.jpg"
 
-    # 4) Interrupteur désactivé : une photo jugée conforme par l'IA est approuvée directement
-    reglages["validation_admin_obligatoire"] = False
+    # 2) Elle figure dans « Décisions de l'IA » du super-administrateur (pas pour un modérateur)…
+    assert client.get("/api/admin/photos/decisions-ia", headers=moderateur).status_code == 403
+    decisions = client.get("/api/admin/photos/decisions-ia", headers=admin).json()
+    item = next(p for p in decisions if p["id"] == photo["id"])
+    # … qui peut FORCER le refus ; le modérateur ne le peut pas
+    url = f"/api/admin/photos/{item['user_id']}/{photo['id']}/review"
+    assert client.post(url, params={"approve": False}, headers=moderateur).status_code == 403
+    assert client.post(url, params={"approve": False}, headers=admin).json()["status"] == "rejected"
+
+    # 3) Option « validation systématique » : la photo attend le super-administrateur, avec son aperçu masqué
+    reglages["validation_admin_systematique"] = True
     assert client.put("/api/admin/settings/moderation", json=reglages, headers=admin).status_code == 200
     try:
         r2 = client.post("/api/me/photos", json={"url": "https://x/moi2.jpg"}, headers=membre).json()
-        assert r2["status"] == "approved"
-        assert r2["masked_url"] == "https://x/masque-final.jpg"
+        assert r2["status"] == "needs_review" and r2["masked_url"] == "https://x/masque.jpg"
+        assert client.get("/api/admin/photos/pending", headers=moderateur).status_code == 403
+        assert any(p["id"] == r2["id"] for p in client.get("/api/admin/photos/pending", headers=admin).json())
     finally:
-        # Remise du réglage par défaut pour les autres tests
-        reglages["validation_admin_obligatoire"] = True
+        reglages["validation_admin_systematique"] = False
         client.put("/api/admin/settings/moderation", json=reglages, headers=admin)
+
+    # 4) Option désactivée : la photo retenue est libérée (comme au démarrage du serveur)
+    assert client.portal.call(ph.liberer_photos_conformes) >= 1
+    moi = client.get("/api/auth/me", headers=membre).json()
+    libre = next(p for p in moi["photos"] if p["id"] == r2["id"])
+    assert libre["status"] == "approved" and "administrateur" not in (libre["moderation_notes"] or "")
 
 
 def test_visage_en_clair_seulement_apres_un_match(client, make_user):
