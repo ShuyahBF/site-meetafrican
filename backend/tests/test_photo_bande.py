@@ -6,24 +6,32 @@ reconnaissable. Et étant Administrateur je devais valider mon inscription et vo
 import numpy as np
 
 from ai_moderation import ModerationResult
-from face_blur import band_faces_in_photo, polygone_bande
+from face_blur import band_faces_in_photo, masquer_visages, polygone_bande
+from image_processing import mask_version
 
 
-def test_polygone_bande_couvre_des_yeux_au_nez():
-    """Visage de face (repères YuNet) : la bande déborde des yeux sur les côtés et descend jusqu'au nez."""
+def test_polygone_bande_des_sourcils_au_dessus_du_menton():
+    """Visage de face (repères YuNet) : le bandeau déborde des yeux et descend un peu sous la bouche (pas au menton)."""
     # Repères : œil droit, œil gauche, nez, coin droit de la bouche, coin gauche de la bouche
     reperes = np.array([[100, 100], [160, 100], [130, 140], [110, 170], [150, 170]], dtype=np.float32)
     poly = polygone_bande((0, 0, 200, 200), reperes)
     xs, ys = poly[:, 0], poly[:, 1]
     assert xs.min() < 100 - 30 and xs.max() > 160 + 30      # déborde largement des deux yeux
     assert ys.min() < 100 - 20                               # couvre les sourcils
-    assert 140 <= ys.max() < 170                             # descend jusqu'au nez, sans couvrir la bouche
+    assert 170 < ys.max() < 200                              # couvre la bouche, s'arrête au-dessus du menton
 
 
 def test_bande_aucun_visage():
     """Image sans visage : pas de bande (l'appelant floute alors toute la photo)."""
     vide = np.full((200, 200, 3), 255, dtype=np.uint8)
     assert band_faces_in_photo(vide) is None
+    assert masquer_visages(vide, "masque_sanitaire") is None
+
+
+def test_version_du_masque_suit_le_style():
+    """Changer de style dans les paramètres fait régénérer les photos (version différente)."""
+    assert mask_version("bandeau") != mask_version("masque_sanitaire")
+    assert mask_version("inconnu") == mask_version("bandeau")
 
 
 def _admin(client, make_user, role="admin"):
@@ -45,10 +53,10 @@ def test_photo_conforme_attend_la_validation_admin(client, make_user, monkeypatc
     async def ia_conforme(url, prompt):
         return ModerationResult(decision="approved", reason="Photo nette, un seul visage")
 
-    async def masque(url):
+    async def masque(url, style="bandeau"):
         return "https://x/masque.jpg"
 
-    async def variantes(url):
+    async def variantes(url, style="bandeau"):
         return "https://x/filigrane.jpg", "https://x/masque-final.jpg"
 
     monkeypatch.setattr(ph, "_count_faces", un_visage)
@@ -69,13 +77,17 @@ def test_photo_conforme_attend_la_validation_admin(client, make_user, monkeypatc
     assert photo["masked_url"] == "https://x/masque.jpg"
     assert "administrateur" in photo["moderation_notes"]
 
-    # 2) Elle apparaît dans la file d'attente (un modérateur la voit aussi)
+    # 2) Elle apparaît dans la file d'attente du SUPER-ADMINISTRATEUR ; un modérateur n'y a pas accès
     moderateur = _admin(client, make_user, role="moderator")
-    file_attente = client.get("/api/admin/photos/pending", headers=moderateur).json()
+    assert client.get("/api/admin/photos/pending", headers=moderateur).status_code == 403
+    file_attente = client.get("/api/admin/photos/pending", headers=admin).json()
     item = next(p for p in file_attente if p["id"] == photo["id"])
     assert item["masked_url"] == "https://x/masque.jpg"
 
-    # 3) Validation par l'administrateur : photo approuvée, version masquée définitive
+    # 3) Le modérateur ne peut pas valider ; le super-administrateur oui
+    refus = client.post(f"/api/admin/photos/{item['user_id']}/{photo['id']}/review", params={"approve": True}, headers=moderateur)
+    assert refus.status_code == 403
+    # Validation par le super-administrateur : photo approuvée, version masquée définitive
     v = client.post(f"/api/admin/photos/{item['user_id']}/{photo['id']}/review", params={"approve": True}, headers=admin)
     assert v.status_code == 200 and v.json()["status"] == "approved"
 
@@ -90,3 +102,24 @@ def test_photo_conforme_attend_la_validation_admin(client, make_user, monkeypatc
         # Remise du réglage par défaut pour les autres tests
         reglages["validation_admin_obligatoire"] = True
         client.put("/api/admin/settings/moderation", json=reglages, headers=admin)
+
+
+def test_visage_en_clair_seulement_apres_un_match(client, make_user):
+    """Le bandeau n'est servi qu'aux membres qui n'ont PAS matché avec le propriétaire de la photo."""
+    from db import db
+
+    proprio, _, _ = make_user(gender="femme")
+    visiteur, h_visiteur, _ = make_user(gender="homme")
+    photo = {"id": "p-clair", "url": "https://x/clair.jpg", "masked_url": "https://x/bandeau.jpg",
+             "status": "approved", "is_primary": True, "mask_version": mask_version()}
+    client.portal.call(lambda: db.users.update_one({"id": proprio}, {"$set": {"photos": [photo]}}))
+
+    # Pas de match : bandeau
+    vue = client.get(f"/api/users/{proprio}", headers=h_visiteur).json()
+    assert vue["profile"]["photos"][0]["url"] == "https://x/bandeau.jpg"
+
+    # Match : photo en clair
+    a, b = sorted([proprio, visiteur])
+    client.portal.call(lambda: db.matches.insert_one({"id": "m-clair", "user_a": a, "user_b": b, "created_at": "2026-10-09T00:00:00+00:00"}))
+    vue = client.get(f"/api/users/{proprio}", headers=h_visiteur).json()
+    assert vue["profile"]["photos"][0]["url"] == "https://x/clair.jpg"

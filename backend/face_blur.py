@@ -111,16 +111,30 @@ def blur_faces_in_photo(rgb: np.ndarray) -> Optional[np.ndarray]:
 
 
 # ---------------------------------------------------------------------------
-# Photos : BANDE opaque des yeux au nez (demande du propriétaire, 09/10/2026)
+# Photos : BANDEAU NOIR ou MASQUE SANITAIRE avec le logo beAuthentik
 # ---------------------------------------------------------------------------
-# « L'IA devait afficher ma photo avec une bande des yeux au nez afin qu'on ne soit pas reconnaissable. »
+# Demandes du propriétaire (09/10/2026) :
+#   « bande des yeux au nez afin qu'on ne soit pas reconnaissable », puis « Mettons le bandeau noir un peu
+#   au-dessus du menton ou un masque sanitaire (au choix dans les paramètres) avec le logo de beAuthentik ».
 # YuNet renvoie, pour chaque visage, 5 repères : œil droit, œil gauche, bout du nez, coins de la bouche.
-# La bande couvre des sourcils jusqu'au bout du nez, un peu plus large que les deux yeux, et suit
-# l'inclinaison de la tête (angle de la ligne des yeux). Elle est OPAQUE : rien n'est récupérable dessous.
-BANDE_COULEUR_BGR = (12, 4, 20)    # aubergine très foncé (couleur de la marque), opaque
-BANDE_MARGE_COTES = 0.75           # débord de chaque côté des yeux (fraction de l'écart entre les yeux)
-BANDE_MARGE_HAUT = 0.55            # au-dessus des yeux : sourcils (fraction de l'écart entre les yeux)
-BANDE_MARGE_BAS = 0.30             # sous le bout du nez (fraction de l'écart entre les yeux)
+# Toutes les formes sont calculées dans le REPÈRE DU VISAGE pour suivre l'inclinaison de la tête :
+#   u = position le long de la ligne des yeux, v = position vers le bas du visage,
+#   l'unité est l'écart entre les deux yeux (le visage garde ainsi les mêmes proportions quelle que soit sa taille).
+# Le masquage est OPAQUE : rien n'est récupérable dessous.
+STYLE_BANDEAU = "bandeau"
+STYLE_MASQUE_SANITAIRE = "masque_sanitaire"
+STYLES_MASQUE = (STYLE_BANDEAU, STYLE_MASQUE_SANITAIRE)
+
+BANDE_COULEUR_BGR = (14, 12, 12)          # noir (très légèrement adouci), opaque
+BANDE_MARGE_COTES = 0.75                  # débord de chaque côté des yeux (en écarts entre les yeux)
+BANDE_MARGE_HAUT = 0.55                   # au-dessus des yeux : sourcils
+BANDE_MARGE_SOUS_BOUCHE = 0.30            # sous la bouche : s'arrête un peu au-dessus du menton
+
+MASQUE_COULEUR_BGR = (238, 214, 168)      # bleu clair « masque chirurgical »
+MASQUE_PLIS_BGR = (205, 178, 128)         # plis du masque, un ton plus foncé
+MASQUE_ELASTIQUE_BGR = (246, 246, 246)    # élastiques blancs
+
+LOGO_PATH = Path(__file__).parent / "assets" / "images" / "logo-beauthentik.png"
 
 
 def detect_faces_landmarks(bgr: np.ndarray) -> List[Tuple[Box, np.ndarray]]:
@@ -139,39 +153,126 @@ def detect_faces_landmarks(bgr: np.ndarray) -> List[Tuple[Box, np.ndarray]]:
     return out
 
 
-def polygone_bande(cadre: Box, reperes: np.ndarray) -> np.ndarray:
-    """Les 4 coins de la bande (yeux → nez) d'un visage, inclinée comme la ligne des yeux."""
-    oeil_d, oeil_g, nez = reperes[0], reperes[1], reperes[2]
-    vecteur = oeil_g - oeil_d
-    ecart = float(np.hypot(*vecteur))
+class _RepereVisage:
+    """Repère du visage : centre entre les yeux, axe des yeux (u), normale vers le menton (v), écart des yeux."""
+
+    def __init__(self, reperes: np.ndarray):
+        oeil_d, oeil_g = reperes[0], reperes[1]
+        vecteur = oeil_g - oeil_d
+        self.ecart = float(np.hypot(*vecteur))
+        self.axe = vecteur / self.ecart
+        self.normale = np.array([-self.axe[1], self.axe[0]])
+        self.centre = (oeil_d + oeil_g) / 2
+        self.angle_deg = float(np.degrees(np.arctan2(self.axe[1], self.axe[0])))   # inclinaison de la tête
+        # Profondeurs (en écarts) du nez et de la bouche sous la ligne des yeux, avec des minimums réalistes
+        bouche = (reperes[3] + reperes[4]) / 2
+        self.v_nez = max(self._v(reperes[2]), 0.35)
+        self.v_bouche = max(self._v(bouche), self.v_nez + 0.25)
+
+    def _v(self, point: np.ndarray) -> float:
+        return float(np.dot(point - self.centre, self.normale)) / self.ecart
+
+    def point(self, u: float, v: float) -> np.ndarray:
+        """Coordonnées (u, v) du visage → pixel de l'image."""
+        return self.centre + (self.axe * u + self.normale * v) * self.ecart
+
+    def poly(self, points_uv) -> np.ndarray:
+        return np.array([[round(p[0]), round(p[1])] for p in (self.point(u, v) for u, v in points_uv)], dtype=np.int32)
+
+
+def _cadre_vers_repere(cadre: Box) -> Optional[np.ndarray]:
+    """Repères approximatifs déduits du cadre du visage quand ceux de YuNet sont inutilisables."""
     x0, y0, x1, y1 = cadre
-    if ecart < 2:   # repères inutilisables : bande horizontale déduite du cadre du visage
-        hauteur = y1 - y0
-        return np.array([[x0, y0 + 0.18 * hauteur], [x1, y0 + 0.18 * hauteur],
-                         [x1, y0 + 0.68 * hauteur], [x0, y0 + 0.68 * hauteur]], dtype=np.int32)
-    axe = vecteur / ecart                       # direction de la ligne des yeux
-    normale = np.array([-axe[1], axe[0]])       # vers le bas du visage
-    centre_yeux = (oeil_d + oeil_g) / 2
-    descente_nez = max(float(np.dot(nez - centre_yeux, normale)), 0.35 * ecart)
-    gauche = oeil_d - axe * ecart * BANDE_MARGE_COTES
-    droite = oeil_g + axe * ecart * BANDE_MARGE_COTES
-    haut = -normale * ecart * BANDE_MARGE_HAUT
-    bas = normale * (descente_nez + ecart * BANDE_MARGE_BAS)
-    coins = [gauche + haut, droite + haut, droite + bas, gauche + bas]
-    return np.array([[round(c[0]), round(c[1])] for c in coins], dtype=np.int32)
+    w, h = x1 - x0, y1 - y0
+    if w < 4 or h < 4:
+        return None
+    return np.array([[x0 + 0.32 * w, y0 + 0.40 * h], [x0 + 0.68 * w, y0 + 0.40 * h], [x0 + 0.5 * w, y0 + 0.58 * h],
+                     [x0 + 0.37 * w, y0 + 0.75 * h], [x0 + 0.63 * w, y0 + 0.75 * h]], dtype=np.float64)
 
 
-def band_faces_in_photo(rgb: np.ndarray) -> Optional[np.ndarray]:
-    """Photo (tableau RGB) avec une bande opaque des yeux au nez sur chaque visage, ou None si aucun
-    visage n'est détecté (l'appelant applique alors le floutage complet : en cas de doute, tout est masqué)."""
+def _repere(cadre: Box, reperes: np.ndarray) -> Optional[_RepereVisage]:
+    if float(np.hypot(*(reperes[1] - reperes[0]))) < 2:
+        reperes = _cadre_vers_repere(cadre)
+        if reperes is None:
+            return None
+    return _RepereVisage(reperes)
+
+
+def polygone_bande(cadre: Box, reperes: np.ndarray) -> np.ndarray:
+    """Les 4 coins du bandeau noir : des sourcils jusqu'un peu au-dessus du menton, incliné comme les yeux."""
+    r = _repere(cadre, reperes)
+    if r is None:
+        x0, y0, x1, y1 = cadre
+        return np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], dtype=np.int32)
+    cote = 0.5 + BANDE_MARGE_COTES
+    bas = r.v_bouche + BANDE_MARGE_SOUS_BOUCHE
+    return r.poly([(-cote, -BANDE_MARGE_HAUT), (cote, -BANDE_MARGE_HAUT), (cote, bas), (-cote, bas)])
+
+
+def _formes_masque(r: _RepereVisage):
+    """Masque sanitaire : contour (arête du nez → menton), 3 plis horizontaux et 4 élastiques vers les oreilles."""
+    haut = r.v_nez * 0.55                     # sur l'arête du nez, juste sous les yeux
+    vb = r.v_bouche
+    bas = vb + 0.62                           # jusque sous le menton
+    contour = r.poly([(-0.95, haut), (-0.35, haut - 0.10), (0.35, haut - 0.10), (0.95, haut),
+                      (1.08, (haut + vb) / 2), (1.02, vb), (0.78, vb + 0.42), (0.35, bas), (-0.35, bas),
+                      (-0.78, vb + 0.42), (-1.02, vb), (-1.08, (haut + vb) / 2)])
+    plis = [r.poly([(-0.98, haut + (bas - haut) * k), (0.98, haut + (bas - haut) * k)]) for k in (0.30, 0.48, 0.66)]
+    elastiques = [r.poly([(s * 0.95, haut + 0.04), (s * 1.42, -0.05)]) for s in (-1, 1)] + \
+                 [r.poly([(s * 1.0, vb + 0.05), (s * 1.42, 0.35)]) for s in (-1, 1)]
+    return contour, plis, elastiques, (haut + bas) / 2, bas - haut
+
+
+def _coller_logo(image_pil, centre_xy, taille_px: int, angle_deg: float) -> None:
+    """Logo beAuthentik collé au centre du masquage, tourné comme la tête (silencieux si le logo manque)."""
+    from PIL import Image
+
+    if taille_px < 8 or not LOGO_PATH.exists():
+        return
+    logo = Image.open(LOGO_PATH).convert("RGBA").resize((taille_px, taille_px), Image.LANCZOS)
+    logo = logo.rotate(-angle_deg, resample=Image.BICUBIC, expand=True)
+    x, y = int(centre_xy[0] - logo.width / 2), int(centre_xy[1] - logo.height / 2)
+    image_pil.alpha_composite(logo, (x, y))
+
+
+def masquer_visages(rgb: np.ndarray, style: str = STYLE_BANDEAU) -> Optional[np.ndarray]:
+    """Photo (tableau RGB) dont chaque visage est caché par le BANDEAU NOIR ou le MASQUE SANITAIRE, logo au centre.
+    None si aucun visage n'est détecté (l'appelant floute alors toute la photo : en cas de doute, tout est masqué)."""
+    from PIL import Image
+
     bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
     visages = detect_faces_landmarks(bgr)
     if not visages:
         return None
     out = bgr.copy()
+    logos = []                                  # (centre, taille, angle) : collés après le dessin des formes
     for cadre, reperes in visages:
-        cv2.fillConvexPoly(out, polygone_bande(cadre, reperes), BANDE_COULEUR_BGR, lineType=cv2.LINE_AA)
-    return cv2.cvtColor(out, cv2.COLOR_BGR2RGB)
+        r = _repere(cadre, reperes)
+        if style == STYLE_MASQUE_SANITAIRE and r is not None:
+            contour, plis, elastiques, v_centre, hauteur = _formes_masque(r)
+            epaisseur = max(1, round(r.ecart * 0.035))
+            for e in elastiques:
+                cv2.polylines(out, [e], False, MASQUE_ELASTIQUE_BGR, epaisseur, lineType=cv2.LINE_AA)
+            cv2.fillPoly(out, [contour], MASQUE_COULEUR_BGR, lineType=cv2.LINE_AA)
+            for p in plis:
+                cv2.polylines(out, [p], False, MASQUE_PLIS_BGR, max(1, epaisseur // 2 + 1), lineType=cv2.LINE_AA)
+            cv2.polylines(out, [contour], True, MASQUE_PLIS_BGR, epaisseur, lineType=cv2.LINE_AA)
+            logos.append((r.point(0, v_centre), int(min(hauteur * 0.55, 0.85) * r.ecart), r.angle_deg))
+        else:
+            poly = polygone_bande(cadre, reperes)
+            cv2.fillConvexPoly(out, poly, BANDE_COULEUR_BGR, lineType=cv2.LINE_AA)
+            if r is not None:
+                v_centre = (-BANDE_MARGE_HAUT + r.v_bouche + BANDE_MARGE_SOUS_BOUCHE) / 2
+                logos.append((r.point(0, v_centre), int(0.75 * r.ecart), r.angle_deg))
+    image = Image.fromarray(cv2.cvtColor(out, cv2.COLOR_BGR2RGB)).convert("RGBA")
+    for centre, taille, angle in logos:
+        _coller_logo(image, centre, taille, angle)
+    return np.asarray(image.convert("RGB"))
+
+
+def band_faces_in_photo(rgb: np.ndarray) -> Optional[np.ndarray]:
+    """Compatibilité : bandeau noir (style par défaut)."""
+    return masquer_visages(rgb, STYLE_BANDEAU)
 
 
 # ---------------------------------------------------------------------------

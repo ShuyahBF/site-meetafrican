@@ -4,7 +4,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
@@ -525,6 +525,9 @@ class ModerationSettings(BaseModel):
     # 09/10/2026 — « l'administrateur doit valider mon inscription et voir ma photo masquée » : toute nouvelle
     # photo attend la validation d'un administrateur, même quand l'IA la juge conforme (son avis est affiché).
     validation_admin_obligatoire: bool = True
+    # 09/10/2026 — façon de cacher le visage pour les membres qui n'ont pas matché : « bandeau » (noir, des sourcils
+    # à un peu au-dessus du menton) ou « masque_sanitaire » ; logo beAuthentik au centre dans les deux cas.
+    style_masque: Literal["bandeau", "masque_sanitaire"] = "bandeau"
     id_verification_prompt: str = DEFAULT_ID_VERIFICATION_PROMPT
     photo_moderation_prompt: str = DEFAULT_PHOTO_MODERATION_PROMPT
 

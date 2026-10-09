@@ -10,7 +10,6 @@ from pydantic import BaseModel
 from auth import get_current_user
 from db import db
 from models import Conversation, Match, PhotoStatus, Swipe, UserPublic, to_user_public
-from routes.subscriptions import has_active_subscription
 
 router = APIRouter(tags=["Matching"])
 
@@ -23,16 +22,31 @@ def _opposite(gender: str) -> str:
     return "femme" if gender == "homme" else "homme"
 
 
+async def matched_ids(viewer_id: str, other_ids: List[str]) -> set:
+    """Parmi `other_ids`, les membres avec qui `viewer_id` a matché (une seule requête)."""
+    if not other_ids:
+        return set()
+    cursor = db.matches.find(
+        {"$or": [{"user_a": viewer_id, "user_b": {"$in": other_ids}}, {"user_b": viewer_id, "user_a": {"$in": other_ids}}]},
+        {"_id": 0, "user_a": 1, "user_b": 1},
+    )
+    return {m["user_b"] if m["user_a"] == viewer_id else m["user_a"] async for m in cursor}
+
+
 async def _mask_photos_for_viewer(profiles: List[UserPublic], viewer_id: str) -> List[UserPublic]:
-    """Sans abonnement actif, le visage des AUTRES profils reste masqué
-    (voir image_processing.apply_face_mask) — visible en clair uniquement
-    avec un abonnement en cours. S'applique uniquement aux photos déjà
-    approuvées (les autres n'ont de toute façon pas de masked_url)."""
+    """09/10/2026 — règle du propriétaire : « Le bandeau n'est mis sur une photo que si le visiteur n'a pas matché
+    avec le propriétaire de la photo. » Le visage d'un profil est donc caché (bandeau noir ou masque sanitaire,
+    voir image_processing.apply_face_mask) tant qu'il n'y a pas de match ; après un match, la photo est en clair.
+    Le super-administrateur voit les photos en clair (validation). S'applique aux photos approuvées."""
     if not profiles:
         return profiles
-    if await has_active_subscription(viewer_id):
+    viewer = await db.users.find_one({"id": viewer_id}, {"_id": 0, "role": 1}) or {}
+    if viewer.get("role") == "admin":
         return profiles
+    en_clair = await matched_ids(viewer_id, [p.id for p in profiles])
     for p in profiles:
+        if p.id in en_clair or p.id == viewer_id:
+            continue
         for photo in p.photos:
             if photo.status == PhotoStatus.approved and photo.masked_url:
                 photo.url = photo.masked_url

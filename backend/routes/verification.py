@@ -126,7 +126,16 @@ async def get_moderation_settings(_: dict = Depends(get_current_admin)):
 
 @router.put("/admin/settings/moderation", response_model=ModerationSettings)
 async def update_moderation_settings(payload: ModerationSettings, _: dict = Depends(get_current_admin)):
+    ancien = await db.settings.find_one({"id": "global_moderation"}, {"_id": 0, "style_masque": 1}) or {}
     doc = payload.model_dump()
     doc["id"] = "global_moderation"
     await db.settings.update_one({"id": "global_moderation"}, {"$set": doc}, upsert=True)
+    # 09/10/2026 — style de masquage changé (bandeau <-> masque sanitaire) : les photos déjà approuvées sont
+    # régénérées en arrière-plan, une à la fois (media_migration.py), sans ralentir le site.
+    if (ancien.get("style_masque") or "bandeau") != payload.style_masque:
+        import asyncio
+
+        from media_migration import migration_loop
+
+        asyncio.create_task(migration_loop(attente=1))
     return payload

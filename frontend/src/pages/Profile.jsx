@@ -247,13 +247,13 @@ export default function Profile() {
             <input ref={cameraInputRef} type="file" accept="image/*" capture="user" hidden onChange={addPhoto} />
           </div>
           <p className="mt-2 text-xs text-slate-400">
-            Chaque photo est contrôlée par IA puis validée par un administrateur avant publication : votre visage doit
+            Chaque photo est contrôlée par IA puis validée par l'administrateur avant publication : votre visage doit
             être visible, tenue correcte, rien de trop suggestif.
           </p>
-          {/* 09/10/2026 — aperçu de ce que voient les membres sans abonnement : bande opaque des yeux au nez */}
+          {/* 09/10/2026 — aperçu de ce que voient les membres qui n'ont pas matché avec vous (bandeau ou masque + logo) */}
           {photos.some((p) => p.masked_url) && (
             <div className="mt-4">
-              <p className="text-xs font-bold text-slate-600">Comment les autres membres vous voient (visage masqué)</p>
+              <p className="text-xs font-bold text-slate-600">Comment vous voient les membres avec qui vous n'avez pas matché</p>
               <div className="mt-2 grid grid-cols-3 gap-2">
                 {photos.filter((p) => p.masked_url).map((p) => (
                   <img key={`masque-${p.id}`} src={p.masked_url} alt="Aperçu masqué" className="aspect-[3/4] w-full rounded-2xl object-cover" />

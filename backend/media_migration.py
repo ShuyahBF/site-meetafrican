@@ -21,7 +21,7 @@ from pathlib import Path
 import httpx
 
 from db import db
-from image_processing import MASK_VERSION, apply_face_mask
+from image_processing import apply_face_mask, mask_version
 from storage import delete_public_media, presigned_document_url, save_photo, save_public_media
 from video_processing import BLUR_MODE_FACE, make_poster, make_public_version, probe_duration
 
@@ -44,8 +44,16 @@ async def _remember_if_test(is_test: bool, *urls: str) -> None:
             await _remember_media("public", url)
 
 
+async def _style_masque() -> str:
+    """Style de masquage choisi dans Admin > Paramètres (bandeau noir par défaut)."""
+    doc = await db.settings.find_one({"id": "global_moderation"}, {"_id": 0, "style_masque": 1}) or {}
+    return doc.get("style_masque") or "bandeau"
+
+
 async def migrate_one_photo() -> bool:
-    """Régénère UNE photo masquée d'ancienne version. False s'il n'en reste plus."""
+    """Régénère UNE photo masquée d'ancienne version (ou d'un autre style que celui choisi). False s'il n'en reste plus."""
+    style = await _style_masque()
+    MASK_VERSION = mask_version(style)   # version attendue pour le style courant
     user = await db.users.find_one(
         {"photos": {"$elemMatch": {"masked_url": {"$nin": [None, ""]}, "mask_version": {"$ne": MASK_VERSION}}}},
         {"_id": 0, "id": 1, "photos": 1, "is_test_data": 1},
@@ -54,7 +62,7 @@ async def migrate_one_photo() -> bool:
         return False
     photo = next(p for p in user["photos"] if p.get("masked_url") and p.get("mask_version") != MASK_VERSION)
     try:
-        masked = await asyncio.to_thread(apply_face_mask, await _download(photo["url"]))
+        masked = await asyncio.to_thread(apply_face_mask, await _download(photo["url"]), style)
         new_url = await save_photo(masked, "image/jpeg")
     except Exception as exc:  # noqa: BLE001 — photo illisible : on la marque pour ne pas boucler
         print(f"[media_migration] photo {photo['id']} : {exc!r}")
@@ -117,8 +125,23 @@ async def migrate_all() -> dict:
     return done
 
 
-async def migration_loop() -> None:
-    await asyncio.sleep(30)  # laisse le serveur démarrer tranquillement
+_en_cours = False   # une seule boucle de migration à la fois
+
+
+async def migration_loop(attente: int = 30) -> None:
+    """Boucle de fond : au démarrage du serveur, et relancée quand le style de masquage change (Paramètres)."""
+    global _en_cours
+    if _en_cours:
+        return
+    _en_cours = True
+    try:
+        await _boucle(attente)
+    finally:
+        _en_cours = False
+
+
+async def _boucle(attente: int) -> None:
+    await asyncio.sleep(attente)  # laisse le serveur démarrer tranquillement
     while True:
         try:
             worked = await migrate_one_photo() or await migrate_one_video()

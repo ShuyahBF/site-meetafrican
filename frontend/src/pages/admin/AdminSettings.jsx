@@ -458,10 +458,54 @@ function ModerationSection() {
         Validation des photos par un administrateur obligatoire
       </label>
       <p className="mt-1 text-xs text-slate-500">
-        Activée : chaque nouvelle photo attend votre validation (Admin → Photos), même jugée conforme par l'IA ; vous
-        voyez la photo d'origine et sa version masquée (bande des yeux au nez). Désactivée : une photo jugée conforme
-        par l'IA est publiée aussitôt.
+        Activée : chaque nouvelle photo attend votre validation (Admin → Photos, réservé au super-administrateur),
+        même jugée conforme par l'IA ; vous voyez la photo d'origine et sa version masquée. Désactivée : une photo
+        jugée conforme par l'IA est publiée aussitôt.
       </p>
+
+      {/* 09/10/2026 — façon de cacher le visage aux membres qui n'ont pas matché (logo beAuthentik au centre).
+          Changer de style régénère en arrière-plan toutes les photos déjà approuvées. */}
+      <fieldset className="mt-4">
+        <legend className="text-sm font-semibold">Visage caché aux membres sans match</legend>
+        <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {[
+            { valeur: "bandeau", titre: "Bandeau noir", texte: "Des sourcils jusqu'un peu au-dessus du menton." },
+            { valeur: "masque_sanitaire", titre: "Masque sanitaire", texte: "Bleu clair, du nez au menton : les yeux restent visibles." },
+          ].map((o) => (
+            <label
+              key={o.valeur}
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm ${
+                (form.style_masque || "bandeau") === o.valeur ? "border-primary bg-primary/5" : "border-slate-200"
+              }`}
+            >
+              <input
+                type="radio"
+                name="style_masque"
+                value={o.valeur}
+                checked={(form.style_masque || "bandeau") === o.valeur}
+                onChange={() => setForm({ ...form, style_masque: o.valeur })}
+                className="mt-1"
+              />
+              {/* Pictogramme : visage avec bandeau noir ou avec masque bleu */}
+              <svg viewBox="0 0 40 40" className="h-10 w-10 shrink-0" aria-hidden="true">
+                <ellipse cx="20" cy="21" rx="13" ry="16" fill="#e9c7a8" />
+                {o.valeur === "bandeau"
+                  ? <rect x="5" y="13" width="30" height="17" rx="2" fill="#0e0c0c" />
+                  : <path d="M8 22 Q20 18 32 22 L31 30 Q20 38 9 30 Z" fill="#a8d6ee" stroke="#80b2cd" />}
+                <circle cx="20" cy={o.valeur === "bandeau" ? 21.5 : 26} r="3" fill="#f4256a" />
+              </svg>
+              <span>
+                <span className="block font-semibold">{o.titre}</span>
+                <span className="text-xs text-slate-500">{o.texte}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+        <p className="mt-1 text-xs text-slate-500">
+          Logo beAuthentik au centre. Après un match, les deux membres se voient en clair. Un changement de style
+          s'applique aux nouvelles photos et, en arrière-plan, à toutes les photos déjà publiées.
+        </p>
+      </fieldset>
 
       <Field label="Prompt système — vérification d'identité">
         <textarea

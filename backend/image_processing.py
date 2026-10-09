@@ -3,11 +3,13 @@
   - `apply_watermark` : filigrane discret "beAuthentik" en bas de l'image,
     appliqué à toute photo dès son approbation (IA ou admin) — dissuade la
     réutilisation des photos hors du site.
-  - `apply_face_mask` : version masquée servie aux profils SANS abonnement
-    actif (voir routes/matching.py:_mask_photos_for_viewer). Le VISAGE est
-    détecté (face_blur.py) et seul lui est flouté : silhouette et style
-    restent visibles. Si aucun visage n'est détecté, par sécurité, toute
-    l'image est floutée avec un bandeau de marque (ancien comportement).
+  - `apply_face_mask` : version masquée servie aux membres qui n'ont PAS
+    matché avec le propriétaire de la photo (voir routes/matching.py:
+    _mask_photos_for_viewer). Le VISAGE est détecté (face_blur.py) puis caché
+    par un bandeau noir ou un masque sanitaire avec le logo beAuthentik (au
+    choix dans Admin > Paramètres) : silhouette et style restent visibles.
+    Si aucun visage n'est détecté, par sécurité, toute l'image est floutée
+    avec un bandeau de marque.
 
 Police utilisée : Plus Jakarta Sans (police de marque du site), embarquée
 dans assets/fonts/ pour ne pas dépendre des polices système — absentes par
@@ -67,19 +69,29 @@ def apply_watermark(image_bytes: bytes) -> bytes:
 
 # Version du masquage : les photos masquées plus anciennes (ou d'une autre
 # version) sont régénérées automatiquement (voir media_migration.py).
-MASK_VERSION = "bande-v1"   # 09/10/2026 : bande des yeux au nez (au lieu du flou du visage)
+# La version dépend du STYLE choisi dans les paramètres : changer de style fait régénérer toutes les photos.
+STYLE_PAR_DEFAUT = "bandeau"
+STYLES_MASQUE = ("bandeau", "masque_sanitaire")
 
 
-def apply_face_mask(image_bytes: bytes) -> bytes:
-    """Version servie aux visiteurs sans abonnement : BANDE opaque des yeux au nez sur chaque visage,
-    reste net ; image entièrement floutée si aucun visage n'est détecté (en cas de doute, tout est masqué)."""
+def mask_version(style: str = STYLE_PAR_DEFAUT) -> str:
+    """Identifiant de version du masquage pour un style (ex. « bandeau-v2 », « masque_sanitaire-v2 »)."""
+    return f"{style if style in STYLES_MASQUE else STYLE_PAR_DEFAUT}-v2"
+
+
+MASK_VERSION = mask_version()   # 09/10/2026 : bandeau noir jusqu'au-dessus du menton, avec le logo
+
+
+def apply_face_mask(image_bytes: bytes, style: str = STYLE_PAR_DEFAUT) -> bytes:
+    """Version servie aux membres sans match : BANDEAU NOIR (sourcils → un peu au-dessus du menton) ou MASQUE
+    SANITAIRE, logo beAuthentik au centre ; image entièrement floutée si aucun visage n'est détecté."""
     img = _load_rgb(image_bytes)
     try:
         import numpy as np
 
-        from face_blur import band_faces_in_photo
+        from face_blur import masquer_visages
 
-        faces_blurred = band_faces_in_photo(np.asarray(img))
+        faces_blurred = masquer_visages(np.asarray(img), style)
     except Exception as exc:  # détecteur indisponible -> repli sûr
         print(f"[image_processing] détection de visage impossible : {exc}")
         faces_blurred = None
@@ -89,11 +101,11 @@ def apply_face_mask(image_bytes: bytes) -> bytes:
 
 
 def _face_only_mask(img: Image.Image) -> bytes:
-    """Visage déjà masqué (bande des yeux au nez) : on ajoute une petite étiquette en bas."""
+    """Visage déjà masqué (bandeau ou masque sanitaire) : on ajoute une petite étiquette en bas."""
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
     font = _font(max(12, img.width // 28))
-    text = "Visage masqué · abonnez-vous pour le voir"
+    text = "Visage masqué · visible après un match"
     text_w = draw.textlength(text, font=font)
     pad = max(6, img.width // 60)
     x0 = (img.width - text_w) / 2 - pad

@@ -6,7 +6,8 @@ import MentionVersion from "@/components/MentionVersion";
 const NAV = [
   { to: "/admin", label: "Tableau de bord", end: true },
   { to: "/admin/chronologie", label: "Chronologie" },
-  { to: "/admin/photos", label: "Photos" },
+  // 09/10/2026 — la validation des photos est réservée au super-administrateur (les modérateurs ne la voient pas)
+  { to: "/admin/photos", label: "Photos", adminOnly: true },
   { to: "/admin/videos", label: "Vidéos" },
   { to: "/admin/verifications", label: "Vérifications" },
   { to: "/admin/journal-verifications", label: "Journal" },
