@@ -448,6 +448,21 @@ function ModerationSection() {
         Si désactivée, toutes les soumissions (pièces d'identité et photos) passent directement en revue humaine.
       </p>
 
+      {/* 09/10/2026 — validation des photos par un administrateur, même quand l'IA les juge conformes */}
+      <label className="mt-3 flex items-center gap-2 text-sm font-semibold">
+        <input
+          type="checkbox"
+          checked={form.validation_admin_obligatoire ?? true}
+          onChange={(e) => setForm({ ...form, validation_admin_obligatoire: e.target.checked })}
+        />
+        Validation des photos par un administrateur obligatoire
+      </label>
+      <p className="mt-1 text-xs text-slate-500">
+        Activée : chaque nouvelle photo attend votre validation (Admin → Photos), même jugée conforme par l'IA ; vous
+        voyez la photo d'origine et sa version masquée (bande des yeux au nez). Désactivée : une photo jugée conforme
+        par l'IA est publiée aussitôt.
+      </p>
+
       <Field label="Prompt système — vérification d'identité">
         <textarea
           value={form.id_verification_prompt}

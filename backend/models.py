@@ -103,10 +103,10 @@ class UserLogin(BaseModel):
 class Photo(BaseModel):
     id: str = Field(default_factory=_uuid)
     url: str
-    # Version floutée + bandeau de marque, servie à la place de `url` aux
-    # visiteurs sans abonnement actif (voir routes/matching.py). Générée en
-    # même temps que le filigrane sur `url`, au moment de l'approbation —
-    # absente tant que la photo n'est pas encore approuvée.
+    # Version masquée (bande des yeux au nez) servie à la place de `url` aux
+    # visiteurs sans abonnement actif (voir routes/matching.py). Depuis le
+    # 09/10/2026, produite dès l'envoi pour que le membre et l'administrateur
+    # voient l'aperçu ; elle n'est servie aux autres qu'une fois la photo approuvée.
     masked_url: Optional[str] = None
     # Version de l'algorithme de masquage ayant produit masked_url (les
     # anciennes versions sont régénérées par media_migration.py).
@@ -522,6 +522,9 @@ class ModerationSettings(BaseModel):
     humaine)."""
     id: str = "global"
     ai_auto_enabled: bool = True
+    # 09/10/2026 — « l'administrateur doit valider mon inscription et voir ma photo masquée » : toute nouvelle
+    # photo attend la validation d'un administrateur, même quand l'IA la juge conforme (son avis est affiché).
+    validation_admin_obligatoire: bool = True
     id_verification_prompt: str = DEFAULT_ID_VERIFICATION_PROMPT
     photo_moderation_prompt: str = DEFAULT_PHOTO_MODERATION_PROMPT
 
