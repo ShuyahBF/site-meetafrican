@@ -9,7 +9,7 @@ const RELECTURE_MS = 5 * 60 * 1000;
  * Abonnement Premium du membre connecté (backend/abonnement_grace.py et cycle_vie.py),
  * monté une seule fois dans App :
  *  - période de grâce : bandeau rouge « Abonnement expiré — N jour(s) de grâce restant(s) — Renouveler » ;
- *  - grâce écoulée : bandeau orange (visages de nouveau floutés), avec les dates de
+ *  - grâce écoulée : bandeau orange (fonctions Premium coupées), avec les dates de
  *    suspension et de suppression du compte prévues par le cycle de vie ;
  *  - compte suspendu (J+110) : écran « Compte suspendu — renouveler » sans aucune
  *    donnée, sauf sur la page Abonnement (paiement du renouvellement).
@@ -75,7 +75,7 @@ export default function BandeauAbonnement() {
   if (etat.statut === "expire" && !masque) {
     return (
       <div role="status" className="fixed inset-x-0 top-0 z-[80] bg-amber-500 px-4 py-2 text-center text-sm text-white shadow">
-        <span className="font-semibold">Abonnement Premium expiré : les visages sont de nouveau floutés.</span>
+        <span className="font-semibold">Abonnement Premium expiré : les fonctions Premium sont coupées.</span>
         {cycle?.suspension_le && <> Sans renouvellement, compte suspendu le {cycle.suspension_le} puis supprimé le {cycle.suppression_le}.</>}
         {pathname !== "/abonnement" && <> <Link to="/abonnement" className="font-bold underline">Renouveler</Link></>}
         <button type="button" aria-label="Masquer" onClick={() => setMasque(true)} className="ml-3 font-bold">✕</button>

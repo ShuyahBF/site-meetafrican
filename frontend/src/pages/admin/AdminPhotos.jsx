@@ -28,9 +28,9 @@ export default function AdminPhotos() {
     <div>
       <h1 className="text-2xl font-bold">Modération des photos</h1>
       <p className="mt-1 text-sm text-slate-500">
-        Nouvelles photos à valider (l'avis de l'IA est indiqué), et photos refusées d'office (plus de 2 visages)
-        soumises quand même à une revue humaine. À droite : ce que verront les membres sans abonnement (bande des
-        yeux au nez). Chaque décision est horodatée.
+        Réservé au super-administrateur. Nouvelles photos à valider (l'avis de l'IA est indiqué), et photos refusées
+        d'office (plus de 2 visages) soumises quand même à votre revue. À droite : ce que verront les membres qui n'ont
+        pas matché avec ce membre (bandeau noir ou masque sanitaire, au choix dans Paramètres). Chaque décision est horodatée.
       </p>
 
       {loading ? (

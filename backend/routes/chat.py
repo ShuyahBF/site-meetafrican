@@ -23,15 +23,14 @@ from storage import presigned_document_url, save_private_media
 from models import Message, PhotoStatus, _is_online
 from activity import ip_from_headers, log_activity
 from realtime import RateLimiter, conversation_channel, hub
-from routes.subscriptions import has_active_subscription
+from routes.matching import matched_ids
 
 router = APIRouter(tags=["Chat"])
 
 
 def _masked_photos(photos: list, unlocked: bool) -> list:
-    """Même règle que routes/matching.py:_mask_photos_for_viewer, mais sur
-    un dict brut plutôt qu'un UserPublic — cette route ne passe pas par
-    to_user_public()."""
+    """Même règle que routes/matching.py:_mask_photos_for_viewer (visage en clair seulement après un match), mais
+    sur un dict brut plutôt qu'un UserPublic — cette route ne passe pas par to_user_public()."""
     if unlocked:
         return photos
     result = []
@@ -105,7 +104,8 @@ async def list_conversations(user: dict = Depends(get_current_user)):
     other_ids = [c["user_b"] if c["user_a"] == user["id"] else c["user_a"] for c in convs]
     others = await db.users.find({"id": {"$in": other_ids}}, {"_id": 0}).to_list(len(other_ids) or 1)
     others_by_id = {o["id"]: o for o in others}
-    unlocked = await has_active_subscription(user["id"])
+    # 09/10/2026 — visage en clair seulement avec les membres matchés (plus selon l'abonnement)
+    matches = await matched_ids(user["id"], other_ids)
 
     results = []
     for c in convs:
@@ -121,7 +121,7 @@ async def list_conversations(user: dict = Depends(get_current_user)):
             "conversation_id": c["id"],
             "other_user": {
                 "id": other["id"], "full_name": other["full_name"],
-                "photos": _masked_photos(other.get("photos", []), unlocked),
+                "photos": _masked_photos(other.get("photos", []), other_id in matches or user.get("role") == "admin"),
                 "avg_response_seconds": other.get("avg_response_seconds"),
                 "gender": other.get("gender"),
                 "last_seen_at": other.get("last_seen_at"),

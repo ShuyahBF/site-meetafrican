@@ -71,7 +71,7 @@ const SECTIONS = [
     title: "Ce que voient les autres membres",
     body: (
       <>
-        <p>Les autres membres peuvent voir : votre nom affiché, votre âge (jamais la date de naissance exacte), votre ville et votre pays, votre bio et vos informations de profil, vos photos approuvées (visage flouté pour les non-abonnés), vos vidéos (visage flouté et sans son, sauf accès accordé), une distance approximative en km si vous utilisez « Autour de moi », votre statut « en ligne » ou votre dernière connexion, votre réactivité aux messages et vos compteurs (J'aime, coups de cœur).</p>
+        <p>Les autres membres peuvent voir : votre nom affiché, votre âge (jamais la date de naissance exacte), votre ville et votre pays, votre bio et vos informations de profil, vos photos approuvées (visage caché par un bandeau ou un masque tant que vous n'avez pas matché), vos vidéos (visage flouté et sans son, sauf accès accordé), une distance approximative en km si vous utilisez « Autour de moi », votre statut « en ligne » ou votre dernière connexion, votre réactivité aux messages et vos compteurs (J'aime, coups de cœur).</p>
         <p>Ils ne voient <strong>jamais</strong> : votre email, votre téléphone, votre pièce d'identité, votre position exacte, votre adresse IP ni vos paiements.</p>
       </>
     ),

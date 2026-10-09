@@ -681,7 +681,8 @@ def test_group_photo_rejected_but_sent_to_human_review_with_timestamps(client, m
 
     user_id, headers, _ = make_user()
     admin_id, admin, _ = make_user()
-    client.portal.call(lambda: db.users.update_one({"id": admin_id}, {"$set": {"role": "moderator"}}))
+    # 09/10/2026 : validation des photos réservée au super-administrateur (rôle admin)
+    client.portal.call(lambda: db.users.update_one({"id": admin_id}, {"$set": {"role": "admin"}}))
 
     photo = client.post("/api/me/photos", json={"url": "https://example.com/groupe.jpg"}, headers=headers).json()
     assert photo["status"] == "rejected" and photo["faces_detected"] == 3
@@ -692,7 +693,7 @@ def test_group_photo_rejected_but_sent_to_human_review_with_timestamps(client, m
     queue = client.get("/api/admin/photos/pending", headers=admin).json()
     assert any(p["id"] == photo["id"] for p in queue)
 
-    # Le modérateur confirme le refus : sort de la file, horodaté
+    # Le super-administrateur confirme le refus : sort de la file, horodaté
     client.post(f"/api/admin/photos/{user_id}/{photo['id']}/review", params={"approve": False}, headers=admin)
     assert not any(p["id"] == photo["id"] for p in client.get("/api/admin/photos/pending", headers=admin).json())
 
