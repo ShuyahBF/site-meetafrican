@@ -4,6 +4,8 @@ import BoutonTikTok from "@/components/BoutonTikTok";
 import { useAuth } from "@/context/AuthContext";
 import { extractErrorMessage } from "@/lib/api";
 import ChampMotDePasse from "@/components/ChampMotDePasse"; // lot 46 — œil pour voir la saisie
+import MentionVersion from "@/components/MentionVersion";
+import EtatServeur from "@/components/EtatServeur"; // lot 46 — état du serveur sous le formulaire
 
 export default function Register() {
   const { register } = useAuth();
@@ -33,8 +35,15 @@ export default function Register() {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-background-light px-6 py-10 font-display dark:bg-background-dark">
-      <h1 className="mb-6 text-2xl font-bold text-slate-900 dark:text-white">Créer un compte</h1>
+    // Lot 69 — même cadre que la page de connexion : carte de largeur limitée, CENTRÉE, logo en tête,
+    // état du serveur et version en pied de carte.
+    <div className="flex min-h-screen w-full items-center justify-center bg-background-light px-4 py-10 font-display dark:bg-background-dark">
+      <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl ring-1 ring-slate-100 dark:bg-slate-900 dark:ring-white/10">
+      {/* Logo beAuthentik en tête de carte */}
+      <div className="mb-4 flex flex-col items-center gap-2">
+        <img src="/icone-beauthentik.svg" alt="beAuthentik" className="h-16 w-16" />
+        <h1 className="text-center text-2xl font-bold text-slate-900 dark:text-white">Créer un compte</h1>
+      </div>
 
       {tiktok ? (
         <p className="mb-4 flex items-center gap-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
@@ -45,7 +54,7 @@ export default function Register() {
         <div className="mb-4"><BoutonTikTok onErreur={setError} /></div>
       )}
 
-      <form onSubmit={submit} className="flex flex-1 flex-col gap-4">
+      <form onSubmit={submit} className="flex flex-col gap-4">
         <Field label="Nom complet">
           <input required value={form.full_name} onChange={update("full_name")} className="input" />
         </Field>
@@ -88,7 +97,18 @@ export default function Register() {
         <p className="text-center text-sm text-slate-500 dark:text-slate-400">
           Déjà un compte ? <Link to="/connexion" className="font-semibold text-primary">Se connecter</Link>
         </p>
+        {/* Retour à la page d'accueil du site (comme sur la connexion) */}
+        <p className="text-center text-sm">
+          <Link to="/" className="inline-flex items-center gap-1 font-semibold text-primary">
+            <span className="material-symbols-outlined text-base">arrow_back</span> Retour à l'accueil
+          </Link>
+        </p>
       </form>
+
+      {/* État du serveur, puis version du déploiement en cours (règle permanente) */}
+      <EtatServeur className="mt-6" />
+      <MentionVersion className="mt-2" />
+      </div>
     </div>
   );
 }
