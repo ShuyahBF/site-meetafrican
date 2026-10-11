@@ -132,6 +132,10 @@ async def ouvrir(user_id: str, user_agent: Optional[str] = None, methode: str = 
     await _appliquer_limite(user_id, garder=sid)
     # Lot 47 : une ligne « réussie » au journal des connexions (IP réelle, appareil, session)
     await blocages_acces.journaliser_connexion(user_id, methode, "reussie", ip=ip, user_agent=user_agent, sid=sid)
+    # Lot 71 : connexion signalée à SAWALI (alerte WhatsApp du propriétaire) — envoi en arrière-plan,
+    # jamais bloquant ; rien n'est envoyé si la clé SAWALI n'est pas saisie (signal_connexions_sawali.py)
+    import signal_connexions_sawali  # import différé : même raison que blocages_acces ci-dessus
+    signal_connexions_sawali.signaler_connexion(user_id, ip=ip, user_agent=user_agent)
     return create_access_token(user_id, sid=sid, ouverture=maintenant)
 
 

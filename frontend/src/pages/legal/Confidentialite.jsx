@@ -82,6 +82,7 @@ const SECTIONS = [
     id: "tracabilite",
     title: "Traçabilité et adresses IP",
     body: (
+      <>
       <p>
         Pour la sécurité des membres et la lutte contre la fraude, chaque action qui modifie des données (inscription,
         connexion, abonnement, paiement, publication, message, J'aime, signalement…) est enregistrée avec l'adresse IP
@@ -89,6 +90,17 @@ const SECTIONS = [
         <strong> effacé automatiquement au bout de 12 mois</strong>. Votre propre adresse IP est affichée sur la page
         d'accueil, à titre d'information.
       </p>
+      {/* Lot 71 : connexions et visites signalées à SAWALI Smart Systems (supervision de la plateforme) */}
+      <p>
+        <strong>Supervision de la plateforme.</strong> À chaque connexion à un compte, beAuthentik transmet à
+        SAWALI Smart Systems, qui exploite et supervise la plateforme, l'adresse IP, la date et l'heure, le navigateur
+        utilisé et l'identité du compte (nom affiché, téléphone, rôle), afin de détecter rapidement les accès
+        inhabituels. L'arrivée d'un visiteur non connecté est signalée de la même façon, sans identité : seuls
+        l'adresse IP, le navigateur, la page d'arrivée et un identifiant anonyme tiré au hasard sont transmis
+        (au plus une fois toutes les 30 minutes). Aucun mot de passe ni contenu de profil ou de message n'est
+        transmis.
+      </p>
+      </>
     ),
   },
   {
@@ -134,7 +146,8 @@ const SECTIONS = [
       <p>
         Le site n'utilise <strong>aucun cookie publicitaire ni traceur publicitaire</strong>. Votre navigateur conserve
         uniquement votre jeton de connexion (pour rester connecté) et quelques préférences (critères de recherche,
-        visite déjà comptée), supprimés à la déconnexion ou en effaçant les données du site.
+        visite déjà comptée, identifiant anonyme de visite tiré au hasard), supprimés à la déconnexion ou en effaçant
+        les données du site.
       </p>
     ),
   },
@@ -208,7 +221,9 @@ const SECTIONS = [
         beAuthentik is an 18+ dating website operated by SAWALI SMART SYSTEMS (Ouagadougou, Burkina Faso). We collect
         only the data needed to run the service (account, verified identity, profile, messages, payments) and never
         sell it. If you sign in with TikTok, we receive only your basic profile (open ID, display name, avatar), used
-        to log you in and pre-fill your profile; we never post to your TikTok account. Contact: {CONTACT_EMAIL},
+        to log you in and pre-fill your profile; we never post to your TikTok account. For platform supervision, each
+        sign-in (IP address, browser, account name, phone and role) and each anonymous visit (IP address, browser,
+        landing page, random visitor ID) is reported to SAWALI SMART SYSTEMS. Contact: {CONTACT_EMAIL},
         {" "}{CONTACT_TELEPHONE}.
       </p>
     ),
