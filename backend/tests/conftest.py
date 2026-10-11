@@ -17,6 +17,8 @@ os.environ.update({
     "ADMIN_BOOTSTRAP_PASSWORD": "",
     # Pas de signal de présence SAWALI pendant les tests (aucun réseau)
     "PRESENCE_SAWALI": "0",
+    # Lot 71 : pas de signal de connexion / visite vers SAWALI (réactivé dans test_signal_connexions_sawali.py)
+    "SIGNAL_CONNEXIONS_SAWALI": "0",
 })
 # Permet "import server" depuis backend/tests/
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))

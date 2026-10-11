@@ -60,6 +60,7 @@ import TrackingView from "@/pages/extras/TrackingView";
 import Visitors from "@/pages/extras/Visitors";
 import AccountSettings from "@/pages/extras/AccountSettings";
 import TrackingBeacon from "@/components/TrackingBeacon";
+import SignalVisite from "@/components/SignalVisite";
 import SecureLayout from "@/secure/SecureLayout";
 import SecureFrame from "@/secure/SecureFrame";
 import securisationHtml from "@/secure/content/securisation.html?raw";
@@ -88,6 +89,8 @@ export default function App() {
         <BipNouveauMessage />
         {/* Lot 46 — protection contre les captures d'écran, sur tout le site */}
         <ProtectionCaptures />
+        {/* Lot 71 — visiteur non connecté signalé à SAWALI (au plus 1 fois / 30 min par navigateur) */}
+        <SignalVisite />
         <Routes>
           <Route path="/" element={<Welcome />} />
           <Route path="/inscription" element={<Register />} />

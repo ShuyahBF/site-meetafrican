@@ -52,6 +52,7 @@ from vidal_sync import sync_scheduler_loop
 import version_plateforme
 # Assistance SAWALI (SAWALI lot 90) : relais signé vers le support SAWALI
 import support_sawali
+import signal_connexions_sawali   # lot 71 : connexions et visites signalées à SAWALI
 
 settings = get_settings()
 
@@ -117,6 +118,8 @@ api.include_router(transmission_wa.router)
 api.include_router(transmission_wa.public)            # retours signés de SAWALI (Liluvine)
 # Assistance SAWALI (membre connecté) : /api/support-sawali/etat|messages|fil
 api.include_router(support_sawali.router)
+# Lot 71 : visites (visiteurs non connectés) signalées à SAWALI — POST /api/presence/visite (public)
+api.include_router(signal_connexions_sawali.public)
 
 
 @api.get("/health")
