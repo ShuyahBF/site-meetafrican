@@ -53,6 +53,7 @@ import version_plateforme
 # Assistance SAWALI (SAWALI lot 90) : relais signé vers le support SAWALI
 import support_sawali
 import signal_connexions_sawali   # lot 71 : connexions et visites signalées à SAWALI
+from routes import sawali_contacts   # lot 75 : contacts des membres (prénom + numéro vérifié) lus par SAWALI
 
 settings = get_settings()
 
@@ -120,6 +121,8 @@ api.include_router(transmission_wa.public)            # retours signés de SAWAL
 api.include_router(support_sawali.router)
 # Lot 71 : visites (visiteurs non connectés) signalées à SAWALI — POST /api/presence/visite (public)
 api.include_router(signal_connexions_sawali.public)
+# Lot 75 — prénoms et numéros vérifiés des membres lus (signés HMAC) par SAWALI : GET /api/sawali/contacts
+api.include_router(sawali_contacts.router)
 
 
 @api.get("/health")
