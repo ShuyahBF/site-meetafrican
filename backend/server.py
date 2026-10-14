@@ -20,6 +20,7 @@ from routes import (
     chat,
     cycle_vie,
     interactions,
+    jauge_cluster,
     maintenance_plateforme,
     matching,
     account_extras,
@@ -123,6 +124,7 @@ api.include_router(support_sawali.router)
 api.include_router(signal_connexions_sawali.public)
 # Lot 75 — prénoms et numéros vérifiés des membres lus (signés HMAC) par SAWALI : GET /api/sawali/contacts
 api.include_router(sawali_contacts.router)
+api.include_router(jauge_cluster.router)           # lot 77 : jauge du cluster Atlas (administrateur principal)
 
 
 @api.get("/health")

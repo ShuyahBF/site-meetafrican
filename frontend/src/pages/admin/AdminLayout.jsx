@@ -2,6 +2,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import DerniereSauvegarde from "@/components/DerniereSauvegarde";
 import MentionVersion from "@/components/MentionVersion";
+import JaugeCluster from "@/components/JaugeCluster"; // lot 77 : occupation du cluster de production
 
 const NAV = [
   { to: "/admin", label: "Tableau de bord", end: true },
@@ -68,6 +69,10 @@ export default function AdminLayout() {
           et date/heure de déploiement — règle permanente) */}
       <footer className="pb-6 text-center">
         <DerniereSauvegarde />
+        {/* Lot 77 : jauge du cluster Atlas, administrateur principal seulement */}
+        <div className="mt-2 flex justify-center">
+          <JaugeCluster actif={user?.role === "admin"} />
+        </div>
         <MentionVersion className="mt-2" detaille />
       </footer>
     </div>
