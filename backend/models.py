@@ -81,6 +81,8 @@ class UserRegister(BaseModel):
     referral_code: Optional[str] = Field(None, max_length=20)
     # Code de liaison TikTok (« Continuer avec TikTok » sans compte existant)
     tiktok_lien: Optional[str] = Field(None, max_length=64)
+    # Lot 78 : case FACULTATIVE (jamais cochée d'office) « J'accepte de recevoir les nouveautés et offres sur WhatsApp »
+    accepte_whatsapp: Optional[bool] = None
 
     @field_validator("email", "phone", "referral_code", mode="before")
     @classmethod

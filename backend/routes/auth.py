@@ -83,6 +83,12 @@ async def register(payload: UserRegister, request: Request):
     # affichée sous le bouton d'inscription) : date + version acceptée.
     doc["terms_accepted_at"] = doc["last_login_at"]
     doc["terms_version"] = TERMS_VERSION
+    # Lot 78 : consentement WhatsApp donné par la personne elle-même à l'inscription (case facultative) ; il n'a de sens
+    # que si un téléphone est fourni. Preuve gardée : date, moyen et adresse IP. Sans case cochée : aucune trace
+    # (« pas de réponse » ≠ « refus »), et SAWALI n'envoie alors aucun message de masse ni carrousel.
+    if payload.accepte_whatsapp is True and payload.phone:
+        doc.update({"accepte_whatsapp": True, "accepte_whatsapp_le": doc["last_login_at"],
+                    "accepte_whatsapp_moyen": "inscription", "accepte_whatsapp_ip": doc["registration_ip"]})
     await db.users.insert_one(doc.copy())
     # Inscription commencée par « Continuer avec TikTok » : liaison du compte TikTok
     await lier_si_demande(user.id, payload.tiktok_lien)
