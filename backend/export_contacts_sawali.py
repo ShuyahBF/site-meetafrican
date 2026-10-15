@@ -11,8 +11,9 @@ CONFIDENTIALITÉ (site de rencontre : être membre est déjà une information se
   - seulement les MEMBRES actifs dont le téléphone est VÉRIFIÉ (code reçu), jamais les modérateurs ni les administrateurs ;
   - uniquement le PRÉNOM (premier mot du nom), le numéro et un identifiant ; ni nom de famille, e-mail, genre, âge, ville,
     photo, profil, message, abonnement ni mot de passe ;
-  - aucun consentement transmis pour le moment : SAWALI ne diffuse un carrousel qu'aux personnes qui ont donné leur accord
-    elles-mêmes.
+  - lot 78 : le consentement WhatsApp (accord ou retrait, avec sa date) est transmis SEULEMENT si la personne l'a donné
+    elle-même (case cochée à l'inscription) ; sinon rien : SAWALI ne diffuse un carrousel qu'aux personnes qui ont donné
+    leur accord elles-mêmes.
 """
 from __future__ import annotations
 
@@ -59,12 +60,15 @@ async def tous_les_contacts(db) -> List[Dict[str, Any]]:
     contacts, vus = [], set()
     async for u in db.users.find({"is_active": {"$ne": False}, "phone_verified": True, "phone": {"$nin": [None, ""]},
                                   "role": {"$nin": ["admin", "moderator"]}},
-                                 {"_id": 0, "id": 1, "full_name": 1, "phone": 1}):
+                                 {"_id": 0, "id": 1, "full_name": 1, "phone": 1, "accepte_whatsapp": 1, "accepte_whatsapp_le": 1}):
         tel = re.sub(r"\D", "", u.get("phone") or "")
         if len(tel) < 8 or tel in vus:
             continue
         vus.add(tel)
-        contacts.append({"id": u["id"], "nom": prenom(u.get("full_name")), "telephone": tel, "role": "membre", "societe": "beAuthentik"})
+        contact = {"id": u["id"], "nom": prenom(u.get("full_name")), "telephone": tel, "role": "membre", "societe": "beAuthentik"}
+        if isinstance(u.get("accepte_whatsapp"), bool):      # lot 78 : accord (ou retrait) donné par la personne elle-même
+            contact.update({"accepte_whatsapp": u["accepte_whatsapp"], "accepte_le": u.get("accepte_whatsapp_le")})
+        contacts.append(contact)
     return sorted(contacts, key=lambda c: c["id"])
 
 

@@ -14,6 +14,7 @@ export default function Register() {
   const tiktok = useLocation().state?.tiktok || null;
   const [form, setForm] = useState({
     full_name: tiktok?.nom || "", email: "", phone: "", password: "", gender: "homme", birthdate: "",
+    accepte_whatsapp: false, // lot 78 : case FACULTATIVE, jamais cochée d'office
   });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -76,6 +77,16 @@ export default function Register() {
             <option value="femme">Femme</option>
           </select>
         </Field>
+
+        {/* Lot 78 : consentement WhatsApp facultatif (décoché par défaut) ; proposé seulement si un téléphone est saisi */}
+        {form.phone.trim().length >= 8 && (
+          <label className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
+            <input type="checkbox" checked={form.accepte_whatsapp} className="mt-0.5 h-4 w-4"
+                   onChange={(e) => setForm({ ...form, accepte_whatsapp: e.target.checked })} data-testid="accepte-whatsapp" />
+            <span>J'accepte de recevoir les nouveautés et offres de beAuthentik sur WhatsApp{" "}
+              <span className="text-slate-500">(facultatif — vous pourrez arrêter à tout moment en écrivant STOP)</span>.</span>
+          </label>
+        )}
 
         {error && <p className="text-sm text-red-400">{error}</p>}
 

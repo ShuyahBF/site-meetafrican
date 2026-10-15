@@ -48,3 +48,24 @@ def test_membres_au_telephone_verifie_seulement_et_donnees_minimales(client, mon
     assert not ({"m-sc2", "m-sc3", "m-sc4", "m-sc5"} & ids)
     texte = r.text
     assert "awa@x.bf" not in texte and "1995" not in texte and "femme" not in texte and "Ouedraogo" not in texte
+
+
+def test_consentement_whatsapp_a_l_inscription(client, monkeypatch):
+    """Lot 78 — case facultative : accord noté (date, moyen, IP) seulement si cochée ET téléphone fourni ; transmis à SAWALI."""
+    monkeypatch.setenv("SAWALI_CONTACTS_HMAC", CLE)
+    base = {"password": "motdepasse123", "gender": "femme", "birthdate": "1995-05-05"}
+    r1 = client.post("/api/auth/register", json={**base, "full_name": "Aminata Kone", "phone": "+22670881101", "accepte_whatsapp": True})
+    r2 = client.post("/api/auth/register", json={**base, "full_name": "Salif Traore", "phone": "+22670881102"})            # case non cochée
+    r3 = client.post("/api/auth/register", json={**base, "full_name": "Fatou Sow", "email": "fatou.sow@example.com", "accepte_whatsapp": True})   # sans téléphone
+    assert r1.status_code == r2.status_code == r3.status_code == 201
+    uid = {k: r.json()["user"]["id"] for k, r in (("oui", r1), ("non", r2), ("sans_tel", r3))}
+    fiches = {k: client.portal.call(db.users.find_one, {"id": i}) for k, i in uid.items()}
+    assert fiches["oui"]["accepte_whatsapp"] is True and fiches["oui"]["accepte_whatsapp_moyen"] == "inscription"
+    assert fiches["oui"]["accepte_whatsapp_le"] and "accepte_whatsapp_ip" in fiches["oui"]
+    assert "accepte_whatsapp" not in fiches["non"] and "accepte_whatsapp" not in fiches["sans_tel"]     # jamais d'accord inventé
+    # Les trois numéros vérifiés : SAWALI ne reçoit l'accord que pour celui qui l'a donné
+    client.portal.call(db.users.update_many, {"id": {"$in": [uid["oui"], uid["non"]]}}, {"$set": {"phone_verified": True}})
+    q = "limite=500&page=1"
+    contacts = {c["id"]: c for c in client.get(f"{CHEMIN}?{q}", headers=_entetes(q)).json()["contacts"]}
+    assert contacts[uid["oui"]]["accepte_whatsapp"] is True and contacts[uid["oui"]]["accepte_le"]
+    assert "accepte_whatsapp" not in contacts[uid["non"]]
