@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { apiClient, extractErrorMessage, MOTIF_DECONNEXION_KEY } from "@/lib/api";
 import MentionVersion from "@/components/MentionVersion";
 import EtatServeur from "@/components/EtatServeur"; // lot 46 — état du serveur sous le formulaire
+import InstallerApplication from "@/components/InstallerApplication"; // application Android installable
 import ChampMotDePasse from "@/components/ChampMotDePasse"; // lot 46 — œil pour voir la saisie
 
 // Messages du retour de TikTok (?tiktok_erreur=…)
@@ -155,6 +156,7 @@ export default function Login() {
             <span className="material-symbols-outlined text-base">arrow_back</span> Retour à l'accueil
           </Link>
         </p>
+        <p className="text-center"><InstallerApplication /></p>
         <p className="text-center text-xs text-slate-400">
           <Link to="/cgu" className="underline">Conditions d'utilisation</Link> · <Link to="/confidentialite" className="underline">Confidentialité</Link>
         </p>

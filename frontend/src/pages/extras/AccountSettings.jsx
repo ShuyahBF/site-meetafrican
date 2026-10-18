@@ -4,6 +4,7 @@ import { apiClient, extractErrorMessage } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { enregistrerPreferencesSon, jouerSon, SONS } from "@/lib/bipMessage";
 import PageShell from "@/components/PageShell";
+import InstallerApplication from "@/components/InstallerApplication"; // application Android installable
 
 // Réglages du compte : un interrupteur par option (le Mode Invisible et le son
 // des messages ont chacun leur propre carte, plus bas).
@@ -87,6 +88,8 @@ export default function AccountSettings() {
 
           <SonMessages settings={settings} setSettings={setSettings} enregistrer={enregistrer} saving={saving} />
           <ModeInvisible settings={settings} setSettings={setSettings} enregistrer={enregistrer} saving={saving} />
+
+          <div className="card p-4 text-center"><InstallerApplication /></div>
 
           {message && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm font-semibold text-rose-700">{message}</p>}
         </div>
