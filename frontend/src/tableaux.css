@@ -2,7 +2,7 @@
    TABLEAUX — règle permanente du propriétaire, valable pour TOUT tableau
    ==========================================================================
    1. Ligne survolée par la souris  → fond bleu clair transparent.
-   2. Ligne sélectionnée            → fond orange clair + texte blanc.
+   2. Ligne sélectionnée            → fond orange clair + texte bleu nuit (28/10/2026).
 
    Une ligne est « sélectionnée » si elle porte UN de ces marqueurs :
      - <tr aria-selected="true">   (recommandé : accessible aux lecteurs d'écran)
@@ -25,7 +25,7 @@ tbody > tr:hover > th {
   background-color: rgba(56, 189, 248, 0.16);
 }
 
-/* 2. Sélection : orange clair, police blanche.
+/* 2. Sélection : orange clair, police bleu nuit #0A1E3D (28/10/2026 : le blanc n'avait que 2:1 de contraste ; 7,7:1 en bleu nuit).
    « !important » est ici NÉCESSAIRE : les classes Tailwind de type
    « hover:text-… » ou « dark:text-… » sont plus prioritaires qu'un simple
    sélecteur de tableau et rendraient sinon le texte illisible sur l'orange. */
@@ -38,19 +38,19 @@ tbody > tr.ligne-selectionnee > th,
 tbody > tr:has(> td:first-child input[type="checkbox"]:checked) > td,
 tbody > tr:has(> td:first-child input[type="checkbox"]:checked) > th {
   background-color: #f6a35b !important; /* orange clair de la règle permanente (CLAUDE.md), lot 48 */
-  color: #ffffff !important;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2); /* améliore la lisibilité du blanc */
+  color: #0A1E3D !important;
 }
 
 /* Tous les textes À L'INTÉRIEUR d'une cellule sélectionnée (liens, badges,
-   textes gris…) passent aussi en blanc. */
-tbody > tr[aria-selected="true"] > td *,
-tbody > tr[aria-selected="true"] > th *,
-tbody > tr[data-selected="true"] > td *,
-tbody > tr[data-selected="true"] > th *,
-tbody > tr.ligne-selectionnee > td *,
-tbody > tr.ligne-selectionnee > th *,
-tbody > tr:has(> td:first-child input[type="checkbox"]:checked) > td *,
-tbody > tr:has(> td:first-child input[type="checkbox"]:checked) > th * {
-  color: #ffffff !important;
+   textes gris…) passent aussi en bleu nuit — SAUF les pastilles qui ont leur propre fond (classe bg-… ou .badge) : elles gardent leur couleur, sinon le texte
+   bleu nuit deviendrait illisible sur un fond foncé. */
+tbody > tr[aria-selected="true"] > td *:not([class*="bg-"], [class*="bg-"] *, .badge, .badge *),
+tbody > tr[aria-selected="true"] > th *:not([class*="bg-"], [class*="bg-"] *, .badge, .badge *),
+tbody > tr[data-selected="true"] > td *:not([class*="bg-"], [class*="bg-"] *, .badge, .badge *),
+tbody > tr[data-selected="true"] > th *:not([class*="bg-"], [class*="bg-"] *, .badge, .badge *),
+tbody > tr.ligne-selectionnee > td *:not([class*="bg-"], [class*="bg-"] *, .badge, .badge *),
+tbody > tr.ligne-selectionnee > th *:not([class*="bg-"], [class*="bg-"] *, .badge, .badge *),
+tbody > tr:has(> td:first-child input[type="checkbox"]:checked) > td *:not([class*="bg-"], [class*="bg-"] *, .badge, .badge *),
+tbody > tr:has(> td:first-child input[type="checkbox"]:checked) > th *:not([class*="bg-"], [class*="bg-"] *, .badge, .badge *) {
+  color: #0A1E3D !important;
 }
