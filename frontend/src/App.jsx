@@ -5,6 +5,7 @@ import AdminRoute from "@/components/AdminRoute";
 import Welcome from "@/pages/Welcome";
 import Register from "@/pages/Register";
 import Login from "@/pages/Login";
+import Installer from "@/pages/Installer";   // page d'installation publique
 import Discover from "@/pages/Discover";
 import Subscriptions from "@/pages/Subscriptions";
 import Profile from "@/pages/Profile";
@@ -98,6 +99,8 @@ export default function App() {
           {/* Lot 47 — compte ou adresse IP bloqué par le super-administrateur */}
           <Route path="/acces-suspendu" element={<AccesSuspendu />} />
           <Route path="/restauration-initiale" element={<RestaurationInitiale />} />
+          {/* Page d'installation PUBLIQUE : le lien se partage par WhatsApp à des personnes qui n'ont pas encore de compte */}
+          <Route path="/installer" element={<Installer />} />
           <Route path="/cgu" element={<Cgu />} />
           <Route path="/confidentialite" element={<Confidentialite />} />
           {/* Alias anglais des pages légales (adresses déclarées aux revues TikTok / Meta) */}
